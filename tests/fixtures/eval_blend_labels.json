@@ -1,0 +1,378 @@
+{
+  "version": 1,
+  "description": "B1 (v0.4): labeled benchmark for evaluation-blend retrieval. Each query lists 1-3 ground-truth relevant skills out of the 50-skill fixture corpus. synthetic_meta lets us populate sparse mega_meta evidence (helpful/harmful counts + contexts) at benchmark time so the v0.3 blend has a signal to consume — only the few skills relevant to a given scenario carry non-trivial data; everything else stays cold (use_eval=False ordering is unchanged).",
+  "queries": [
+    {
+      "query": "Verify an inbound HMAC-SHA256 webhook signature with replay protection",
+      "relevant_skills": ["webhook-signer"],
+      "synthetic_meta": {
+        "webhook-signer": {
+          "helpful_count": 6,
+          "harmful_count": 0,
+          "helpful_contexts": ["validated HMAC payload on test vector"],
+          "status": "active"
+        },
+        "url-safe-parser": {
+          "helpful_count": 1,
+          "harmful_count": 4,
+          "harmful_contexts": ["applied to webhook signature parsing — wrong tool"],
+          "status": "suspect"
+        }
+      }
+    },
+    {
+      "query": "Build an OAuth callback handler that validates state and exchanges the code for tokens",
+      "relevant_skills": ["oauth-callback"],
+      "synthetic_meta": {
+        "oauth-callback": {
+          "helpful_count": 5,
+          "harmful_count": 0,
+          "helpful_contexts": ["validated state nonce and exchanged code for access token"],
+          "status": "active"
+        }
+      }
+    },
+    {
+      "query": "Issue and verify a CSRF token in a session-cookie form flow",
+      "relevant_skills": ["csrf-token-issuer", "session-cookie-setter"],
+      "synthetic_meta": {
+        "csrf-token-issuer": {
+          "helpful_count": 8,
+          "harmful_count": 0,
+          "helpful_contexts": ["issued double-submit CSRF token tied to session"],
+          "status": "active"
+        }
+      }
+    },
+    {
+      "query": "Hash a user password with Argon2id and tune memory/time cost",
+      "relevant_skills": ["password-hash-argon2"],
+      "synthetic_meta": {
+        "password-hash-argon2": {
+          "helpful_count": 5,
+          "harmful_count": 0,
+          "helpful_contexts": ["selected memory=64MB, time=3 for password storage"],
+          "status": "active"
+        }
+      }
+    },
+    {
+      "query": "Verify a TOTP MFA code with skew tolerance and replay window",
+      "relevant_skills": ["totp-mfa-verifier"],
+      "synthetic_meta": {
+        "totp-mfa-verifier": {
+          "helpful_count": 4,
+          "harmful_count": 1,
+          "helpful_contexts": ["validated 6-digit TOTP with ±1 step skew"],
+          "status": "active"
+        }
+      }
+    },
+    {
+      "query": "Verify a JWT with RS256 and audience+issuer claims",
+      "relevant_skills": ["jwt-verifier", "oauth-callback"],
+      "synthetic_meta": {
+        "jwt-verifier": {
+          "helpful_count": 9,
+          "harmful_count": 0,
+          "helpful_contexts": ["verified RS256 token + audience match"],
+          "status": "active"
+        }
+      }
+    },
+    {
+      "query": "Amend the staged commit message without modifying file contents",
+      "relevant_skills": ["git-amend-staged"],
+      "synthetic_meta": {
+        "git-amend-staged": {
+          "helpful_count": 7,
+          "harmful_count": 0,
+          "helpful_contexts": ["amended commit message preserving staged diff"],
+          "status": "active"
+        }
+      }
+    },
+    {
+      "query": "Parse a user-supplied URL safely and normalize host/scheme/path",
+      "relevant_skills": ["url-safe-parser"],
+      "synthetic_meta": {
+        "url-safe-parser": {
+          "helpful_count": 6,
+          "harmful_count": 0,
+          "helpful_contexts": ["normalized URL host and stripped unsafe chars"],
+          "status": "active"
+        }
+      }
+    },
+    {
+      "query": "Compose a complex Prisma findMany with many filters and pagination",
+      "relevant_skills": ["prisma-where-builder"],
+      "synthetic_meta": {
+        "prisma-where-builder": {
+          "helpful_count": 5,
+          "harmful_count": 0,
+          "helpful_contexts": ["built Prisma where clause with multiple range filters"],
+          "status": "active"
+        }
+      }
+    },
+    {
+      "query": "Transition the linked Linear ticket to Done with the PR URL attached",
+      "relevant_skills": ["linear-issue-resolver"],
+      "synthetic_meta": {
+        "linear-issue-resolver": {
+          "helpful_count": 6,
+          "harmful_count": 0,
+          "helpful_contexts": ["transitioned Linear ticket and attached PR link"],
+          "status": "active"
+        }
+      }
+    },
+    {
+      "query": "Write an idempotent Postgres transaction wrapper that retries on serialization failure",
+      "relevant_skills": ["postgres-tx-wrapper"],
+      "synthetic_meta": {
+        "postgres-tx-wrapper": {
+          "helpful_count": 4,
+          "harmful_count": 0,
+          "helpful_contexts": ["wrote retrying SERIALIZABLE wrapper with backoff"],
+          "status": "active"
+        }
+      }
+    },
+    {
+      "query": "Generate an S3 presigned URL valid for 15 minutes for one-shot download",
+      "relevant_skills": ["s3-presigned-url"],
+      "synthetic_meta": {
+        "s3-presigned-url": {
+          "helpful_count": 5,
+          "harmful_count": 0,
+          "helpful_contexts": ["produced 15-min presigned GET for download link"],
+          "status": "active"
+        },
+        "s3-multipart-upload": {
+          "helpful_count": 0,
+          "harmful_count": 3,
+          "harmful_contexts": ["misapplied multipart upload to single-shot download"],
+          "status": "suspect"
+        }
+      }
+    },
+    {
+      "query": "Upload a 5GB file to S3 using multipart with abort-on-error",
+      "relevant_skills": ["s3-multipart-upload"],
+      "synthetic_meta": {
+        "s3-multipart-upload": {
+          "helpful_count": 4,
+          "harmful_count": 0,
+          "helpful_contexts": ["uploaded 5GB asset with multipart and abort handler"],
+          "status": "active"
+        }
+      }
+    },
+    {
+      "query": "Apply a Redis pipeline to batch 100 SETs in a single round trip",
+      "relevant_skills": ["redis-pipeline-batch"],
+      "synthetic_meta": {
+        "redis-pipeline-batch": {
+          "helpful_count": 3,
+          "harmful_count": 0,
+          "helpful_contexts": ["batched 100 SET commands via pipeline"],
+          "status": "active"
+        }
+      }
+    },
+    {
+      "query": "Rate-limit an endpoint with Redis token-bucket and burst capacity",
+      "relevant_skills": ["rate-limiter-redis"],
+      "synthetic_meta": {
+        "rate-limiter-redis": {
+          "helpful_count": 5,
+          "harmful_count": 0,
+          "helpful_contexts": ["token-bucket limiter with burst=20 implemented"],
+          "status": "active"
+        }
+      }
+    },
+    {
+      "query": "Restart a Kubernetes deployment rollout in place to pick up new env vars",
+      "relevant_skills": ["k8s-rollout-restart"],
+      "synthetic_meta": {
+        "k8s-rollout-restart": {
+          "helpful_count": 4,
+          "harmful_count": 0,
+          "helpful_contexts": ["restarted deployment to reload secrets"],
+          "status": "active"
+        }
+      }
+    },
+    {
+      "query": "Render a Helm values.yaml with templated environment overrides",
+      "relevant_skills": ["helm-values-template"],
+      "synthetic_meta": {
+        "helm-values-template": {
+          "helpful_count": 3,
+          "harmful_count": 0,
+          "status": "active"
+        }
+      }
+    },
+    {
+      "query": "Define a Zod schema for an incoming JSON body with discriminated unions",
+      "relevant_skills": ["typescript-zod-schema"],
+      "synthetic_meta": {
+        "typescript-zod-schema": {
+          "helpful_count": 6,
+          "harmful_count": 0,
+          "helpful_contexts": ["wrote discriminated-union schema with refine guards"],
+          "status": "active"
+        }
+      }
+    },
+    {
+      "query": "Add a Next.js middleware that gates routes by auth cookie",
+      "relevant_skills": ["nextjs-middleware-auth", "nextjs-route-handler"],
+      "synthetic_meta": {
+        "nextjs-middleware-auth": {
+          "helpful_count": 5,
+          "harmful_count": 0,
+          "helpful_contexts": ["gated /dashboard via cookie middleware"],
+          "status": "active"
+        }
+      }
+    },
+    {
+      "query": "Build a React error boundary that reports to Sentry and renders fallback UI",
+      "relevant_skills": ["react-error-boundary"],
+      "synthetic_meta": {
+        "react-error-boundary": {
+          "helpful_count": 4,
+          "harmful_count": 0,
+          "helpful_contexts": ["caught render errors and reported with Sentry breadcrumb"],
+          "status": "active"
+        }
+      }
+    },
+    {
+      "query": "Stub a Cypress network request with a deterministic fixture",
+      "relevant_skills": ["cypress-network-stub"],
+      "synthetic_meta": {
+        "cypress-network-stub": {
+          "helpful_count": 4,
+          "harmful_count": 0,
+          "status": "active"
+        }
+      }
+    },
+    {
+      "query": "Mock fetch() in a Vitest unit test with typed response shapes",
+      "relevant_skills": ["vitest-mock-fetch"],
+      "synthetic_meta": {
+        "vitest-mock-fetch": {
+          "helpful_count": 3,
+          "harmful_count": 0,
+          "status": "active"
+        }
+      }
+    },
+    {
+      "query": "Configure a CircleCI matrix job to run tests on three node versions",
+      "relevant_skills": ["circleci-matrix-job"],
+      "synthetic_meta": {
+        "circleci-matrix-job": {
+          "helpful_count": 3,
+          "harmful_count": 0,
+          "status": "active"
+        }
+      }
+    },
+    {
+      "query": "Write a multi-stage Dockerfile that produces a slim runtime image",
+      "relevant_skills": ["docker-multistage"],
+      "synthetic_meta": {
+        "docker-multistage": {
+          "helpful_count": 5,
+          "harmful_count": 0,
+          "helpful_contexts": ["produced slim runtime from build stage"],
+          "status": "active"
+        }
+      }
+    },
+    {
+      "query": "Generate a Python Typer CLI with subcommands and rich help output",
+      "relevant_skills": ["python-typer-cli"],
+      "synthetic_meta": {
+        "python-typer-cli": {
+          "helpful_count": 4,
+          "harmful_count": 0,
+          "status": "active"
+        }
+      }
+    },
+    {
+      "query": "Sign and verify a short-lived API request token",
+      "relevant_skills": ["jwt-verifier", "totp-mfa-verifier", "webhook-signer"],
+      "ambiguous": true,
+      "synthetic_meta": {
+        "jwt-verifier": {
+          "helpful_count": 7,
+          "harmful_count": 0,
+          "helpful_contexts": ["signed and verified short-lived API access token"],
+          "status": "active"
+        }
+      }
+    },
+    {
+      "query": "Memoize an expensive computation that re-renders inside a React tree",
+      "relevant_skills": ["react-suspense-data", "react-error-boundary"],
+      "ambiguous": true,
+      "synthetic_meta": {
+        "react-suspense-data": {
+          "helpful_count": 5,
+          "harmful_count": 0,
+          "helpful_contexts": ["memoized expensive data fetch in suspense boundary"],
+          "status": "active"
+        }
+      }
+    },
+    {
+      "query": "Roll forward a SQL schema migration without locking the table",
+      "relevant_skills": ["sql-migration-up", "sql-migration-down", "postgres-tx-wrapper"],
+      "ambiguous": true,
+      "synthetic_meta": {
+        "sql-migration-up": {
+          "helpful_count": 6,
+          "harmful_count": 0,
+          "helpful_contexts": ["rolled forward schema with concurrent index, no lock"],
+          "status": "active"
+        }
+      }
+    },
+    {
+      "query": "Stream a paginated DynamoDB query with retry on throttle",
+      "relevant_skills": ["dynamodb-paginator", "rate-limiter-redis"],
+      "ambiguous": true,
+      "synthetic_meta": {
+        "dynamodb-paginator": {
+          "helpful_count": 4,
+          "harmful_count": 0,
+          "helpful_contexts": ["paginated DynamoDB scan with exponential retry"],
+          "status": "active"
+        }
+      }
+    },
+    {
+      "query": "Render a chart with discrete categorical buckets sized to the viewport",
+      "relevant_skills": ["d3-scale-band", "tailwind-design-tokens"],
+      "ambiguous": true,
+      "synthetic_meta": {
+        "d3-scale-band": {
+          "helpful_count": 3,
+          "harmful_count": 0,
+          "helpful_contexts": ["fitted band scale to viewport with discrete bins"],
+          "status": "active"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,173 @@
+{
+  "pool_59": {
+    "_meta": {
+      "pool_size": 59,
+      "gold_count": 59,
+      "query_count": 200
+    },
+    "per_condition": {
+      "vanilla-codex": {
+        "mean_score": 0.7083333333333333,
+        "in_dist_mean_score": 0.9444444444444444,
+        "null_mean_score": 0.0,
+        "fp_null_rate": 1.0,
+        "mean_catalog_tokens": 1193.0,
+        "wall_seconds": 0.17
+      },
+      "vanilla-claude": {
+        "mean_score": 0.75,
+        "in_dist_mean_score": 1.0,
+        "null_mean_score": 0.0,
+        "fp_null_rate": 1.0,
+        "mean_catalog_tokens": 1972.0,
+        "wall_seconds": 0.0
+      },
+      "vanilla-gemini": {
+        "mean_score": 0.75,
+        "in_dist_mean_score": 1.0,
+        "null_mean_score": 0.0,
+        "fp_null_rate": 1.0,
+        "mean_catalog_tokens": 6005.0,
+        "wall_seconds": 0.0
+      },
+      "mega-tron-bge-m3": {
+        "mean_score": 0.8791666666666668,
+        "in_dist_mean_score": 0.8388888888888889,
+        "null_mean_score": 1.0,
+        "fp_null_rate": 0.0,
+        "mean_catalog_tokens": 112.375,
+        "wall_seconds": 24.72
+      },
+      "mega-tron-skillret": {
+        "mean_score": 0.955,
+        "in_dist_mean_score": 0.9533333333333334,
+        "null_mean_score": 0.96,
+        "fp_null_rate": 0.04,
+        "mean_catalog_tokens": 105.625,
+        "wall_seconds": 25.89
+      },
+      "mega-tron-bge-small": {
+        "mean_score": 0.9566666666666667,
+        "in_dist_mean_score": 0.9555555555555556,
+        "null_mean_score": 0.96,
+        "fp_null_rate": 0.04,
+        "mean_catalog_tokens": 312.23,
+        "wall_seconds": 7.24
+      }
+    }
+  },
+  "pool_183": {
+    "_meta": {
+      "pool_size": 183,
+      "gold_count": 59,
+      "query_count": 200
+    },
+    "per_condition": {
+      "vanilla-codex": {
+        "mean_score": 0.185,
+        "in_dist_mean_score": 0.24666666666666667,
+        "null_mean_score": 0.0,
+        "fp_null_rate": 1.0,
+        "mean_catalog_tokens": 1157.0,
+        "wall_seconds": 0.0
+      },
+      "vanilla-claude": {
+        "mean_score": 0.75,
+        "in_dist_mean_score": 1.0,
+        "null_mean_score": 0.0,
+        "fp_null_rate": 1.0,
+        "mean_catalog_tokens": 2000.0,
+        "wall_seconds": 0.01
+      },
+      "vanilla-gemini": {
+        "mean_score": 0.75,
+        "in_dist_mean_score": 1.0,
+        "null_mean_score": 0.0,
+        "fp_null_rate": 1.0,
+        "mean_catalog_tokens": 17957.0,
+        "wall_seconds": 0.0
+      },
+      "mega-tron-bge-m3": {
+        "mean_score": 0.8725,
+        "in_dist_mean_score": 0.8366666666666667,
+        "null_mean_score": 0.98,
+        "fp_null_rate": 0.02,
+        "mean_catalog_tokens": 145.04,
+        "wall_seconds": 18.79
+      },
+      "mega-tron-skillret": {
+        "mean_score": 0.935,
+        "in_dist_mean_score": 0.94,
+        "null_mean_score": 0.92,
+        "fp_null_rate": 0.08,
+        "mean_catalog_tokens": 124.255,
+        "wall_seconds": 26.98
+      },
+      "mega-tron-bge-small": {
+        "mean_score": 0.9341666666666667,
+        "in_dist_mean_score": 0.9455555555555556,
+        "null_mean_score": 0.9,
+        "fp_null_rate": 0.1,
+        "mean_catalog_tokens": 399.985,
+        "wall_seconds": 8.2
+      }
+    }
+  },
+  "pool_500": {
+    "_meta": {
+      "pool_size": 500,
+      "gold_count": 59,
+      "query_count": 200
+    },
+    "per_condition": {
+      "vanilla-codex": {
+        "mean_score": 0.029166666666666664,
+        "in_dist_mean_score": 0.03888888888888889,
+        "null_mean_score": 0.0,
+        "fp_null_rate": 1.0,
+        "mean_catalog_tokens": 1191.0,
+        "wall_seconds": 0.0
+      },
+      "vanilla-claude": {
+        "mean_score": 0.75,
+        "in_dist_mean_score": 1.0,
+        "null_mean_score": 0.0,
+        "fp_null_rate": 1.0,
+        "mean_catalog_tokens": 3400.0,
+        "wall_seconds": 0.01
+      },
+      "vanilla-gemini": {
+        "mean_score": 0.75,
+        "in_dist_mean_score": 1.0,
+        "null_mean_score": 0.0,
+        "fp_null_rate": 1.0,
+        "mean_catalog_tokens": 49455.0,
+        "wall_seconds": 0.01
+      },
+      "mega-tron-bge-m3": {
+        "mean_score": 0.84,
+        "in_dist_mean_score": 0.8133333333333334,
+        "null_mean_score": 0.92,
+        "fp_null_rate": 0.08,
+        "mean_catalog_tokens": 208.435,
+        "wall_seconds": 24.33
+      },
+      "mega-tron-skillret": {
+        "mean_score": 0.8916666666666667,
+        "in_dist_mean_score": 0.9155555555555556,
+        "null_mean_score": 0.82,
+        "fp_null_rate": 0.18,
+        "mean_catalog_tokens": 157.33,
+        "wall_seconds": 29.35
+      },
+      "mega-tron-bge-small": {
+        "mean_score": 0.8841666666666668,
+        "in_dist_mean_score": 0.9255555555555556,
+        "null_mean_score": 0.76,
+        "fp_null_rate": 0.24,
+        "mean_catalog_tokens": 527.395,
+        "wall_seconds": 9.49
+      }
+    }
+  }
+}

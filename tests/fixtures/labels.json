@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "description": "Ground-truth labels for retrieval benchmarks (5 easy hand-crafted queries).",
+  "queries": [
+    {
+      "query": "Implement HMAC-SHA256 webhook signature verification with replay protection",
+      "gold": "webhook-signer"
+    },
+    {
+      "query": "Fix a typo in the last commit before pushing to my feature branch",
+      "gold": "git-amend-staged"
+    },
+    {
+      "query": "Compose a complex Prisma findMany with multiple range and contains filters",
+      "gold": "prisma-where-builder"
+    },
+    {
+      "query": "After merging the PR, transition the Linear ticket to Done with the PR URL",
+      "gold": "linear-issue-resolver"
+    },
+    {
+      "query": "Parse and normalize a user-supplied URL safely before downstream comparison",
+      "gold": "url-safe-parser"
+    }
+  ]
+}

@@ -1,0 +1,4508 @@
+{
+  "_meta": {
+    "seed": 42,
+    "size": 500
+  },
+  "entries": [
+    {
+      "sha256": "004197e0d49c74a5941849ad09d6309900af69a1bebdc3a8f285cf9c39b86c1b",
+      "sha8": "004197e0",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "supabase-upgrade-migration",
+      "byte_size": 1200,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "0072634e4808f5582bce6044fb1cdcae2418abe6b9b1c32b58a2c8433c43d519",
+      "sha8": "0072634e",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "clerk-multi-env-setup",
+      "byte_size": 7552,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "009ee35a6f530b9bfd58971fd87493e9b6715652f9e1988b57ea635031f7a611",
+      "sha8": "009ee35a",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "engineering-features-for-machine-learning",
+      "byte_size": 4162,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "00c3965a19c45ee149bd32cf8b8fc7adda9bfddf0ef2b6171b081c969dff71d2",
+      "sha8": "00c3965a",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "analyzing-system-throughput",
+      "byte_size": 4054,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "0177f8068bf1aa36befddad31cec4223af169b9abc91bcb12eed865d06937a27",
+      "sha8": "0177f806",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "klingai-cost-controls",
+      "byte_size": 1508,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "019c18889fcbdd1fd207330d0b441cf25758ac7f8cd01caa9c16d88aad1cfe0a",
+      "sha8": "019c1888",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "deploying-machine-learning-models",
+      "byte_size": 3240,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "024193f170f208d8ab40bf5468806eaea19956af25d7ff5a36cfcf1081895d4b",
+      "sha8": "024193f1",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "vercel-debug-bundle",
+      "byte_size": 1235,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "028c24c1389db5fb679249ae411cf9eb21d5956a50997ed725d96df72f79f3e4",
+      "sha8": "028c24c1",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "cursor-upgrade-migration",
+      "byte_size": 1794,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "02c3b7a720b77c9160e252e36d75cbdc7b4c602fc300f284318b273a7402eaa9",
+      "sha8": "02c3b7a7",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "sf-lwc",
+      "byte_size": 20375,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "049877d37a2523cdb089361e9945e78e5cde1641c88595ebe5b3aa74eb609173",
+      "sha8": "049877d3",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "klingai-job-monitoring",
+      "byte_size": 1576,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "05e664a43bb82df2363ef22ceba81a41394a2b819c3367b2413f661485085c8f",
+      "sha8": "05e664a4",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "sglang",
+      "byte_size": 11431,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "066468c14c88b0bfd98e62adc895c69927949f51be4a3c9a4acde17816f29eaf",
+      "sha8": "066468c1",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "windsurf-hello-world",
+      "byte_size": 2349,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "074f0bfe5fe26e8ee92877b350cce092f83abbe8416b8feccc1017ce0d847f01",
+      "sha8": "074f0bfe",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "feature-engineering-helper",
+      "byte_size": 1352,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "0839270bfce0b896da202486018c083291cad3a48087278f53eda9184fbe50cc",
+      "sha8": "0839270b",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "instantly-migration-deep-dive",
+      "byte_size": 7051,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "08560e13fab4d1447baa32906a398911fb2b42b8cb21556a89a57efb2e305252",
+      "sha8": "08560e13",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "retellai-reference-architecture",
+      "byte_size": 7213,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "08afd970f23d716bf0d45aa223dfe82ae88eb720869a422363b72365ad0fcae9",
+      "sha8": "08afd970",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "vastai-webhooks-events",
+      "byte_size": 5425,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "08ecd4ec28002695b6beb2dcf9f0a9e58bbaba9a886959c6dfab0dbd11e191c9",
+      "sha8": "08ecd4ec",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "sam-template-builder",
+      "byte_size": 1241,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "09aed0854b0da385436c6da7e544440fddc44c174e5188248f64549dcf8e1bfd",
+      "sha8": "09aed085",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "instantly-multi-env-setup",
+      "byte_size": 5455,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "0a3f3faf3c1a098dd88b2d9c453e87e10ef918c72182e2556ea638280069e8e9",
+      "sha8": "0a3f3faf",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "deepgram-core-workflow-b",
+      "byte_size": 9003,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "0a5f5619fff80abb979bd8001199cd0e2258034df1ed292d67fb0680b0d6aec5",
+      "sha8": "0a5f5619",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "release-notes-generator",
+      "byte_size": 1300,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "0b97cac0126c4a81408e7f728b60bfd3e020bc046cd49c14044d1664d453ea97",
+      "sha8": "0b97cac0",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "lindy-install-auth",
+      "byte_size": 2563,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "0c9275e36726c91bbe4ebf50a9db306af5f7952858fed40ba748ae07c8007cdf",
+      "sha8": "0c9275e3",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "mock-generator",
+      "byte_size": 1186,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "0cb257b4d991e676bd69e690e400c438202c196a950a938370fbc3a6c49af8ef",
+      "sha8": "0cb257b4",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "slack-bot-creator",
+      "byte_size": 1272,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "0cecc34c1d2f100520163426b70ecf27962a02e3e4e5f381afcc5a8cea72dcff",
+      "sha8": "0cecc34c",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "scanning-for-data-privacy-issues",
+      "byte_size": 4180,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "0d6e8d1a62c859646ffc6c17c2201d67ba1bf7d8978a5a30c43ebaa42df5fc7f",
+      "sha8": "0d6e8d1a",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "clay-debug-bundle",
+      "byte_size": 3180,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "0d7f324954d6b8fa176e04bb5e3e68324db9fa0d387ef0fba64ad4f447d8e980",
+      "sha8": "0d7f3249",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "gamma-multi-env-setup",
+      "byte_size": 6237,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "0df5603329a327ccc5c2eca88cd41ca0dd1a11f7e70b1502680e886d1820f5c4",
+      "sha8": "0df56033",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "eventbridge-rule-creator",
+      "byte_size": 1289,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "0eb901c5576e1bdd7a041fe360554603b9a3f01614d6bc700db734fccd77eaad",
+      "sha8": "0eb901c5",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "gh-actions-validator",
+      "byte_size": 2722,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "0ffe7ba824b7c18b5246ec41d4899b34c642aac39929333b1082259bf74cb36d",
+      "sha8": "0ffe7ba8",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "firecrawl-policy-guardrails",
+      "byte_size": 6619,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "1022196f478dbe706b318bb97617003beed49a69180155945b4ee350cacb845e",
+      "sha8": "1022196f",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "error-mapping-helper",
+      "byte_size": 1261,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "102c8826ce9951c4b5c756180fadbf399d210665571324d585822906830a8cfe",
+      "sha8": "102c8826",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "replit-ci-integration",
+      "byte_size": 2863,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "1120b3769e2985cefb3d25be981b1f914abeba57ae079b83c20c666c164fa9fe",
+      "sha8": "1120b376",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "brand-guidelines",
+      "byte_size": 2235,
+      "license_spdx": "Apache-2.0",
+      "license_source": "/Users/gwanghoon/.agents/skills/brand-guidelines/LICENSE.txt"
+    },
+    {
+      "sha256": "11ae4b43fb38d8ba809f4486c51f06c47be431234aaf4dbbb9cfdc2d6f347d0e",
+      "sha8": "11ae4b43",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "xss-vulnerability-scanner",
+      "byte_size": 1385,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "11e8672cf19a1ae15aaae5f8ec6d9e6afdd63eeda45afb242d598bfa9dbc9d2d",
+      "sha8": "11e8672c",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "customerio-upgrade-migration",
+      "byte_size": 6846,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "12038f59fe7df2361b281dce01b6fb87245e9c1ae3b4d972bb487390209df245",
+      "sha8": "12038f59",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "configuring-service-meshes",
+      "byte_size": 3488,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "12227ed092b3505b935940b79e9cce95b1f8e290cd3f1d66659ec1be6b473389",
+      "sha8": "12227ed0",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "instantly-reference-architecture",
+      "byte_size": 7247,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "1292186e2602aa66e23084354456f9c7f71765d0a3418a851c52e98604ee27b3",
+      "sha8": "1292186e",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "beam-pipeline-builder",
+      "byte_size": 1280,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "12b558b7ecd1515b85dfbab9b5e68e6e5ae4f6a7da2ad8dd31a608247a2fd7e0",
+      "sha8": "12b558b7",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "container-security-auditor",
+      "byte_size": 1364,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "138893b244558c91f5cb6c04f8e1a8ab48844cb94d143ed6883dde27fdfb1ef8",
+      "sha8": "138893b2",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "sentry-release-management",
+      "byte_size": 1806,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "146bfecb442f810a395e1e146fe26a75b4621f7bde0f9676cfec8c0ef48aa0de",
+      "sha8": "146bfecb",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "linear-hello-world",
+      "byte_size": 4314,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "147931c7906421e07f26773b28c19c41812ff4d0bab37d9a659074d8ed5bb061",
+      "sha8": "147931c7",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "model-export-helper",
+      "byte_size": 1259,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "14cf74c522f73874092c068c09e0c11c7df4ecd9d62d31a762b26f18524acda5",
+      "sha8": "14cf74c5",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "exa-ci-integration",
+      "byte_size": 2782,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "1534108e71687af7ca09e1a15a94eaf20f038072a65f9d9916a51534ef464a91",
+      "sha8": "1534108e",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "groq-multi-env-setup",
+      "byte_size": 5285,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "154320b6da081c1a7506c34539640a49f5ddfb699a897d21183b2f7c6c37f3bb",
+      "sha8": "154320b6",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "gamma-performance-tuning",
+      "byte_size": 5270,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "159007068c73d46f28622a299784541d3a340fa97a64e2e17e1bb0653c08288f",
+      "sha8": "15900706",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "gcp-examples-expert",
+      "byte_size": 1166,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "15b5ee50349f72802906b4a36b38e9e5ab300b80409b71b972fd955d0aa983ea",
+      "sha8": "15b5ee50",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "orchestrating-multi-agent-systems",
+      "byte_size": 2270,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "15b74f6054dd96c017614ee5210004f647ce224a6ac2c47da1d83570bd04eb81",
+      "sha8": "15b74f60",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "replit-debug-bundle",
+      "byte_size": 3232,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "16233656c6cf35a7b85cdd33f0d05bcfaff7609d61c32b26bfa8201e592408d2",
+      "sha8": "16233656",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "providing-performance-optimization-advice",
+      "byte_size": 4677,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "1699984e76312757c6b9744fb68d09d6729a5f1cdb2e0bb17dfa98433e194a0b",
+      "sha8": "1699984e",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "context-compression",
+      "byte_size": 12344,
+      "license_spdx": "MIT",
+      "license_source": "/Users/gwanghoon/.agents/skills/context-engineering-collection/LICENSE"
+    },
+    {
+      "sha256": "16cd0a8ac39e82cc01f2b3bd70cff07cce3c2d0daf3e5071a93c72271369784d",
+      "sha8": "16cd0a8a",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "customerio-hello-world",
+      "byte_size": 3211,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "170944e3cedcb92379c4893e0c9de6bbd6a9d83fc4961b4d2cd83f32fbf9f8ea",
+      "sha8": "170944e3",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "dataset-loader-creator",
+      "byte_size": 1304,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "1767d89eaea8a5b035cfe5f4599d907c2ff85d9a9e14e4e9b241aae75795af64",
+      "sha8": "1767d89e",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "coderabbit-upgrade-migration",
+      "byte_size": 2882,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "18a985e14ad2fbabe5f523b346995c155ebb1c2078e53bda963910a42055a3cd",
+      "sha8": "18a985e1",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "granola-debug-bundle",
+      "byte_size": 5139,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "18dc99687bf190f78b03ad4168b7d8a4f25190170a4ef7382a5bfca08e877ee6",
+      "sha8": "18dc9968",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "windsurf-advanced-troubleshooting",
+      "byte_size": 6902,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "1906c761eb8fa8d18e6e77afff1b430c4c5f706dbf8c906ae95276d81b7271b7",
+      "sha8": "1906c761",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "supabase-observability",
+      "byte_size": 1685,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "193e79128c30ddd16dcefbd60522b5f5d73115c7ab287959f49a9d1eed002fbe",
+      "sha8": "193e7912",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "book-sft-pipeline",
+      "byte_size": 14252,
+      "license_spdx": "MIT",
+      "license_source": "/Users/gwanghoon/.agents/skills/context-engineering-collection/LICENSE"
+    },
+    {
+      "sha256": "1ab655433fe7a0da3addd28bebb668867f03a828c5693c19e2103e51abfeb16c",
+      "sha8": "1ab65543",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "status-code-recommender",
+      "byte_size": 1290,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "1ae10bc0f05c0d9f964799a36bb51f9c79f6141d099380eee5caf4b176fe0590",
+      "sha8": "1ae10bc0",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "ab-test-analyzer",
+      "byte_size": 1219,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "1bbae27e39cde46b4a4b208eae8f454938eef74787c02964ea07085f0fa1c609",
+      "sha8": "1bbae27e",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "posthog-local-dev-loop",
+      "byte_size": 3008,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "1beb7fb18b7d595e7090192c9e717d074186da361012e5dac4d8ee96df9c61cb",
+      "sha8": "1beb7fb1",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "supabase-reliability-patterns",
+      "byte_size": 1659,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "1c281164ece1dcc7bb672dd9e6071aaa497837473c44b50f1970cd789deb8d1e",
+      "sha8": "1c281164",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "memcached-config-helper",
+      "byte_size": 1322,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "1c8dbbb7bbaf76790edd5781a25d349dcce03daf12eeaa9df3ba9f7d49de8971",
+      "sha8": "1c8dbbb7",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "fireflies-prod-checklist",
+      "byte_size": 3649,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "1d375e80d465342543943a100dae352991968686d98e17f39b34328e7c6c93e8",
+      "sha8": "1d375e80",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "perplexity-cost-tuning",
+      "byte_size": 5084,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "1d6e05272f055ee785f181f1205698af851f244b58ec3474c4463a209056d5b9",
+      "sha8": "1d6e0527",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "retellai-observability",
+      "byte_size": 6150,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "1d9053faf8340d7419c904c3675248bbbcb395831943995b710143c1c85505e8",
+      "sha8": "1d9053fa",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "rate-limiter-config",
+      "byte_size": 1313,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "1e428862009058fff03963233289184d6d26574af8b7746f6613c82a63c9e327",
+      "sha8": "1e428862",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "deepgram-local-dev-loop",
+      "byte_size": 4152,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "1ee3c911a5c615c4f508e5611cb6e38548aba5ea12efb0c3e8838614cc6347b9",
+      "sha8": "1ee3c911",
+      "source_root": "/Users/gwanghoon/.codex/skills",
+      "original_dirname": "openai-docs",
+      "byte_size": 7315,
+      "license_spdx": "Apache-2.0",
+      "license_source": "/Users/gwanghoon/.codex/skills/.system/openai-docs/LICENSE.txt"
+    },
+    {
+      "sha256": "1f9fa09a5a53dae93a6c56251ea6160a3349436e064ed7b309d0fe9df80b5d4b",
+      "sha8": "1f9fa09a",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "data-catalog-updater",
+      "byte_size": 1268,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "1fdf6fc964d259cf419c6086f4e1be894d91f6fe5b31cc46344f13ca7fdd419b",
+      "sha8": "1fdf6fc9",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "environment-variables-handler",
+      "byte_size": 1372,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "2013d9f613690202a33c788fca46e4aaaf341a891679982bda3620aefafb8cd7",
+      "sha8": "2013d9f6",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "klingai-common-errors",
+      "byte_size": 3132,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "20b5bdae85f7dea814243fcc20e539e827c7c8e60f6ffe531712268b603bce5b",
+      "sha8": "20b5bdae",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "snapshot-test-helper",
+      "byte_size": 1258,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "215019cd658a34cda6dff67a35aefb54fb4a2dd2cfa57874e18cd2cfb997ff98",
+      "sha8": "215019cd",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "tracking-crypto-portfolio",
+      "byte_size": 6973,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "219757503f84684534b3efe5616822ad17e6dc5c6cad127e6b46033a429d38ba",
+      "sha8": "21975750",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "modal-serverless-gpu",
+      "byte_size": 8555,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "21ef0d568aed0166b820d60128a77d4d061ff65faf1688b63618ab81a6756cdb",
+      "sha8": "21ef0d56",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "exa-rate-limits",
+      "byte_size": 4388,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "222d5fd4a9d5d87098ef58bbc95e4dc73154dd9d7b6b90204b5708681fca88b6",
+      "sha8": "222d5fd4",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "exa-local-dev-loop",
+      "byte_size": 2904,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "22c83e0383215a7d153cfa15c8f3ebf6e82ba2b8146bd81f7c4861c6b06fa05c",
+      "sha8": "22c83e03",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "generating-api-contracts",
+      "byte_size": 2449,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "22d1c596bd8544fdfbc004ef97a7fe553726cb4422a9b1ba628adec1066e12f0",
+      "sha8": "22d1c596",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "supabase-hello-world",
+      "byte_size": 2590,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "250e99c0d2cf4379492dd3a5a30e647a641e21b9a6c164051ee19765872f1fad",
+      "sha8": "250e99c0",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "supabase-performance-tuning",
+      "byte_size": 1599,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "25c8bbc515dbc6aac65e86e9ab50dd327e4fc70cd4e66b6614532107b09b4144",
+      "sha8": "25c8bbc5",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "groq-performance-tuning",
+      "byte_size": 5052,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "26c383a0584a25975766ebd1361006af07e91e662a28dfbbf7cb1d793a9004b4",
+      "sha8": "26c383a0",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "tracking-service-reliability",
+      "byte_size": 3838,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "2767a286b6b3315eaace12639c0d9e0718f14691dea36b0fc92e1c85cdd9b159",
+      "sha8": "2767a286",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "groq-observability",
+      "byte_size": 5943,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "2a74bd2378857c520066fbe84fc0c6c556d0fa0b8c4afde1eab1c0abfb51ed8a",
+      "sha8": "2a74bd23",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "simpo-training",
+      "byte_size": 5916,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "2aacab6e1fe1671b83379ea8814f4c9ac6a9e3cd7362dd9d23634b29fc5d69dd",
+      "sha8": "2aacab6e",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "bundle-size-analyzer",
+      "byte_size": 1288,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "2af0e18847db4b3e8931ff7db5941e3992bcd56fdab3eaa671753af863e00b45",
+      "sha8": "2af0e188",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "polling-mechanism-setup",
+      "byte_size": 1297,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "2b1b438b9e214db49a4752e2a478804446f0233d82f2843644e7ee52c42ab217",
+      "sha8": "2b1b438b",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "conditional-request-helper",
+      "byte_size": 1326,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "2b93783ca7dcd647762d6efb833db0cb5ccd55040acba6bf36c6213566acff10",
+      "sha8": "2b93783c",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "exa-webhooks-events",
+      "byte_size": 5303,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "2c13a1637b90e91f8773106fd94b3be609062edc7dd375e9586f205e3df66f8a",
+      "sha8": "2c13a163",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "user-story-generator",
+      "byte_size": 1311,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "2c6525134b5086499e4eb2c689b951ae473d49b111d1067c45902135c3792878",
+      "sha8": "2c652513",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "pdf-generator",
+      "byte_size": 1224,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "2c7028001bf36a8a6bc1020d646a1fbad29c93f92f7706c437bde858e9616c71",
+      "sha8": "2c702800",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "guidance",
+      "byte_size": 14515,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "2d07d2b18868910d21cf2ab6a83b1b6f025d2f3f9dbe4d63cc81168f215267e1",
+      "sha8": "2d07d2b1",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "groq-data-handling",
+      "byte_size": 5579,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "2d8f0fa9c5f3e934df43dc7c1ba566077e2e7d4e0f9154d55a726c6fd62fadd4",
+      "sha8": "2d8f0fa9",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "context-engineering-collection",
+      "byte_size": 7754,
+      "license_spdx": "MIT",
+      "license_source": "/Users/gwanghoon/.agents/skills/context-engineering-collection/LICENSE"
+    },
+    {
+      "sha256": "2dccc6b88702a22c08edfe61a37d7a005f70912585ce7c791e1c20d64501f7b3",
+      "sha8": "2dccc6b8",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "gradient-clipping-helper",
+      "byte_size": 1328,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "2e7ef504fae4447a8d3b41d574f2210a2bedaa6bcc97d5af9136079914486ab3",
+      "sha8": "2e7ef504",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "tailwind-class-optimizer",
+      "byte_size": 1336,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "2f1f09ffa8178ff81860d37fc8c2cf35949494d2fe59e08fb59f01c2d5cbb1fd",
+      "sha8": "2f1f09ff",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "optimizing-prompts",
+      "byte_size": 4038,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "30568d99c7d9f2aba8cc140f920176bf762193e26ba9844f0528c450b369c0c1",
+      "sha8": "30568d99",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "checking-session-security",
+      "byte_size": 2364,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "307c7344c7f3a498ab23fd39fc3a8bb6ec5d23edbe9e73eabc88437a78c966de",
+      "sha8": "307c7344",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "iam-policy-reviewer",
+      "byte_size": 1280,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "3198a9e934f68cfdbd031c6aa83e88568d438e08a1463694cccad637667c1527",
+      "sha8": "3198a9e9",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "early-stopping-callback",
+      "byte_size": 1316,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "3304a799162e46012f1ebbf755b787bd68496eab747841e48d4e2f9e9e9dae9a",
+      "sha8": "3304a799",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "lindy-core-workflow-b",
+      "byte_size": 3964,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "331672b16ab12c0797b0e180b7252dbb889dc41ff2795a46ee2a03d4c719aa82",
+      "sha8": "331672b1",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "clerk-install-auth",
+      "byte_size": 3837,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "3353635a2e54619968a3c594cdec8b3e01d2c8afad601724e47d95c3a4f40a94",
+      "sha8": "3353635a",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "juicebox-rate-limits",
+      "byte_size": 5032,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "3385e19afb9ec8efcfa8fc6cb7a4c90275fbd64e8e9c4a182bde0941e4c1fc8d",
+      "sha8": "3385e19a",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "sentry-incident-runbook",
+      "byte_size": 1812,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "3394265cb2e83137d505c48369042df96d99bc487be19f72be12cdd31c55734a",
+      "sha8": "3394265c",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "replit-upgrade-migration",
+      "byte_size": 2774,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "3424c260bd8b00f2221a622c36949d4a6c0dc789ced1429623e1417b7710c054",
+      "sha8": "3424c260",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "dbt-test-creator",
+      "byte_size": 1220,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "345c31dbf5bd04382fdb39a04a34f897375d58a115cac2c74eb074a2df570f83",
+      "sha8": "345c31db",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "granola-enterprise-rbac",
+      "byte_size": 8664,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "347c73de1cc030506a8cdf2107367d25b85c22fb5222954825b44dccbd8de9f5",
+      "sha8": "347c73de",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "sentry-performance-tuning",
+      "byte_size": 1757,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "34aeb8593a133630b97e68705a7de5077f6052dd7cdca94c8043b53f9a26e829",
+      "sha8": "34aeb859",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "clerk-sdk-patterns",
+      "byte_size": 5416,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "34c8f8a4f945c75e5cb23e71366f7a25433769d55f3f2f16743dbc8289c38978",
+      "sha8": "34c8f8a4",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "agent-context-loader",
+      "byte_size": 1484,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "35343029941210db38b0305727569647d461f8ff9375afe84be99c89953eb698",
+      "sha8": "35343029",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "linear-security-basics",
+      "byte_size": 7262,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "355d37f1bf71302d6b688b48f976671df6b1119b832d461e6c73057f9f1a310b",
+      "sha8": "355d37f1",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "exa-load-scale",
+      "byte_size": 6298,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "3594efcb2da1536103c72780c1c0f097f35e65746b80239ca51815a675428201",
+      "sha8": "3594efcb",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "retry-logic-helper",
+      "byte_size": 1237,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "3639b01277ead0c53eb1da317dec690a979d4caf6e92428456993c412cb11842",
+      "sha8": "3639b012",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "request-interceptor-creator",
+      "byte_size": 1345,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "373f0b1973a013fbe75a95fed5d7c35c82e5582e4299beec6430d1a15f3722fd",
+      "sha8": "373f0b19",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "analyzing-liquidity-pools",
+      "byte_size": 5388,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "398a9da64f065fc9c2b24915677aec0e67637f442923d2253a26208d38b4fbf7",
+      "sha8": "398a9da6",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "customerio-security-basics",
+      "byte_size": 7812,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "3a0f6ca078dd54f67e321f03fa455594fc9aef3dfb151d158f510a8947d3daa8",
+      "sha8": "3a0f6ca0",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "runbook-creator",
+      "byte_size": 1257,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "3a45489baf49c375883694ec78d6a9b283533a352e8d47cf630332faff83a231",
+      "sha8": "3a45489b",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "qdrant-vector-search",
+      "byte_size": 13451,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "3bb5cd126841c213683b5ba47c92481862c466b3195a371cf25244048e376050",
+      "sha8": "3bb5cd12",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "linear-local-dev-loop",
+      "byte_size": 4846,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "3cb11360a0bb1429457f1965d40484fc55d82194a126a13aad7b54e837674b95",
+      "sha8": "3cb11360",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "password-hash-generator",
+      "byte_size": 1361,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "3d94a432c5564c16440a86c4b9d926f799f51d762fa9f97fd62df2eba0142ddd",
+      "sha8": "3d94a432",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "gin-middleware-creator",
+      "byte_size": 1310,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "3ddcfb3b23ff02bd6a6809e0173df4df77c0fb8e04435bdfffa2c8246dd0ccb1",
+      "sha8": "3ddcfb3b",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "instantly-prod-checklist",
+      "byte_size": 3622,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "3e317bc7eb1c701a0187cbbeeaaad939ce758afb7447bd1502a8e33e228c4ff4",
+      "sha8": "3e317bc7",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "nextjs-server-side-error-debugging",
+      "byte_size": 4122,
+      "license_spdx": "MIT",
+      "license_source": "/Users/gwanghoon/.agents/skills/claudeception/LICENSE"
+    },
+    {
+      "sha256": "3e34bc08d5149a25acfd5a8809409865faae1f532d8f9c941f6afd2c45f4369f",
+      "sha8": "3e34bc08",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "granola-reference-architecture",
+      "byte_size": 10273,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "3e4ec7e92f788c9407eb9d5d2b6225084851507861cc1bb9d144c3be62492efe",
+      "sha8": "3e4ec7e9",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "clerk-data-handling",
+      "byte_size": 10550,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "3f74e0766c6e0ee0cb102d9f9b66936ed8106f5ab3514216e7dfb18223ca94e7",
+      "sha8": "3f74e076",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "lindy-security-basics",
+      "byte_size": 4757,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "3f78c59152b28a8566536583a85f0aad415126a01dc30a0fae6d40c94203eb53",
+      "sha8": "3f78c591",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "sentry-policy-guardrails",
+      "byte_size": 1814,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "3f9efaebd7331bea86022a101329074c6eab8af2d33591e691c565fcba641a5f",
+      "sha8": "3f9efaeb",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "audiocraft-audio-generation",
+      "byte_size": 16308,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "404ccad087e828ec2d924581e1f5c15788622c6a043e009e302b00b0fdbad5b3",
+      "sha8": "404ccad0",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "gamma-enterprise-rbac",
+      "byte_size": 8771,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "40a46f5b3a1c99f528ab734e5274d904b2b36df7e4dbd2a755d197690b9544a3",
+      "sha8": "40a46f5b",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "perplexity-deploy-integration",
+      "byte_size": 4896,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "42174d9f5debdcdd12266279a0dcd77d5441348df279c702f8c553bde8a96e9b",
+      "sha8": "42174d9f",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "analyzing-on-chain-data",
+      "byte_size": 2327,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "425fc80c8234b1450d27052ee724b2e8992f9b58e2de7428da36f392de4ddd10",
+      "sha8": "425fc80c",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "ideogram-core-workflow-a",
+      "byte_size": 1510,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "426fd8efdd6296c9d70d18d8b2259b3848568eedeae3d8fcdada4295a6d69918",
+      "sha8": "426fd8ef",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "exa-sdk-patterns",
+      "byte_size": 3591,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "427d9d96f40fd83c2fcf42f50e74934f97a06abada623bd2ac6604655a4296a0",
+      "sha8": "427d9d96",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "contract-test-creator",
+      "byte_size": 1270,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "42a740ffe541e8a296d9f0530acf36d4b810eab13f2685c002744899f25997e6",
+      "sha8": "42a740ff",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "clay-migration-deep-dive",
+      "byte_size": 6826,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "42e6ce577b34e7a9a9406b75b1f1301d3b50ca293e246e2eab40841f01274cbb",
+      "sha8": "42e6ce57",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "supabase-architecture-variants",
+      "byte_size": 1675,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "42eb849add130cbfe2b9b4e71537b790cf00e5153f83e9ae6af0fb3b9d271a34",
+      "sha8": "42eb849a",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "apollo-migration-deep-dive",
+      "byte_size": 14884,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "43e60e25c6e5938640eb186e0aaee07e1739d2f731f11c7f06c327b12a7f0db8",
+      "sha8": "43e60e25",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "excel-variance-analyzer",
+      "byte_size": 2044,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "43f27aa1d5e7e92273e29c59a328263317f805be9f7a3f3aa4a80f8cfb0a21fc",
+      "sha8": "43f27aa1",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "data-story-outliner",
+      "byte_size": 1255,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "4470ad5027b59befbc2fc8eee79214d6d37094ea42f4a63311e55abaabbed866",
+      "sha8": "4470ad50",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "vercel-prod-checklist",
+      "byte_size": 1155,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "4525c0c9304dace11f28c1c6a6cae8da603b16cfcfc63cc8c2146f1a85fd2190",
+      "sha8": "4525c0c9",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "feature-importance-analyzer",
+      "byte_size": 1364,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "453595f03f002c8f428f268f51e136f89c80cb5a8b47bd786dd2fbfb9608bf3d",
+      "sha8": "453595f0",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "database-documentation-gen",
+      "byte_size": 4938,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "453e4db87b6fafd651bc2ad416da2f573104d6d09678c6d5a51f441c56e3ead9",
+      "sha8": "453e4db8",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "bigquery-view-generator",
+      "byte_size": 1282,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "455281e44e070c5743093ab2bed50a0748ef8edde839d35c1f662a16fee3e78b",
+      "sha8": "455281e4",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "langchain-deploy-integration",
+      "byte_size": 6909,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "45eb81928a38280989ee7a0e14d04441df13c1099b439301bc40ebe963ff4d1d",
+      "sha8": "45eb8192",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "retellai-core-workflow-b",
+      "byte_size": 1529,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "45ef0782f3f6649646982ca1f05d88260db786d0d2263c35b74139adfe6b53ab",
+      "sha8": "45ef0782",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "groq-deploy-integration",
+      "byte_size": 4620,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "46445fd957a358b8ad4b17957bd1624dc63a9fba599492228216a41e1fb23a36",
+      "sha8": "46445fd9",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "replit-hello-world",
+      "byte_size": 2287,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "46ae26ef089551b5742245c80fd14f49fe172ad5dfbf3d7514582d426a107008",
+      "sha8": "46ae26ef",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "spark-job-creator",
+      "byte_size": 1232,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "47174e7f6cae67e6344ef554d3f80c27ef1667d3f229d5c67c4281025c9c920f",
+      "sha8": "47174e7f",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "modeling-nosql-data",
+      "byte_size": 4854,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "47b1d10f419a51a400010bcd80d99a8bdb5c4510fc3e57fe9bc9be7efa6a48f8",
+      "sha8": "47b1d10f",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "sentencepiece",
+      "byte_size": 5632,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "47b8fb4d8ea267d20f2cff529b9d66472771337c7166aef7e9dbe8edcd68e8e6",
+      "sha8": "47b8fb4d",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "supabase-security-basics",
+      "byte_size": 1109,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "47ffe35ba882da7dfdf8f69d82918f8a1672e17db1017f5cb94a617a49059f20",
+      "sha8": "47ffe35b",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "ideogram-performance-tuning",
+      "byte_size": 5176,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "48520a19641f4b4c3ed4a1992df1912ea305767e65176cbd2a32eab5884f795d",
+      "sha8": "48520a19",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "apollo-hello-world",
+      "byte_size": 3956,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "49d9d9b5015fa7067d6b5751e7f386c6bada99656e5cd7536ae9200f24d4e8a8",
+      "sha8": "49d9d9b5",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "instantly-deploy-integration",
+      "byte_size": 4850,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "4aaa41924d2f21318ff7486306c1925e6f224893395a5812bd6da87a5a0c2c19",
+      "sha8": "4aaa4192",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "bdi-mental-states",
+      "byte_size": 10090,
+      "license_spdx": "MIT",
+      "license_source": "/Users/gwanghoon/.agents/skills/context-engineering-collection/LICENSE"
+    },
+    {
+      "sha256": "4b03183530acd3aa1d4415cfe082d66f8432551e073eabd1614c4bb6851826e0",
+      "sha8": "4b031835",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "bigquery-ml-model-creator",
+      "byte_size": 1306,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "4b16c070da9966e3e71a8f5324d7b1b2d4ddd68a3df8b27305b1a19b841f62b3",
+      "sha8": "4b16c070",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "autogpt-agents",
+      "byte_size": 9304,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "4be07badb515050c9691b4f8cba37ac23064954e56ba579ebbc95e2afd2411b2",
+      "sha8": "4be07bad",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "css-module-generator",
+      "byte_size": 1288,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "4cfee2aa112675ec2c8c38795dcd584554ff342979eee6f7fe8e52efd554dcdf",
+      "sha8": "4cfee2aa",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "invoice-generator",
+      "byte_size": 1272,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "4de3826a023cfd463e3521c9f5d863ca966221c32a83005960467002fd5b43af",
+      "sha8": "4de3826a",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "groq-webhooks-events",
+      "byte_size": 5338,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "4eac977496627ac3d0c81aec766e14c8d0c663e5e218b080647906b84c5e8e59",
+      "sha8": "4eac9774",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "flask-ml-api-creator",
+      "byte_size": 1271,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "4f12dfb93fb167d2d4d7fbe34854fd932866e75389cf97410cc0558aa8d1cfbc",
+      "sha8": "4f12dfb9",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "migration-guide-creator",
+      "byte_size": 1353,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "4f3e7f255eace7ca78d67b9888eb252dafbd35cef614dc58674f2bf8eac77ee7",
+      "sha8": "4f3e7f25",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "keyboard-navigation-tester",
+      "byte_size": 1360,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "4f4ab71db393d9a031b9d231886e5a49a1faa4bf095136825f51e3476e7ef190",
+      "sha8": "4f4ab71d",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "webhook-receiver-generator",
+      "byte_size": 1333,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "4f612c8f16c65481f115e4883a9ffec7fa0487604fc2f8fa788deb7b4339c994",
+      "sha8": "4f612c8f",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "apollo-performance-tuning",
+      "byte_size": 9481,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "4f6b700280f6396661d8f94a764a9e8153dbfa81a037b7cbd0bf9d8b98de8168",
+      "sha8": "4f6b7002",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "context-fundamentals",
+      "byte_size": 12137,
+      "license_spdx": "MIT",
+      "license_source": "/Users/gwanghoon/.agents/skills/context-engineering-collection/LICENSE"
+    },
+    {
+      "sha256": "4faf67e5441ce5675fc30f5fa4db6171cc705c7be0696098bd3b5ee830db7baa",
+      "sha8": "4faf67e5",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "windsurf-sdk-patterns",
+      "byte_size": 3771,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "4feba64227f6db505044663cd5432bf9c0599c5c8984d94d3b2d1598711a1f80",
+      "sha8": "4feba642",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "hqq-quantization",
+      "byte_size": 11466,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "506fb6249a25d2ce4d48e6d26e82227d0bf9432e622b2ff66cee1c52efab8703",
+      "sha8": "506fb624",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "replit-core-workflow-a",
+      "byte_size": 1482,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "5279c5f006a66d68924f64948cfce2165449f413198bf991889c0fc571615173",
+      "sha8": "5279c5f0",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "apdex-score-calculator",
+      "byte_size": 1306,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "52debfb3e00c2368437a49d097e68ad13e8cafc2102b6add5e80b0420a39f180",
+      "sha8": "52debfb3",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "deepgram-migration-deep-dive",
+      "byte_size": 16490,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "5310bc49a9d4ac6af875e9ffb16f5af4181712ee2d0e2475df1fd4fc428e1962",
+      "sha8": "5310bc49",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "fireflies-multi-env-setup",
+      "byte_size": 5482,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "536e75d4c238e659ba314d122c2e2d17dea1a5c9bf4d05c4f15c19836dd57852",
+      "sha8": "536e75d4",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "lindy-migration-deep-dive",
+      "byte_size": 10188,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "5370ac700454e2d8caffd40a964c2364e5774c7ca793f8bae1f7d38afb023db4",
+      "sha8": "5370ac70",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "evaluating-machine-learning-models",
+      "byte_size": 3495,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "538c97824a988d75ae1933d6b107b773668b2841dd137b90b51f78ecc0698d3b",
+      "sha8": "538c9782",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "instantly-observability",
+      "byte_size": 6178,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "53d7a18269448cf960ba0a4b5151aba5a2b447060eb6771cf888f4d970918169",
+      "sha8": "53d7a182",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "manim",
+      "byte_size": 4735,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "53f1665b2d82f45ff3462b7fb4f4fc3b41b85bf35c87011573c301d895b0e74a",
+      "sha8": "53f1665b",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "managing-network-policies",
+      "byte_size": 3884,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "54385da785d46efa82ba80b73d0f50b6bf07e64aa5756698fa59e8de040a558a",
+      "sha8": "54385da7",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "replit-common-errors",
+      "byte_size": 2284,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "54d9614caddf3a6e9ff6a71d816420b96560892f033bbef1a1ac639914d671a1",
+      "sha8": "54d9614c",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "supabase-rate-limits",
+      "byte_size": 1150,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "55bcd4f18fac2e5c1e40b0663bb20a1f8a2d81dfed1eb392dce2423c1c77107b",
+      "sha8": "55bcd4f1",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "openrouter-pricing-basics",
+      "byte_size": 1656,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "56310edd5d8431226fc87982ee52f0fddb239c91484a0651482cc857ce7705bd",
+      "sha8": "56310edd",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "reminder-system-creator",
+      "byte_size": 1344,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "575accf4cdb8c823c8f4bbdbb33cf5b552c819dda090cd3d81e549ca6f3c4008",
+      "sha8": "575accf4",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "openrouter-prod-checklist",
+      "byte_size": 1710,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "579f2a03d7886e9f8b86dc4897ad52b68df19c66aa73ae063fe2d6d0e206217c",
+      "sha8": "579f2a03",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "cursor-debug-bundle",
+      "byte_size": 1720,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "57e33c8abe111c3e30e69908f3b477dcf246dba24f5fac78dd838a1c77af64eb",
+      "sha8": "57e33c8a",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "running-e2e-tests",
+      "byte_size": 3578,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "57eaf97e982fe758b6fd0ef2281b6961940e4a1c8258f303b0ce02d55d0636c6",
+      "sha8": "57eaf97e",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "serving-llms-vllm",
+      "byte_size": 9026,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "5805bf6b5c298964a1c0c544050aa9a8528e176fd6200834aed40f98c7bfcf9e",
+      "sha8": "5805bf6b",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "managing-database-migrations",
+      "byte_size": 4925,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "58f6daffe675088b8c6b6a1e0865e7cbdb28e38460c80a6b00ca9fdbfdc43c94",
+      "sha8": "58f6daff",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "juicebox-data-handling",
+      "byte_size": 9371,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "59c505090cccfc08ad8f9994788ae758257c942684d40feac4be22f0e1ff4cfe",
+      "sha8": "59c50509",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "monitoring-cpu-usage",
+      "byte_size": 3638,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "5a0ca43ccec0783bbef14b5531e7be051cb381b9c3221b711a780211ec2308d8",
+      "sha8": "5a0ca43c",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "cdk-stack-generator",
+      "byte_size": 1229,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "5c49d9dc37cafe4fbf5a2d99d78310f2707055551d4e780287bdd6ccaa1d23b7",
+      "sha8": "5c49d9dc",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "quickstart-guide-generator",
+      "byte_size": 1389,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "5d9610dfbbf1867832806f82431e7085661e98163168b93039463337dddae889",
+      "sha8": "5d9610df",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "prisma-connection-pool-exhaustion",
+      "byte_size": 4736,
+      "license_spdx": "MIT",
+      "license_source": "/Users/gwanghoon/.agents/skills/claudeception/LICENSE"
+    },
+    {
+      "sha256": "5dacd63372e38857bf639e8e4e661586cbc1644e496029bc82beb28f54fe199d",
+      "sha8": "5dacd633",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "encrypting-and-decrypting-data",
+      "byte_size": 4250,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "5e64ad2cec71a8866d9e8ca7861a56e5cfdbe57289bc305752c20a14230e80e0",
+      "sha8": "5e64ad2c",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "groq-reference-architecture",
+      "byte_size": 6957,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "5f5b132521fa284c9b9b486b6ae87574fc55c84b73b99da5dec4eecd5a6ff1d1",
+      "sha8": "5f5b1325",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "plotly-chart-generator",
+      "byte_size": 1284,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "5fb36cd079b7ad14bde9f3a68bd9e291f6d60ef2ae89744fb08e7364b296ed63",
+      "sha8": "5fb36cd0",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "https-certificate-checker",
+      "byte_size": 1385,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "605086c16380d5958a0b84403135ae0008a8a7e4339d0d61e7dc106a262b85e7",
+      "sha8": "605086c1",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "batch-inference-pipeline",
+      "byte_size": 1319,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "6139664431306db1530ebfeaf1f62147db35850ce347af082bec649f370ff825",
+      "sha8": "61396644",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "apollo-security-basics",
+      "byte_size": 8470,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "6205178450a659916db66082119cc0102119759c048c2d716fd8a3495ee5b33d",
+      "sha8": "62051784",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "juicebox-webhooks-events",
+      "byte_size": 5881,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "628f7faf0b3cfac3837daeff8e5ac1ff669c52eb8fdba293dee0ed001bc88913",
+      "sha8": "628f7faf",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "clay-known-pitfalls",
+      "byte_size": 8001,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "629ac5e358fe07afb2be6a6be67bc16f8fa7806af6e8ba1bb6ce850f65f0d104",
+      "sha8": "629ac5e3",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "retellai-webhooks-events",
+      "byte_size": 5495,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "63a93940eb3875c9739c75e60aff44819ac9548d40c7f4fd27858c8e61ec267e",
+      "sha8": "63a93940",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "scanning-for-secrets",
+      "byte_size": 3968,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "6432bc1355d713156b0e7eef30717f9bcf75ab0f2b86bbcd71c633d52a3b589b",
+      "sha8": "6432bc13",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "windsurf-debug-bundle",
+      "byte_size": 3284,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "64715c8b057bb5f23091369937326caf349c2c1d8b5755be266e7b4ec4f1bba1",
+      "sha8": "64715c8b",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "windsurf-data-handling",
+      "byte_size": 5703,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "6483dbb3f153d4e18911239ff1a23cd0fa13b7e798d1befa3d55eacd7b9f4d02",
+      "sha8": "6483dbb3",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "ideogram-upgrade-migration",
+      "byte_size": 2828,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "64b3e8f16b5bcb2eb7eb079652247a983870625f68b777dfcfdfd34e909b8b2e",
+      "sha8": "64b3e8f1",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "gamma-security-basics",
+      "byte_size": 4208,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "64b9aa0588c523d924522aa3027529cdd678ed67cebbca7d705d2c3b89273341",
+      "sha8": "64b9aa05",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "clay-sdk-patterns",
+      "byte_size": 3627,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "66f428d229cee15224c6ed8252b327316c0bcbccb8ff3c5418d20ffbda7487fd",
+      "sha8": "66f428d2",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "certificate-lifecycle-manager",
+      "byte_size": 1400,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "67042fd717dc1c7f5ee7c3a62625dd0e0b3838c6f82e80b0f50331b3614076de",
+      "sha8": "67042fd7",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "replit-core-workflow-b",
+      "byte_size": 1495,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "68940b756689c16920b0d89b0939904cee88b9177f3714021f4e05936ba0e99b",
+      "sha8": "68940b75",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "exa-incident-runbook",
+      "byte_size": 5145,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "69b0566e8d749acdad2a805ed6980947e5458c96b41bd405e520f2006ff0e7fb",
+      "sha8": "69b0566e",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "pinecone",
+      "byte_size": 7827,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "6a1650afde66a11e682057ae866c9d5a160769b72dcc5e4ae40bab79b8189d41",
+      "sha8": "6a1650af",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "lambda-function-generator",
+      "byte_size": 1301,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "6a8740834f2a576249e4e06564216da2a6c870f20158d9979306c127f88a6018",
+      "sha8": "6a874083",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "retellai-hello-world",
+      "byte_size": 2359,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "6ae27496eef2f3673f17e5fc346dfcd3dda3f93a17a2f289d54a51867ffbdb98",
+      "sha8": "6ae27496",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "vastai-debug-bundle",
+      "byte_size": 3241,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "6c37deee3597b31e664830bbdf30007626fa26a02bcb87538b9aa46683ab9ccc",
+      "sha8": "6c37deee",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "apollo-ci-integration",
+      "byte_size": 9959,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "6cf3e4f10c07eb3636a6917fc764cd57a225d66eb236125e8b940d846ff2b0f9",
+      "sha8": "6cf3e4f1",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "vercel-architecture-variants",
+      "byte_size": 1651,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "6d6035941c2c3c61555bf142fe9e33621d07a6219149aed2d224111e5ad93b6b",
+      "sha8": "6d603594",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "windsurf-multi-env-setup",
+      "byte_size": 5421,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "6d78a68a527d6924f7ac841b5289834a6130e4093a98e8ffba89f1f19e34a8e2",
+      "sha8": "6d78a68a",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "genkit-production-expert",
+      "byte_size": 1272,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "6e2646a78278221a95c240910c0ec3cce47d6e7a4c76107769368128a9c2d7f4",
+      "sha8": "6e2646a7",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "perplexity-multi-env-setup",
+      "byte_size": 5489,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "6e69257341b9ee01b22a46905e93f6fe2339b9f8147c7f77da46be7b366b6556",
+      "sha8": "6e692573",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "training-llms-megatron",
+      "byte_size": 9706,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "70b9ab8725d9b111eb3eb4846c96db80e2b5feb42567069bbb2a4b70c226291b",
+      "sha8": "70b9ab87",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "plugin-creator",
+      "byte_size": 1030,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "710909cee21998152e0fd0d22e0e3b5b8bac12c360a363f6266df44aac2a93b3",
+      "sha8": "710909ce",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "exa-core-workflow-a",
+      "byte_size": 1440,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "7169b7a0fc4196678e903146780e5f0b91aa62c12947afea56dd881c574e8766",
+      "sha8": "7169b7a0",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "klingai-webhook-config",
+      "byte_size": 1632,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "720d770164ddc7be600bfea4afe4b8f163fb187b2c4391c611af1686e253855a",
+      "sha8": "720d7701",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "groq-debug-bundle",
+      "byte_size": 3180,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "7221e4f9043e662234432b523f1a8420dba5fa9f6d9305f25c9756ba780d3547",
+      "sha8": "7221e4f9",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "juicebox-enterprise-rbac",
+      "byte_size": 9415,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "724f8f3b9ae83f8d66a54c8b937db6a35d6acd028a941d71a07f7b1d91494793",
+      "sha8": "724f8f3b",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "vertex-ai-deployer",
+      "byte_size": 1247,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "73350228ae6eea5d47685db3311c6c69ea4ca7e871f2d382dd523b0b847ed6b2",
+      "sha8": "73350228",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "spark-sql-optimizer",
+      "byte_size": 1256,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "73e9b00b625b45f340b898930bfee1a1787705f861911d837cc0373539bf91e9",
+      "sha8": "73e9b00b",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "cpu-profiler-config",
+      "byte_size": 1270,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "75044fdb65bf666dfbbd6dcf78a1c974bb0c89c0d166d612fd249e1547d0e45b",
+      "sha8": "75044fdb",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "airflow-dag-generator",
+      "byte_size": 1280,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "753f3da055e63d4344bb98ec02e02872c40e37c8ff3b49f43fcf1ca907e6c461",
+      "sha8": "753f3da0",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "klingai-install-auth",
+      "byte_size": 1694,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "7569ba5b91ba1d39016514f9b2e6a0924ccb9c11fdc4b83970fa37b2f73cb44e",
+      "sha8": "7569ba5b",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "gamma-prod-checklist",
+      "byte_size": 4370,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "7632344e37ca097b28502aaafeeb066c5f247a7649454f724579e35b94ae38c6",
+      "sha8": "7632344e",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "openrouter-team-setup",
+      "byte_size": 1684,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "766625b1a1cf0203aa7a3e02410d4fb061b280e0bc46a0a755440d068feda795",
+      "sha8": "766625b1",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "klingai-pricing-basics",
+      "byte_size": 1552,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "773c9ae9b8e3fb9a0b331c2f89bcf8150c8aa3f289421afc3210e519dad35032",
+      "sha8": "773c9ae9",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "tracking-crypto-prices",
+      "byte_size": 8372,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "77996c6333b1fd50bc9e03231e125e22e267de9175b72822bfdecec8cab2fd0e",
+      "sha8": "77996c63",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "cursor-prod-checklist",
+      "byte_size": 1773,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "7865f485174cf7bcbc2a26601d1b84f002ecea27767cc7fe7d6c68ed88512a24",
+      "sha8": "7865f485",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "sentry-reference-architecture",
+      "byte_size": 1844,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "78a33d532a7db74f0f0b324444b90c0a741f42ea9a2993d4667afceb708a4eb9",
+      "sha8": "78a33d53",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "openrouter-common-errors",
+      "byte_size": 1673,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "79a494b9212c73810d53527800c69f80acd6aa1907fca8c614c69583cac76e89",
+      "sha8": "79a494b9",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "faiss",
+      "byte_size": 5048,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "79e154054cc6ae4ba9b7c92f07135181ae3f1f086749fec8c4424eac9aac1c85",
+      "sha8": "79e15405",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "analyzing-dependencies",
+      "byte_size": 4576,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "7a0b734ad9e4d3a5c74a02a075cb1e07dd3139c91f0d2d97738d74a98f8313b3",
+      "sha8": "7a0b734a",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "replit-reference-architecture",
+      "byte_size": 7073,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "7a6a367b2d6ca9dccc07fd0e30f3e283be594acc12a07d4e3a4085ff2e160f55",
+      "sha8": "7a6a367b",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "juicebox-deploy-integration",
+      "byte_size": 5095,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "7ac0016c52f78591dcdd57ac4d620ccbb02857ce279399839fcdb493f99f98c0",
+      "sha8": "7ac0016c",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "granola-core-workflow-b",
+      "byte_size": 4302,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "7af0e236fe6a3fff6b6340bc1f1d28b1450e44f9cfaf729c6042dd0869344cd2",
+      "sha8": "7af0e236",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "groq-cost-tuning",
+      "byte_size": 4904,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "7bca4e497632197eca77f6ac6b19459d54b072f9d40bcb93c48a7aedaf56042a",
+      "sha8": "7bca4e49",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "hypermedia-link-generator",
+      "byte_size": 1314,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "7d99ec9499e4af9d273d54b9c74103120667eb2a98192915d6e31730a83b8574",
+      "sha8": "7d99ec94",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "retellai-architecture-variants",
+      "byte_size": 7422,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "7e73b44c97345fd7deecf383a840f3c17a7c12db5ffc900c96e707011f7c3200",
+      "sha8": "7e73b44c",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "running-clustering-algorithms",
+      "byte_size": 3936,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "7f65729ad0faa963e3ab3ba7a4b748c55ded74ec4545256dc318ef8ae0fae74a",
+      "sha8": "7f65729a",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "cors-policy-validator",
+      "byte_size": 1337,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "7f677eb4ff36d97ecbf56c7a88dfa079872e414d3c4c125a243d0d4caa1b0c7d",
+      "sha8": "7f677eb4",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "vault-secrets-integrator",
+      "byte_size": 1316,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "7f69d7844c8dfd479ce5f22d639772adfa1725f222fee8c654365942de4aa64d",
+      "sha8": "7f69d784",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "cursor-codebase-indexing",
+      "byte_size": 1840,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "7faf5e1e5e8ce6f54aea36dbedcc8eb91202e716a878ec2746f9ad3b86209a10",
+      "sha8": "7faf5e1e",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "langchain-upgrade-migration",
+      "byte_size": 6096,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "803df57780a85bbcf796a1856286ea2c41501646933f013b0e3166cc49cb7e2b",
+      "sha8": "803df577",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "granola-sdk-patterns",
+      "byte_size": 3866,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "80ae7f059e7ef5075bbcfa8b51c8260299e1fef1f919d5e1cc3e662580e29805",
+      "sha8": "80ae7f05",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "finding-arbitrage-opportunities",
+      "byte_size": 6474,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "81691a41744b27a888059349f2991f1ae34e9adfaf6a34b8bbc857dca303af02",
+      "sha8": "81691a41",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "posthog-install-auth",
+      "byte_size": 2236,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "816dce0d04b2e2ddc1510a5aaf3e545778f4c59f7329af689dc9941bbbebca37",
+      "sha8": "816dce0d",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "stable-diffusion-image-generation",
+      "byte_size": 12989,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "827d8293f616e2d57ba257830314ec518c3c144197c1d14a7a1cbcdfa9a0d7a7",
+      "sha8": "827d8293",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "cursor-hello-world",
+      "byte_size": 1676,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "82bf34a14f07f12b45ec8ddc90a18fbf42d35797b1c2a367e685aae23fc57767",
+      "sha8": "82bf34a1",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "retellai-core-workflow-a",
+      "byte_size": 1517,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "82d7eb6ecb373cdb4ebc219a04c3981b624114f18af94de68c5bf797c06d9cdc",
+      "sha8": "82d7eb6e",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "designing-database-schemas",
+      "byte_size": 4902,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "8430e08e183f518a3d3cd16e0dfc293fe5e0ef8022e6ecf6e4d6f6a3711703c5",
+      "sha8": "8430e08e",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "learning-rate-scheduler",
+      "byte_size": 1316,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "8443938d85ef598f28c10d620c963667c220b0e7c4ef2b965ca4a42c87475ff6",
+      "sha8": "8443938d",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "apollo-core-workflow-b",
+      "byte_size": 9242,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "84cf90a23e60770415da043f47cdc4b9dc9c5ed36d2f83c38a8f3b8007683fba",
+      "sha8": "84cf90a2",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "sentry-performance-tracing",
+      "byte_size": 1191,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "84f5d8093081ef22f330a240c616aac851ce5e3bdb435a471fbf4aa2bc827907",
+      "sha8": "84f5d809",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "docker-compose-creator",
+      "byte_size": 1288,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "851205ff44e2a7d39b8c69624508ac7a719232c41512462dff37e789783dc71e",
+      "sha8": "851205ff",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "setting-up-experiment-tracking",
+      "byte_size": 3743,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "853cd4c513a190888ef1c913b0a5e9e62a42d714932e0a2cc75f27b6abbfa0b0",
+      "sha8": "853cd4c5",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "langchain-prod-checklist",
+      "byte_size": 6165,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "86b54e48ab2b396a596cb3121d23ac469f2af2d7cbc5f507014583eac66c49cd",
+      "sha8": "86b54e48",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "presentation-slide-outliner",
+      "byte_size": 1344,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "86d86b5502a7ab950c34aebc5937ecc7c1a38fc92999709231261adecb935bec",
+      "sha8": "86d86b55",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "apollo-reference-architecture",
+      "byte_size": 12896,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "871a5c2160456c53f8e7fa9b98d2b22eab44d93957dccc1e8cb8d379bdb09a54",
+      "sha8": "871a5c21",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "klingai-compliance-review",
+      "byte_size": 1719,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "8750544035433d8642741a69ad7d76d0d594f00521192af5ae039b45c600a990",
+      "sha8": "87505440",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "retellai-ci-integration",
+      "byte_size": 2927,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "8866cc8cdb4afeca423d56dc577b3202c4c0aabf69a32007330dad431a828586",
+      "sha8": "8866cc8c",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "firecrawl-deploy-integration",
+      "byte_size": 4850,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "891b77bc09118393f9bd1235404ee3f0cf412f56e57dc4b454e2fbd8fd507bc3",
+      "sha8": "891b77bc",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "evaluating-llms-harness",
+      "byte_size": 11895,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "89eaffcf62f3cd6267248e689a854d3543059352bf4c94e842e2e46b839cf7f3",
+      "sha8": "89eaffcf",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "vpc-network-setup",
+      "byte_size": 1210,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "8a69b0ea37d27b55c9db9056c033d19c0b9f36f0dbcdc66870095812e035a7a9",
+      "sha8": "8a69b0ea",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "running-performance-tests",
+      "byte_size": 3583,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "8c2221b797e650a933800cfa45282a70caca20aaa85cbcece6e16acf1020dc39",
+      "sha8": "8c2221b7",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "deepspeed",
+      "byte_size": 144988,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "8c26fae99d8c8dae15b89314dd74cb31f631c4ccb7fcb04a99e575ef148e3122",
+      "sha8": "8c26fae9",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "vastai-performance-tuning",
+      "byte_size": 5129,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "8d04cc9988f0754f754414a80984af3730be7c79840b0bd012e4dad163b77763",
+      "sha8": "8d04cc99",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "optuna-study-creator",
+      "byte_size": 1280,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "8d447b536683b97d16bbf876b2105a5ef9967e81ed6d93439d97fd13e52d74b7",
+      "sha8": "8d447b53",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "windsurf-reliability-patterns",
+      "byte_size": 7212,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "8d5c9690f52980c6df47778d7d9fd5ecb86b21f55e67139d2bb425d1402ab0b6",
+      "sha8": "8d5c9690",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "apollo-core-workflow-a",
+      "byte_size": 7064,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "8db6a6a1b651d43d08c0eaa2e175c4f01ee93f420f495dfcd59b67ea6f72094f",
+      "sha8": "8db6a6a1",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "lindy-prod-checklist",
+      "byte_size": 4313,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "8e230830006990e0542e27761cd35f45ef38ff3538c595305fa32ee0df76621c",
+      "sha8": "8e230830",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "seo-meta-generator",
+      "byte_size": 1264,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "8e8f93a32918c84a66cdf679ff515fbdb235d648712404a84ae2a6ee0fda2d89",
+      "sha8": "8e8f93a3",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "coderabbit-multi-env-setup",
+      "byte_size": 5489,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "8ebb01df7459b98953929c5cf70c1f7332d156a26aac27460d485c4ddf0e081b",
+      "sha8": "8ebb01df",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "perplexity-reference-architecture",
+      "byte_size": 7305,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "8ecef600329b820712281e840bdb78f6df25aeb768f8a9f398431986c22b4140",
+      "sha8": "8ecef600",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "retellai-sdk-patterns",
+      "byte_size": 3782,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "8ef7e008a94165c87d699b96becc9c5349da2b5bbdfffef7ab24c9f2c38921d4",
+      "sha8": "8ef7e008",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "cursor-usage-analytics",
+      "byte_size": 1693,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "8fa50a0a664e4a3ecd633363168ff316562eabb7ac1343efbc6f8c2ccd220b4e",
+      "sha8": "8fa50a0a",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "posthog-core-workflow-b",
+      "byte_size": 1509,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "8fcfe1aa04523483c1d1a5aa10835bc796228d2de9a66460a767bf2d6ed7432e",
+      "sha8": "8fcfe1aa",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "notebooklm",
+      "byte_size": 9442,
+      "license_spdx": "MIT",
+      "license_source": "/Users/gwanghoon/.agents/skills/notebooklm/LICENSE"
+    },
+    {
+      "sha256": "9199a67938251c0c53ece33e8d3db8a0be041980fa617f45c74f6fefecf80f83",
+      "sha8": "9199a679",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "customerio-rate-limits",
+      "byte_size": 7683,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "92159c00f298a1839d5f9b2b9ecc728d98a401cf8f29507e8ad64b722656e744",
+      "sha8": "92159c00",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "discord-bot-generator",
+      "byte_size": 1320,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "92b03222b200ee07eb496c0f801758b6e51ab423f5041042ee3f53784d277d18",
+      "sha8": "92b03222",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "calculating-crypto-taxes",
+      "byte_size": 6631,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "93a46bafb18ab12009732dcd3924072a16905f316b15c5ce9874c38dfc72e59c",
+      "sha8": "93a46baf",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "pagination-helper",
+      "byte_size": 1218,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "94099a9c1a8a0cbe2d5f7902327f363163153c95615026f98a089421fcbca94b",
+      "sha8": "94099a9c",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "alertmanager-rules-config",
+      "byte_size": 1328,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "942ced5509a9121ad78ac7ff4e2106cf183a1cfe2fe086dea8ecb5d7367a5e25",
+      "sha8": "942ced55",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "juicebox-install-auth",
+      "byte_size": 2530,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "94f0ac3554806ad8b6369e45053a1995a8bcbb30f5506db99c443d1fec7eb0a7",
+      "sha8": "94f0ac35",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "mermaid-class-diagram-generator",
+      "byte_size": 1392,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "96a26bce0fe261c5315112e728dfe99bea0c830cc77505fd93503efd5d0b8248",
+      "sha8": "96a26bce",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "langchain-security-basics",
+      "byte_size": 6144,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "96b06304a6d480f5a104dbde8dc1a9fb85afd0a21fcc861993ec12663c8499f6",
+      "sha8": "96b06304",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "nginx-ingress-manager",
+      "byte_size": 1280,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "96ee5eb6a0538e0a95d9443012986d487b2c65606c3fe46f64b35ba3071e9bf7",
+      "sha8": "96ee5eb6",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "cursor-tab-completion",
+      "byte_size": 1735,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "96fc43427d14650ae01532de86f68b1246ff06a8d5fdc98552f7fbad2af82754",
+      "sha8": "96fc4342",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "train-test-splitter",
+      "byte_size": 1268,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "9834f6539f531d07f1426b1f3b5b7c113a0386fe9b1dccf59a33534f8e241d2a",
+      "sha8": "9834f653",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "cloud-scheduler-job-creator",
+      "byte_size": 1330,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "9a3183998457a246fb5db6df374ffd7ee1456d8f5118237c2a97682fee4e5782",
+      "sha8": "9a318399",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "a-b-test-config-creator",
+      "byte_size": 1307,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "9a95703a50c374189541ea1a2098c9adf13eded91a5a38075ee750956d13d76f",
+      "sha8": "9a95703a",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "sf-diagram-mermaid",
+      "byte_size": 14026,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "9bad5020f1c1eaec8c42382c07db95f5f17ef641496a47fcfaac7c6c3fabcf88",
+      "sha8": "9bad5020",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "firecrawl-known-pitfalls",
+      "byte_size": 8241,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "9c79d28c47db0e195b04b95dbe64f2fd52e93081be45de1288fce5940ec499ca",
+      "sha8": "9c79d28c",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "retellai-rate-limits",
+      "byte_size": 4469,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "9c9c7cadedad8cfb8e1bddeb8032af12bdad3f8880f55104e2bb2f750a255da7",
+      "sha8": "9c9c7cad",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "langchain-local-dev-loop",
+      "byte_size": 4612,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "9cc06fa8bb2660f2139d04fe9f168e23695dee7d0099c99bdca9dd695acf6242",
+      "sha8": "9cc06fa8",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "perplexity-advanced-troubleshooting",
+      "byte_size": 6972,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "9d1dc3fcb83bf0de14717e58c13f49989b2bc307b12febcf040ef9d28fedc0a7",
+      "sha8": "9d1dc3fc",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "lambda-labs-gpu-cloud",
+      "byte_size": 12153,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "9d3f78c6a91752bd2ebd434699b442a9c595e06ba42f117dbb8d8ac1b6e19cbc",
+      "sha8": "9d3f78c6",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "ceo-advisor",
+      "byte_size": 11220,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "9d89189d3239ef3b39cc6c42b497d8809e5380e4e92e5a97cc2c4a5daad59222",
+      "sha8": "9d89189d",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "customerio-webhooks-events",
+      "byte_size": 9572,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "9e9765abcb39e4d1fa83ebaa5b31dde3f5e6f72168dff01a5211f8c30b1d293b",
+      "sha8": "9e9765ab",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "security-group-generator",
+      "byte_size": 1289,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "9fcb83847eb8b4e08044812a39f7c7de092ee67ecc29b1edd07d8fcc5a2577f3",
+      "sha8": "9fcb8384",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "fireflies-enterprise-rbac",
+      "byte_size": 5703,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "a0e4da3e928d70fdb7edc2dfd6f7722be9fa705c4e2bbbf0a9e93a2d40a2254f",
+      "sha8": "a0e4da3e",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "rate-limiting-apis",
+      "byte_size": 2429,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "a2a9e5ddb38316c58ef941f6913f2962ca34cc6b0667628a2d0c0bec2cbaed3c",
+      "sha8": "a2a9e5dd",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "tracking-crypto-derivatives",
+      "byte_size": 8861,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "a332b6236b484914c24ea8988d1d0692f80149150cb7381686d011fcd0209e0c",
+      "sha8": "a332b623",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "juicebox-prod-checklist",
+      "byte_size": 4875,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "a366838966691014a3bf1e40e56c3aaade396a68949f8f4ed521e57a4f1efd43",
+      "sha8": "a3668389",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "clerk-enterprise-rbac",
+      "byte_size": 9498,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "a37a7afa85992b2f103070d3ee913471fb0783101c5442df1196e73c7455ba9d",
+      "sha8": "a37a7afa",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "sentry-migration-deep-dive",
+      "byte_size": 1693,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "a3db776cde4e8c676cb175082cbbf68ca02e3a8ddf1701eb7dd8686111e9cc14",
+      "sha8": "a3db776c",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "adk-engineer",
+      "byte_size": 3296,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "a40ab0de2cdec9338c69ae8378980e5186ac06eb029d65653df0143ddff3aa4d",
+      "sha8": "a40ab0de",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "generating-test-data",
+      "byte_size": 3598,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "a500932a3265c87ef256690e4a9ee9b7e6c9e8f4e80295e8d09f33e520a2405b",
+      "sha8": "a500932a",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "groq-install-auth",
+      "byte_size": 2137,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "a50ee24f1a34491e352e560882f2fb8e6c624503575552fa18cc5e011ff997df",
+      "sha8": "a50ee24f",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "klingai-storage-integration",
+      "byte_size": 1694,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "a5363bc000f672f26977f93df67e820c142c663a8b72e9339e465f900ae02861",
+      "sha8": "a5363bc0",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "ideogram-install-auth",
+      "byte_size": 2269,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "a55a3d2cb63bd040d35bdf39ba712ec955aef343c61908a231e36955100f2da3",
+      "sha8": "a55a3d2c",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "hyperparameter-tuner",
+      "byte_size": 1280,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "a5730b730baaf0aa772b55be8b987faef684f8a944b9aa1b7bba68f26753c9c1",
+      "sha8": "a5730b73",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "validating-api-responses",
+      "byte_size": 2444,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "a603d319831beb1e46efd9299532b2462ee0d0cf01d7aa8928bd21763a3d9760",
+      "sha8": "a603d319",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "llamaindex",
+      "byte_size": 14726,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "a67bc6c76f39e9f3622029065f8022291538508df4aec440aa46ebfaab725f7e",
+      "sha8": "a67bc6c7",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "api-contract",
+      "byte_size": 1221,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "a6a6977efd908c1eb47bca6c8506dbbdfd5f2b2d9748f97139a282f5cd1ba76e",
+      "sha8": "a6a6977e",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "exa-known-pitfalls",
+      "byte_size": 7953,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "a732b0a727c08ac8645fd232ccd2be624f35aecb0b999931d3c350b50aa501b2",
+      "sha8": "a732b0a7",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "detecting-data-anomalies",
+      "byte_size": 2265,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "a7674967ef52f0c7005df5c7669815d872da261769aea00b982f71982f96dabb",
+      "sha8": "a7674967",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "gamma-cost-tuning",
+      "byte_size": 5913,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "a89f5401002aa0a19319658d72b619398e7c092420873877039428c3e454b230",
+      "sha8": "a89f5401",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "github-actions-starter",
+      "byte_size": 1288,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "a8f07f750169a2269a985a85f5e5bdc03eef24c46b8918aec9b10eaa8d236ea9",
+      "sha8": "a8f07f75",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "changelog-creator",
+      "byte_size": 1228,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "a912653e85e32ad6960f52243341a2b27cf6309c6d4441a3e9b27a5c75fa5eef",
+      "sha8": "a912653e",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "gamma-data-handling",
+      "byte_size": 7597,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "a932649218e5910bb876af2be6cc5748e5acdb6a3c195f16987fabad18f67a21",
+      "sha8": "a9326492",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "fixture-generator",
+      "byte_size": 1222,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "a9368faf2da4ed97a9c04f88ebcb413864df301bab3fc48947799fc23aa2b09e",
+      "sha8": "a9368faf",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "coderabbit-deploy-integration",
+      "byte_size": 4896,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "a9658a4d73e179ac9e196471d41d85a70afa0ba18ff0844a1371f2dee277140b",
+      "sha8": "a9658a4d",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "bottleneck-identifier",
+      "byte_size": 1294,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "a97b0f879c4170808562d2c7aad46d4f758b65513f30bf6afa92103e48f5e38d",
+      "sha8": "a97b0f87",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "generating-orm-code",
+      "byte_size": 4866,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "a99f90c5af6e3bed40a12386fe20e58305c1efd4c2d00157532c0851e929b60e",
+      "sha8": "a99f90c5",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "generating-api-sdks",
+      "byte_size": 2403,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "a9c616e3d49eb3365b96275eb83545c60fa8f952e63872a668a7c0a5e567ee2b",
+      "sha8": "a9c616e3",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "rabbitmq-queue-setup",
+      "byte_size": 1286,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "a9dfa25077c3a612f55289323995b9f97c6c2cac43ad015b3df204db692e7f0f",
+      "sha8": "a9dfa250",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "replit-security-basics",
+      "byte_size": 3434,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "ab3c17d52b4d1b0793a6fc819dc2657c0a4af8e8e353599e3ee780d6e4cbcc57",
+      "sha8": "ab3c17d5",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "gamma-incident-runbook",
+      "byte_size": 5940,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "ab43f209a7e1fa74d37682fc8f411f93af21eeb3a12c2997c772ab1688a3b813",
+      "sha8": "ab43f209",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "lindy-webhooks-events",
+      "byte_size": 5670,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "aba067a607cd78019f41bf75ce50efdb71580669c609c18105df46e2e4370f31",
+      "sha8": "aba067a6",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "railway-templates",
+      "byte_size": 4052,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "abd873033bd2c9ea46ee3bc3ce7358ba8b7fccae8e41238f2f88892bec58c6c6",
+      "sha8": "abd87303",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "ecs-task-definition-creator",
+      "byte_size": 1325,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "aca913d834bc1e3d39bbfb75d0658d5a1b9acabf6511744719c5bab91bf306a8",
+      "sha8": "aca913d8",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "model-pruning",
+      "byte_size": 13744,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "acdb318f94624517c8cdb3c925c7a2e8b34c65e8ca02b301777c51eea9f0f73c",
+      "sha8": "acdb318f",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "peft-fine-tuning",
+      "byte_size": 12210,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "ad65e9367042d8c300c5737160122bc81f8c70e6a164aa4860e656a9225bd193",
+      "sha8": "ad65e936",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "juicebox-cost-tuning",
+      "byte_size": 6447,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "adf1b8dc1261ffbf41f3a2e596aaeb9a43613365891e15327653f96d9d579ee8",
+      "sha8": "adf1b8dc",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "firecrawl-migration-deep-dive",
+      "byte_size": 7051,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "af93998e278d6fb4048d1af1521cfb90cb2fa21c29d5d72011a4776e8d62d7a0",
+      "sha8": "af93998e",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "windsurf-upgrade-migration",
+      "byte_size": 2828,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "afe6d8cac59f795ec92967a462c3c2df682ec3dbbfb8a4fd23fa3b3327abf31b",
+      "sha8": "afe6d8ca",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "managing-database-tests",
+      "byte_size": 3595,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "b03f2bfd3f890177eef0b50089a142b3ade16f52742686d06f3155a0cc31683d",
+      "sha8": "b03f2bfd",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "fastapi-router-creator",
+      "byte_size": 1310,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "b0501070053be9586e5696665e666eedfa8ec5948f8137de55a075271c7f36ad",
+      "sha8": "b0501070",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "vastai-common-errors",
+      "byte_size": 2294,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "b1010e90adcb8fd6bf57640df34ab6454fbf7e4216e150a4620f7caccadc4e63",
+      "sha8": "b1010e90",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "mcp-builder",
+      "byte_size": 13552,
+      "license_spdx": "Apache-2.0",
+      "license_source": "/Users/gwanghoon/.agents/skills/mcp-builder/LICENSE.txt"
+    },
+    {
+      "sha256": "b1ae6054a8f0859c8cb6ad4dbac1b8b0b82207125e649287de1e72e6dde0910f",
+      "sha8": "b1ae6054",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "skill-creation-guide",
+      "byte_size": 17844,
+      "license_spdx": "Apache-2.0",
+      "license_source": "/Users/gwanghoon/.agents/skills/skill-creation-guide/LICENSE.txt"
+    },
+    {
+      "sha256": "b20a2741b61f67fadc200cde4386ddc895a51f66026f3f754fb3c2a4ad774c27",
+      "sha8": "b20a2741",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "feature-store-connector",
+      "byte_size": 1307,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "b23055710f311f3fe2cec143da3f0f682909fb474b872ea90163207219790452",
+      "sha8": "b2305571",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "automating-api-testing",
+      "byte_size": 5493,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "b23e75bb4c46aeff822585f15a53b9ff633cda7c382328d7af3af3bb99765420",
+      "sha8": "b23e75bb",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "windsurf-reference-architecture",
+      "byte_size": 7189,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "b3f55a416ff2aa17506c8d638085949953d7c243e43fba0208aa77782b2e9206",
+      "sha8": "b3f55a41",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "replit-sdk-patterns",
+      "byte_size": 3699,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "b3fb19e8a4834482b5996d3de0de349930f05895ee31a539ab56be935cbabcfd",
+      "sha8": "b3fb19e8",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "running-load-tests",
+      "byte_size": 4424,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "b42bac4c51850db004e207e9133635dbfa98f41bbb74d315f2249a4ff2278ed9",
+      "sha8": "b42bac4c",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "windsurf-core-workflow-a",
+      "byte_size": 1510,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "b49bdca9adc8f246bc51e810b62746fd3ead6fec86b3681ccade20422b8578f0",
+      "sha8": "b49bdca9",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "groq-security-basics",
+      "byte_size": 3376,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "b63ad0e53e5b7c657b9e74930236395a6f6a5de80d056899bb5bcdd034fa4d8a",
+      "sha8": "b63ad0e5",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "coderabbit-ci-integration",
+      "byte_size": 2971,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "b64e13ad5ca021513529f89406934109c526551522dbfaea05403a2aed375620",
+      "sha8": "b64e13ad",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "openrouter-data-privacy",
+      "byte_size": 1693,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "b68e843a7b2f8ddf43f3b8dc644449bdd9b43acb819dd5c38baf5ad5d3bd7dae",
+      "sha8": "b68e843a",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "managing-database-sharding",
+      "byte_size": 4911,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "b6c599fc93caa14779e0c8c2168a07632a83393a4eb07f528327c0ae725f3d1c",
+      "sha8": "b6c599fc",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "chart-type-recommender",
+      "byte_size": 1291,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "b783a90ab97e0780ca1af3b15198c33fad2a429cfaaf479ce503905001449663",
+      "sha8": "b783a90a",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "route53-record-manager",
+      "byte_size": 1265,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "b8021ffa7fd4c746e0153b77886be84f7968fe321c31bec19e716d4e58c7684b",
+      "sha8": "b8021ffa",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "sprint-planning-helper",
+      "byte_size": 1335,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "b8e7f971924255c419e133a8a62dff5413fe169e7db74a6b644c660e9a9f9f2f",
+      "sha8": "b8e7f971",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "cloud-run-service-config",
+      "byte_size": 1294,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "b933bbd2ae092fbcb342826d6b094e7e7f00f942257dabe9ee6ebd048469c931",
+      "sha8": "b933bbd2",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "report-template-generator",
+      "byte_size": 1327,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "b9d283b64b60e9022f6a15b6ba2e311e42816d7f6f13903e98a87efeda2b7c78",
+      "sha8": "b9d283b6",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "kubernetes-ingress-config",
+      "byte_size": 1328,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "ba3ad93ec953c04f7573ad02f671061a1c9adb4cf9d37cbe97ca9c624295a3b4",
+      "sha8": "ba3ad93e",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "excel-lbo-modeler",
+      "byte_size": 2133,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "bb73f8e9f85c9d38030942a503d185f8c797c3647a6b06649e7fa528f7e07709",
+      "sha8": "bb73f8e9",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "generating-unit-tests",
+      "byte_size": 5077,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "bec335088cb05c78fb3e206f7906b294ea4553d13357c850991dba8d0a21bd2b",
+      "sha8": "bec33508",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "overnight-development",
+      "byte_size": 1790,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "bf83274943022c31fcaf9dfba20089890d4a9139caf90bcedf34d8f7e4435ff7",
+      "sha8": "bf832749",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "ideogram-cost-tuning",
+      "byte_size": 5024,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "bfdff02ac7be7e11fc34afa87db6e3d9bc7a236ad749cb5344ffac12d7da861d",
+      "sha8": "bfdff02a",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "orchestrating-deployment-pipelines",
+      "byte_size": 4991,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "c0ba6563c3ed15223e068d7b298af12bca7256e4d4ed50531f446f4331b0f212",
+      "sha8": "c0ba6563",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "clerk-deploy-integration",
+      "byte_size": 6019,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "c119a0bda161c371f4ddb7639f557f7e3193ca6d97fdff7fd47c55c8b996ef8e",
+      "sha8": "c119a0bd",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "memory-profiler-setup",
+      "byte_size": 1294,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "c16f3e53f88725f2a61141168519841c77c43a1a963858b929079fdaeb9fd738",
+      "sha8": "c16f3e53",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "oauth-callback-handler",
+      "byte_size": 1285,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "c281b942adb1760c6213ffb9e96a5fb42349a84df5cc1ddc31c1b59f74b17881",
+      "sha8": "c281b942",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "windsurf-install-auth",
+      "byte_size": 2269,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "c35893e221e28895c52143cc11bf30e41a44817796b39d4b15727dadc9796552",
+      "sha8": "c35893e2",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "theme-factory",
+      "byte_size": 3124,
+      "license_spdx": "Apache-2.0",
+      "license_source": "/Users/gwanghoon/.agents/skills/theme-factory/LICENSE.txt"
+    },
+    {
+      "sha256": "c42a3779409089c9f1f7a28a5616f64fc6eb1f93d57e3f51a50e25ab127a6265",
+      "sha8": "c42a3779",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "key-rotation-manager",
+      "byte_size": 1292,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "c456f09d299872d46ed0f5690521fe8502e3eee3f38a654d93b8307c5e6dbe10",
+      "sha8": "c456f09d",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "react-best-practices",
+      "byte_size": 7357,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "c4d2a1d11dce2ad655e3562ce47cfb14c70a65da203245baa39971d0828d05c8",
+      "sha8": "c4d2a1d1",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "testing-load-balancers",
+      "byte_size": 3602,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "c4dbe4c9ae6e0feb4f5c012cac8a2f4e1d9fe4d79339f5e098c4ac2ffade94c3",
+      "sha8": "c4dbe4c9",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "ideogram-hello-world",
+      "byte_size": 2349,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "c5316cb53bb5f68d28ec5fdefd74700287d16aaa4764c94f803d07a43dbc3f82",
+      "sha8": "c5316cb5",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "fireflies-local-dev-loop",
+      "byte_size": 3096,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "c53accf9308576ace683afd7de1dfe4a01d33ff9647053b5279c825378bc225d",
+      "sha8": "c53accf9",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "date-range-analyzer",
+      "byte_size": 1255,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "c5bd5cb1e6d11995e087ee82867c847310970b295e084bfed89afc2e703c3392",
+      "sha8": "c5bd5cb1",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "performing-regression-analysis",
+      "byte_size": 3693,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "c66a45cba043313cceb58ec44aef288c6d26e611de68a898ba27e08e08bc0aff",
+      "sha8": "c66a45cb",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "exa-reliability-patterns",
+      "byte_size": 6987,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "c6885622cb43fa52e2964cc54e58529eb576dba781ce0ab0f69871d04ccfae22",
+      "sha8": "c6885622",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "retellai-reliability-patterns",
+      "byte_size": 7235,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "c71a238a80ce132596efa6177b810911ec426e2802752d9b4dd917b3c99e2915",
+      "sha8": "c71a238a",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "testing-mobile-apps",
+      "byte_size": 3572,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "c758df3914a67918e97fae3bb3e546d453b986d54d843cfb64795a26e3af5f9c",
+      "sha8": "c758df39",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "onnx-converter",
+      "byte_size": 1199,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "c778a28963124297950cc201529c6b0248be2579f867d7c01b29585077f2012c",
+      "sha8": "c778a289",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "clay-load-scale",
+      "byte_size": 6335,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "c8541e08c465269c12595ad58763fa6212c897b33d17946588d261f51c90fe59",
+      "sha8": "c8541e08",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "firecrawl-data-handling",
+      "byte_size": 5734,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "c87f77a8a7454af17ea3c4630bea10a0f82bae9db4a33bd0d8bdc7e6199a47f9",
+      "sha8": "c87f77a8",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "redux-slice-generator",
+      "byte_size": 1300,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "c9567573b53f52ffd022ed73e8c329605bfefd7cc4d9a591333f674ff3b5e8f6",
+      "sha8": "c9567573",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "pwa-manifest-generator",
+      "byte_size": 1312,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "c9b771c280840f12d0e98749250c35df4a83a21f95465c41e8ae13f0229ecb40",
+      "sha8": "c9b771c2",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "grpo-rl-training",
+      "byte_size": 17200,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "ca034a694c4e7018fbfd05acac8d0456a318e66c45b033018e7987aa1c65aa22",
+      "sha8": "ca034a69",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "asana-task-creator",
+      "byte_size": 1287,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "ca2036ed27353135029bcd82e005fc748daa9c4d0065e1ee5e5e5441fa31af48",
+      "sha8": "ca2036ed",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "cursor-common-errors",
+      "byte_size": 1727,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "ca38437c36b0b6e8d1d4885952f82f083934e9c6ec3a79c67fe5336dabe4824a",
+      "sha8": "ca38437c",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "vercel-advanced-troubleshooting",
+      "byte_size": 1601,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "ca7b0d5aa02a1a3b74f1b6a2203a48e2b46d07e2892d04b96c63ef85134c547f",
+      "sha8": "ca7b0d5a",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "pre-commit-hook-setup",
+      "byte_size": 1276,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "cb09f779458d6c4cc84c9ebcc825359ffcc827a4f669ace4a8cd589d82c15e05",
+      "sha8": "cb09f779",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "makefile-generator",
+      "byte_size": 1240,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "cd01cee93a2228c199c23e77047e4444b0a6eeddd12dcf14104ca2a5de3fa8e2",
+      "sha8": "cd01cee9",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "dspy",
+      "byte_size": 15291,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "cdc6de3cd7ce4d6c91f795170f8a2ade3720fa259a72f55b2208b48391ab52e3",
+      "sha8": "cdc6de3c",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "vertex-ai-media-master",
+      "byte_size": 1490,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "ce1636f10ac6625f02c2f4b7f4c793b9f27c5e6db303387f186e18a6e68f5ecc",
+      "sha8": "ce1636f1",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "sns-topic-config",
+      "byte_size": 1193,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "ce668b9846523a62a698780f9df9190d73adff076a7e4070b95e26ba13dd4222",
+      "sha8": "ce668b98",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "firecrawl-install-auth",
+      "byte_size": 2302,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "cfd0d65bb147da0379d95b33b1e24bb3f9fd2b17f40c620c3012b097cb396387",
+      "sha8": "cfd0d65b",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "firecrawl-reliability-patterns",
+      "byte_size": 7257,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "d0e1e45ababaddd37bdf9b74f921150c552d0445a53a0354d03c9ea8d66ad789",
+      "sha8": "d0e1e45a",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "gcs-bucket-config",
+      "byte_size": 1210,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "d0fa316719a44fd61a0e6d830db8310612d622a2ad08c73cc7d310f2fdbb15ce",
+      "sha8": "d0fa3167",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "ideogram-local-dev-loop",
+      "byte_size": 3034,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "d118f3f169f501a8b98af23cc3752f5b97c5af28fa590e05a62e7169c1b95471",
+      "sha8": "d118f3f1",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "optimizing-cache-performance",
+      "byte_size": 3171,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "d14857410baf8a1a1b72ff5b79c6a284c969ebf95fd8124d6e6b76a7558af6b3",
+      "sha8": "d1485741",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "dagster-pipeline-creator",
+      "byte_size": 1316,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "d15c1b11d805513048bbc63c88feeb98437e240af542c0a5ab08ee8218b2a7f4",
+      "sha8": "d15c1b11",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "excel-macro-creator",
+      "byte_size": 1296,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "d1add4207a97ce311e9aaeb9acefd2e9b60bba3f5c4872aa465fa0c607dd0254",
+      "sha8": "d1add420",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "exa-multi-env-setup",
+      "byte_size": 5251,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "d1c960f73b9f92307d95d901af2abd5a00ff60cb5f668ff7793fb60e28803537",
+      "sha8": "d1c960f7",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "customerio-install-auth",
+      "byte_size": 3313,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "d1d8a50d88dccbdd0eb2b01cfa0e4eee1039d28c392658a3b83f1821f14195dc",
+      "sha8": "d1d8a50d",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "langchain-cost-tuning",
+      "byte_size": 7925,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "d1ec487890e418cb9b1925596ff89afe84eeb996bbff0d349fbba3347bb4536a",
+      "sha8": "d1ec4878",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "langchain-reference-architecture",
+      "byte_size": 9999,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "d216b3c7c26489502941e48bcd41281953621db913ca6e4ce4b8af49b0670d42",
+      "sha8": "d216b3c7",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "langchain-enterprise-rbac",
+      "byte_size": 12931,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "d2ea509dbc534e2b23d57410ad71ffbd82ea1a1da643a3d36a1cc50d24fb0ebd",
+      "sha8": "d2ea509d",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "percentile-analyzer",
+      "byte_size": 1270,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "d2ff3f9eed2cb8e15cb98e8e2398ca359325a32fd5d16ebfe0d115d7624583af",
+      "sha8": "d2ff3f9e",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "huggingface-tokenizers",
+      "byte_size": 13674,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "d3662f51daaacc7846a1857a902363f200434ece8aa6645d4a311431087857c6",
+      "sha8": "d3662f51",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "customerio-deploy-pipeline",
+      "byte_size": 9587,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "d40555dd102484a7e6887da9bb115b88e0d63176702451fb860954a264fa02f1",
+      "sha8": "d40555dd",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "coderabbit-security-basics",
+      "byte_size": 3550,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "d495e5509628e3b298a86f803ed6ed70790068e2e0fc10cbda6ea1053e2b5584",
+      "sha8": "d495e550",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "linear-webhooks-events",
+      "byte_size": 8216,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "d54a1db07913b01ff4834b939d7b62bead701d2556f2347c1fe90554c90f79eb",
+      "sha8": "d54a1db0",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "org-chart-creator",
+      "byte_size": 1224,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "d64d37edee8f6c6cb243c2e2525564a501bb81c0ae13897e837272c4522b9e1c",
+      "sha8": "d64d37ed",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "customerio-observability",
+      "byte_size": 11183,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "d69549c4ff666ec9ed4df26cd8267c5db7c4e9c47d5e3910102a70717e591c2a",
+      "sha8": "d69549c4",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "log-analysis-security",
+      "byte_size": 1304,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "d71e20de1f2fc2ce93876a35211999ba991e268369424adc2c71e1e305d3488e",
+      "sha8": "d71e20de",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "setting-up-log-aggregation",
+      "byte_size": 3868,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "d74caa45483f5b3c6bd6267e39b444627989ff90fdb84b6c2e7c3da4ddf143ef",
+      "sha8": "d74caa45",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "llama-cpp",
+      "byte_size": 5912,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "d76b23a103adb91e22adc54bd2e32a754eb4d4e74989f887ab8ff4587754ca6c",
+      "sha8": "d76b23a1",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "supabase-debug-bundle",
+      "byte_size": 1259,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "d826e73c60d0ac46b9f79cbd315c36b7c0c32f86bdb7dd353529fb7850593255",
+      "sha8": "d826e73c",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "supabase-advanced-troubleshooting",
+      "byte_size": 1623,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "d8586e21ecd4df1a32371f8d86746f8fbd88358f5dc8957e5dd91a473d2ab484",
+      "sha8": "d8586e21",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "nemo-curator",
+      "byte_size": 9338,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "d95ff748520fdb3d2fda9f59fd527ccb1ae54fb21603d7ba73dbdb5891dc34eb",
+      "sha8": "d95ff748",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "validating-performance-budgets",
+      "byte_size": 4157,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "d9ceaf5c8028b29c39685554e7e5cdc32277672b807437c33bf9411b8c044be9",
+      "sha8": "d9ceaf5c",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "vertex-agent-builder",
+      "byte_size": 3259,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "d9e3c3a4ef493ce8b77ab80ffdd9220d7cb4770c25fa87f369d1f48156f00744",
+      "sha8": "d9e3c3a4",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "azure-ml-deployer",
+      "byte_size": 1235,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "dacaad6cee13822a341a0f4a1207bf8a8461eeedec3b01e3c7eae4967e7c9e81",
+      "sha8": "dacaad6c",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "go-handler-generator",
+      "byte_size": 1286,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "db5632dd9501a6ce7124f6c744d8a73e677890369d33cbfb45cf406358c06d01",
+      "sha8": "db5632dd",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "coderabbit-debug-bundle",
+      "byte_size": 3336,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "dbe16c6bd7db3a9b9aaf5fde16620997745c738f621145b24e34b494b0419417",
+      "sha8": "dbe16c6b",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "000-jeremy-content-consistency-validator",
+      "byte_size": 1922,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "dbfeb1ef679578d6a4c89ee07a9ec8929f5568ab6ebf9f297985d52f9ffc8d47",
+      "sha8": "dbfeb1ef",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "deepgram-observability",
+      "byte_size": 14151,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "dc13d58d98f092044b4fa0f8caec2cfc935cc272dbe89b125abc7bd9ecdb3f9f",
+      "sha8": "dc13d58d",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "langchain-sdk-patterns",
+      "byte_size": 4915,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "dc86ad2ce95e329edd87e3b84d890c6290618dd30b3b82005fd43b9e345bfa81",
+      "sha8": "dc86ad2c",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "monitoring-database-transactions",
+      "byte_size": 4952,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "dd0ca35e979c26f908a3e8c54035cc1ea420c4c975e2e5a5327ece2646b7ea13",
+      "sha8": "dd0ca35e",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "clay-multi-env-setup",
+      "byte_size": 5285,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "ddaf8765974b4b21216b91ed11f04c011c99947d0bbc473243d50545dd16a4a3",
+      "sha8": "ddaf8765",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "gamma-migration-deep-dive",
+      "byte_size": 10030,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "e0c1da83766332e0f3db4bcca954c3a70be399632758dcec2680aa82e236438d",
+      "sha8": "e0c1da83",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "optimizing-attention-flash",
+      "byte_size": 10201,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "e0eae4549e2ee8d20f4a1b6de832a09093186550d36d14e63aec43fd7f046669",
+      "sha8": "e0eae454",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "coderabbit-observability",
+      "byte_size": 6225,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "e14f37f62557c31c85615e3f14cd3aac0685dd3114b7ed0d12110bcfd9ecbe2d",
+      "sha8": "e14f37f6",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "pdf-parser",
+      "byte_size": 1188,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "e1acf1d7c78b76bed26abf0ea60a2ba6ea04505b24c85abd904e45d92f6fad4c",
+      "sha8": "e1acf1d7",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "deepgram-deploy-integration",
+      "byte_size": 10642,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "e20b8b4a335b1e3cbd29b6736d219cbbffe33e25252931b92a4bef500ec32531",
+      "sha8": "e20b8b4a",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "groq-upgrade-migration",
+      "byte_size": 2720,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "e216541f744ea201b46711c9a3fa6dddc6b20e5a19f02d94243edf137b58bba6",
+      "sha8": "e216541f",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "attack-surface-analyzer",
+      "byte_size": 1328,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "e2194ac0647c598c003c07a26999009625ae8d786ce3658a2f064dd01fa29e05",
+      "sha8": "e2194ac0",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "sentry-hello-world",
+      "byte_size": 1313,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "e2ee46bf3e82bb5920a173ec334cb2fee803c0dff81e3f8b13e4d87b24b4e1d7",
+      "sha8": "e2ee46bf",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "visualization-best-practices",
+      "byte_size": 1363,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "e3469a9da21ba899ac03e54ce59fc6fbf3ffd72062976af46963b11f9e7502fe",
+      "sha8": "e3469a9d",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "scanning-for-gdpr-compliance",
+      "byte_size": 4483,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "e38ef5f3f706756843a6968ce75f114281ad10705f42feaf5abb43a467976185",
+      "sha8": "e38ef5f3",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "cursor-team-setup",
+      "byte_size": 1738,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "e3b9519b66d2d31819c68e3363905acc223f5308196fc47ea223da28577b1af3",
+      "sha8": "e3b9519b",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "juicebox-common-errors",
+      "byte_size": 4041,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "e3f6e8cd70d7f3d79bf6e9544a95484e2f7d1a549bb22ae15e194769089d8fa4",
+      "sha8": "e3f6e8cd",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "clay-local-dev-loop",
+      "byte_size": 2930,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "e462d742ecd7064f285f46ab99644b75de1ebfbdba8e9ec9ed49c48a9fd42781",
+      "sha8": "e462d742",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "gamma-sdk-patterns",
+      "byte_size": 3530,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "e559cc68ee827a98de97c6147630d8d1d2945081185c0a34f89c156592b56de7",
+      "sha8": "e559cc68",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "retellai-common-errors",
+      "byte_size": 2344,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "e5ce81d3dc40e7780b0fa2a0a36b5ada888beb3931d2badd2909b57c50002aed",
+      "sha8": "e5ce81d3",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "slack-gif-creator",
+      "byte_size": 17142,
+      "license_spdx": "Apache-2.0",
+      "license_source": "/Users/gwanghoon/.agents/skills/slack-gif-creator/LICENSE.txt"
+    },
+    {
+      "sha256": "e65ae6834f2165050ba674d553148ee3009e667ac3f4769bfaf9031701cdc5e0",
+      "sha8": "e65ae683",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "json-config-manager",
+      "byte_size": 1252,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "e79db675eab0ede71e8e519bf8d902bb686b2932f52c13eba98c09c327ed9ca0",
+      "sha8": "e79db675",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "clay-observability",
+      "byte_size": 5943,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "e7e3708d0282928398680585d7eb5793d7fad302755ffd162906d45bfbc20d56",
+      "sha8": "e7e3708d",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "architecture-doc-creator",
+      "byte_size": 1365,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "e7f537ba8da21a3137b9a79b790c1175a91ba85518470f95f594513d8cbe1e93",
+      "sha8": "e7f537ba",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "integration-test-generator",
+      "byte_size": 1333,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "e919ebcf29e6e38973ab498a07a5cbf54f22e30237fd85eea6fdb31b0dea6948",
+      "sha8": "e919ebcf",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "configuring-auto-scaling-policies",
+      "byte_size": 4892,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "e91c2c55ea7f13d57b5a86788003ab3743b2d99910d3f8788709a1ee28624c83",
+      "sha8": "e91c2c55",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "ideogram-sdk-patterns",
+      "byte_size": 3771,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "e98dd954e1f1f337e904f47933fd60582149e81f420b12c2772d429923b4bba4",
+      "sha8": "e98dd954",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "gamma-core-workflow-b",
+      "byte_size": 4128,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "e9a2f754533f5d550219ad8f5d7defa03189fbff62ad9ed5b4b384df79e12a92",
+      "sha8": "e9a2f754",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "prefect-flow-builder",
+      "byte_size": 1268,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "e9db9a2b586a847d500d3d4e86a4a770d2806cee69fc21d9dc511ae744bf18e6",
+      "sha8": "e9db9a2b",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "deepgram-webhooks-events",
+      "byte_size": 12734,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "eb1b174b2dc9344557e38a5216267799298901588ce65022eb1b6de22ce0ef42",
+      "sha8": "eb1b174b",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "supabase-sdk-patterns",
+      "byte_size": 1262,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "eb2b0743aaea4811d6bab853a394c260b3b241079f629e85f3fdc6f114c5bdf0",
+      "sha8": "eb2b0743",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "bash-script-helper",
+      "byte_size": 1240,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "eb433f712279662999117f019c191cc250c84b82262433ad337b8716986125f0",
+      "sha8": "eb433f71",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "juicebox-security-basics",
+      "byte_size": 5248,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "ed1c37b4ad97b3374580fde7b64fe413ad242f6cfd4455876f81e6db6ade78cc",
+      "sha8": "ed1c37b4",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "clerk-cost-tuning",
+      "byte_size": 7558,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "ed5933ad2feaf305e37b3fb245f901090d59dfb1a16f1cb8aa11ec4d8c672460",
+      "sha8": "ed5933ad",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "throttling-apis",
+      "byte_size": 2397,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "ee0640c4d158b3dac20ccebaa3ee4dcdd23ff5ec0fa2517289d406be4088e24d",
+      "sha8": "ee0640c4",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "railway-service",
+      "byte_size": 6774,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "ee56ae27a3eacfcf4b423b7047ec40d64fb9fd710e476407e3f642f31a2cc352",
+      "sha8": "ee56ae27",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "replit-reliability-patterns",
+      "byte_size": 7122,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "ee8df1f8ace2dcf4e631e61a5486b14a5c090d16ef2b299340d679bf15d20ad9",
+      "sha8": "ee8df1f8",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "gamma-core-workflow-a",
+      "byte_size": 3473,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "eef09d8aee352219bae876fb8b851d7d35911a8ceff4ed5016712148a330dec6",
+      "sha8": "eef09d8a",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "plantuml-diagram-generator",
+      "byte_size": 1332,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "ef08569a5ec9aac2d51b3e9455ef8aa89e0be37672c4890074a1e0112ea0af86",
+      "sha8": "ef08569a",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "mermaid-er-diagram-creator",
+      "byte_size": 1332,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "efd0f941933dc8f30634a04bf85186c758125d9083d4c2f005c4c87164e22fd3",
+      "sha8": "efd0f941",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "juicebox-incident-runbook",
+      "byte_size": 6450,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "f01d58bf03c9c20668385884166a6ccc84a146347af27e1f6467cf5e85e58a07",
+      "sha8": "f01d58bf",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "optimizing-gas-fees",
+      "byte_size": 3782,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "f0c80fccd57b26e47761d0827e9daa85ae33f83dc46102192ee5b456702bc1bc",
+      "sha8": "f0c80fcc",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "posthog-enterprise-rbac",
+      "byte_size": 5515,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "f2614e6941d3f6dcee375b6e57ce7d063f5498fa65464b42e21cf927abd1ac08",
+      "sha8": "f2614e69",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "customerio-prod-checklist",
+      "byte_size": 6958,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "f2f550d0305282151ae645a8bc86fe51dbb0e23386c6aa19055e4f100321cdc2",
+      "sha8": "f2f550d0",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "vastai-install-auth",
+      "byte_size": 2218,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "f50ab4eceb57a5016d564223073b5de57103bcd5890b6fb3c2a834900d00a781",
+      "sha8": "f50ab4ec",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "retellai-data-handling",
+      "byte_size": 5716,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "f55ae267e105fe4c0c93bc6942c879ce52c7ea534f02209d4fc532cfba84f2b8",
+      "sha8": "f55ae267",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "langchain-data-handling",
+      "byte_size": 10878,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "f76405ec6477f9a7bab463f636476eb291bcc5fa8e075d95e14ac9a484454b6b",
+      "sha8": "f76405ec",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "api-reference-creator",
+      "byte_size": 1329,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "f787594bce83fc17c1d4fc71afb18eec90c77cfc7179727bdc9407ed63bcecb8",
+      "sha8": "f787594b",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "cloud-logging-sink-setup",
+      "byte_size": 1294,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "f84a9b7b9ef03f29a77e8385c1093e3a15f9ed72d0a58a5d6272569e8a59cb2e",
+      "sha8": "f84a9b7b",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "ideogram-incident-runbook",
+      "byte_size": 5380,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "f8753ddeb4d0586ccc23932bc2f8b47b6bae6832d6efdd16bb2762762391a945",
+      "sha8": "f8753dde",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "retellai-enterprise-rbac",
+      "byte_size": 5594,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "f8b542fe4060c632b0797e47585bdecee52760fe53fc5778f7413eee0998c7af",
+      "sha8": "f8b542fe",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "cte-query-builder",
+      "byte_size": 1231,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "f8c0a776012aadd9bf953e96dcefc00b201594becd56d8e47e2107c67cdf02cd",
+      "sha8": "f8c0a776",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "validating-api-schemas",
+      "byte_size": 2418,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "f8ce4dcbf8bf623ef9bd4015cf88602348293a6f17591fd1350962921fa0aba2",
+      "sha8": "f8ce4dcb",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "aria-attribute-helper",
+      "byte_size": 1300,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "f9490b2dd3ac617cf7fbea772803da3b8ba379c0a9699ee09c27d2539e2b8f5e",
+      "sha8": "f9490b2d",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "performance-lighthouse-runner",
+      "byte_size": 1396,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "f9dd4642beae3c4df36162d052560e2644154421a3ace5a11698cd30d0ea7eb8",
+      "sha8": "f9dd4642",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "linear-performance-tuning",
+      "byte_size": 9226,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "f9f532e8610d0af5b2406c52aa3d964758216fad75612d5ce7b7f10f7eccd883",
+      "sha8": "f9f532e8",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "installation-guide-creator",
+      "byte_size": 1389,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "fa56c8222949aa42fa1a6f29b39e76cc2295b7961f597e2cdbc8d08228e51058",
+      "sha8": "fa56c822",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "lindy-rate-limits",
+      "byte_size": 5134,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "fa8548f92e51c5f062cf52dcd7cdf785631c2a4af7bf7ea5111c7bfbdc50d854",
+      "sha8": "fa8548f9",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "generating-trading-signals",
+      "byte_size": 6323,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "faa6e56239061d95f4f9cc2d56d623175383bc575d651c12d9afcbf27326d58d",
+      "sha8": "faa6e562",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "instantly-ci-integration",
+      "byte_size": 2944,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "fad3b6db7a960709d25e249f9c14d49861e494dc98c96deca216c73e87064bbb",
+      "sha8": "fad3b6db",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "creating-ansible-playbooks",
+      "byte_size": 4908,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "fb5938b1e5637ec6096dd967e1618debf74072d147f39915e3d73f1c78dabb2d",
+      "sha8": "fb5938b1",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "exa-install-auth",
+      "byte_size": 2104,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "fbbabf93783625baee1843756b85f9e925aba0ce0916829e0969cf0d5d8877b0",
+      "sha8": "fbbabf93",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "analyzing-nft-rarity",
+      "byte_size": 3272,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "fc04a33a7327dab7ff94094a546c764670c3005f1d0ee421dbef5505c0a86d9e",
+      "sha8": "fc04a33a",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "clerk-hello-world",
+      "byte_size": 3903,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "fc958dcf2426bf87dd837fe0bcad080867dafd954c37628c0701b2082870f8d1",
+      "sha8": "fc958dcf",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "linear-core-workflow-a",
+      "byte_size": 6219,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "fca19457be4e78f0e3689284d4fbde649ddf9af0d3bba52d2ac1fb470a4c1bd8",
+      "sha8": "fca19457",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "sentence-transformers",
+      "byte_size": 6327,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "fd9d6bcac2e47e51dad1d1718902e1bfa7d4d2fa7ab86500e43940a65aef2190",
+      "sha8": "fd9d6bca",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "genkit-infra-expert",
+      "byte_size": 2140,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "fdb7f99d46938826fbd9826104d3cf865410168eb057f26769bcbce41cce9019",
+      "sha8": "fdb7f99d",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "railway-domain",
+      "byte_size": 2976,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "fdc2e475337ee9f696280405360dd81300665ef108da5de55150ad6e8eab3a9c",
+      "sha8": "fdc2e475",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "railway-projects",
+      "byte_size": 3579,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "fdc445b5fde71bd09187e4e8d9c8363a81b9bca863113f32e8196e6253df85e7",
+      "sha8": "fdc445b5",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "openrouter-routing-rules",
+      "byte_size": 1835,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "fe2dedf2ce7e09ebb89ae51102fd63de6ed9b45bbc9857ffee4574d7bb6f9bd5",
+      "sha8": "fe2dedf2",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "supabase-schema-from-requirements",
+      "byte_size": 1720,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "fe74c9d04cdf5f072d5a570dbf269714fcd10dd432b64415ea343e71cc545118",
+      "sha8": "fe74c9d0",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "clay-hello-world",
+      "byte_size": 2225,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "fea8d154471aaeb003a0020dd50b7a26934ffabc9a77f51dcfb17b479566083b",
+      "sha8": "fea8d154",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "replit-webhooks-events",
+      "byte_size": 5408,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "fee24ba97df1e1aac8d0041733c9bd8e6cd9b95837e3cd6a96faad3adbd928e3",
+      "sha8": "fee24ba9",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "code-injection-detector",
+      "byte_size": 1361,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "feea45ffe372b4ec956a59dbedee671353fc34df6087f1a33b527b3941b13c9c",
+      "sha8": "feea45ff",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "klingai-performance-tuning",
+      "byte_size": 1586,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    },
+    {
+      "sha256": "ff4602ac66158ca2f4f9d519310e47d74216afd8c910232215fd62788706a7a4",
+      "sha8": "ff4602ac",
+      "source_root": "/Users/gwanghoon/.agents/skills",
+      "original_dirname": "customerio-reliability-patterns",
+      "byte_size": 9868,
+      "license_spdx": "MIT",
+      "license_source": "frontmatter:SKILL.md"
+    }
+  ]
+}

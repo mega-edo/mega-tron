@@ -1,0 +1,22 @@
+mega-optimus
+Copyright 2026 mega-symphony contributors
+
+This product includes software developed as part of the mega-symphony
+project (https://github.com/anthropics/mega-symphony — TBD).
+
+----
+
+This product depends on the following third-party software:
+
+* sentence-transformers (Apache-2.0)
+  https://github.com/UKPLab/sentence-transformers
+
+* numpy (BSD-3-Clause)
+  https://numpy.org/
+
+* PyYAML (MIT)
+  https://pyyaml.org/
+
+The default embedding model is BAAI/bge-small-en-v1.5 (MIT, downloaded
+from HuggingFace at runtime, not bundled):
+  https://huggingface.co/BAAI/bge-small-en-v1.5

@@ -1,0 +1,485 @@
+{
+  "_meta": {
+    "seed": 42,
+    "gold_count": 59,
+    "candidate_count": 252,
+    "low_pct": 30,
+    "high_pct": 80,
+    "p_low_len": 213,
+    "p_high_len": 330
+  },
+  "golds": [
+    {
+      "gold_id": "G01",
+      "sha256": "009ee35a6f530b9bfd58971fd87493e9b6715652f9e1988b57ea635031f7a611",
+      "sha8": "009ee35a",
+      "skill_name": "engineering-features-for-machine-learning",
+      "description_len": 267,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G02",
+      "sha256": "02c3b7a720b77c9160e252e36d75cbdc7b4c602fc300f284318b273a7402eaa9",
+      "sha8": "02c3b7a7",
+      "skill_name": "sf-lwc",
+      "description_len": 322,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G03",
+      "sha256": "049877d37a2523cdb089361e9945e78e5cde1641c88595ebe5b3aa74eb609173",
+      "sha8": "049877d3",
+      "skill_name": "klingai-job-monitoring",
+      "description_len": 230,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G04",
+      "sha256": "05e664a43bb82df2363ef22ceba81a41394a2b819c3367b2413f661485085c8f",
+      "sha8": "05e664a4",
+      "skill_name": "sglang",
+      "description_len": 292,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G05",
+      "sha256": "0a3f3faf3c1a098dd88b2d9c453e87e10ef918c72182e2556ea638280069e8e9",
+      "sha8": "0a3f3faf",
+      "skill_name": "deepgram-core-workflow-b",
+      "description_len": 301,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G06",
+      "sha256": "15b5ee50349f72802906b4a36b38e9e5ab300b80409b71b972fd955d0aa983ea",
+      "sha8": "15b5ee50",
+      "skill_name": "orchestrating-multi-agent-systems",
+      "description_len": 319,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G07",
+      "sha256": "15b74f6054dd96c017614ee5210004f647ce224a6ac2c47da1d83570bd04eb81",
+      "sha8": "15b74f60",
+      "skill_name": "replit-debug-bundle",
+      "description_len": 307,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G08",
+      "sha256": "16233656c6cf35a7b85cdd33f0d05bcfaff7609d61c32b26bfa8201e592408d2",
+      "sha8": "16233656",
+      "skill_name": "providing-performance-optimization-advice",
+      "description_len": 284,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G09",
+      "sha256": "16cd0a8ac39e82cc01f2b3bd70cff07cce3c2d0daf3e5071a93c72271369784d",
+      "sha8": "16cd0a8a",
+      "skill_name": "customerio-hello-world",
+      "description_len": 273,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G10",
+      "sha256": "193e79128c30ddd16dcefbd60522b5f5d73115c7ab287959f49a9d1eed002fbe",
+      "sha8": "193e7912",
+      "skill_name": "book-sft-pipeline",
+      "description_len": 224,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G11",
+      "sha256": "22d1c596bd8544fdfbc004ef97a7fe553726cb4422a9b1ba628adec1066e12f0",
+      "sha8": "22d1c596",
+      "skill_name": "supabase-hello-world",
+      "description_len": 267,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G12",
+      "sha256": "2b93783ca7dcd647762d6efb833db0cb5ccd55040acba6bf36c6213566acff10",
+      "sha8": "2b93783c",
+      "skill_name": "exa-webhooks-events",
+      "description_len": 306,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G13",
+      "sha256": "2c7028001bf36a8a6bc1020d646a1fbad29c93f92f7706c437bde858e9616c71",
+      "sha8": "2c702800",
+      "skill_name": "guidance",
+      "description_len": 214,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G14",
+      "sha256": "35343029941210db38b0305727569647d461f8ff9375afe84be99c89953eb698",
+      "sha8": "35343029",
+      "skill_name": "linear-security-basics",
+      "description_len": 313,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G15",
+      "sha256": "3bb5cd126841c213683b5ba47c92481862c466b3195a371cf25244048e376050",
+      "sha8": "3bb5cd12",
+      "skill_name": "linear-local-dev-loop",
+      "description_len": 308,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G16",
+      "sha256": "3ddcfb3b23ff02bd6a6809e0173df4df77c0fb8e04435bdfffa2c8246dd0ccb1",
+      "sha8": "3ddcfb3b",
+      "skill_name": "instantly-prod-checklist",
+      "description_len": 310,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G17",
+      "sha256": "3e34bc08d5149a25acfd5a8809409865faae1f532d8f9c941f6afd2c45f4369f",
+      "sha8": "3e34bc08",
+      "skill_name": "granola-reference-architecture",
+      "description_len": 305,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G18",
+      "sha256": "3f74e0766c6e0ee0cb102d9f9b66936ed8106f5ab3514216e7dfb18223ca94e7",
+      "sha8": "3f74e076",
+      "skill_name": "lindy-security-basics",
+      "description_len": 255,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G19",
+      "sha256": "404ccad087e828ec2d924581e1f5c15788622c6a043e009e302b00b0fdbad5b3",
+      "sha8": "404ccad0",
+      "skill_name": "gamma-enterprise-rbac",
+      "description_len": 288,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G20",
+      "sha256": "42eb849add130cbfe2b9b4e71537b790cf00e5153f83e9ae6af0fb3b9d271a34",
+      "sha8": "42eb849a",
+      "skill_name": "apollo-migration-deep-dive",
+      "description_len": 296,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G21",
+      "sha256": "453595f03f002c8f428f268f51e136f89c80cb5a8b47bd786dd2fbfb9608bf3d",
+      "sha8": "453595f0",
+      "skill_name": "database-documentation-gen",
+      "description_len": 259,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G22",
+      "sha256": "455281e44e070c5743093ab2bed50a0748ef8edde839d35c1f662a16fee3e78b",
+      "sha8": "455281e4",
+      "skill_name": "langchain-deploy-integration",
+      "description_len": 324,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G23",
+      "sha256": "54385da785d46efa82ba80b73d0f50b6bf07e64aa5756698fa59e8de040a558a",
+      "sha8": "54385da7",
+      "skill_name": "replit-common-errors",
+      "description_len": 250,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G24",
+      "sha256": "54d9614caddf3a6e9ff6a71d816420b96560892f033bbef1a1ac639914d671a1",
+      "sha8": "54d9614c",
+      "skill_name": "supabase-rate-limits",
+      "description_len": 308,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G25",
+      "sha256": "55bcd4f18fac2e5c1e40b0663bb20a1f8a2d81dfed1eb392dce2423c1c77107b",
+      "sha8": "55bcd4f1",
+      "skill_name": "openrouter-pricing-basics",
+      "description_len": 215,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G26",
+      "sha256": "57e33c8abe111c3e30e69908f3b477dcf246dba24f5fac78dd838a1c77af64eb",
+      "sha8": "57e33c8a",
+      "skill_name": "running-e2e-tests",
+      "description_len": 216,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G27",
+      "sha256": "6432bc1355d713156b0e7eef30717f9bcf75ab0f2b86bbcd71c633d52a3b589b",
+      "sha8": "6432bc13",
+      "skill_name": "windsurf-debug-bundle",
+      "description_len": 319,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G28",
+      "sha256": "6d78a68a527d6924f7ac841b5289834a6130e4093a98e8ffba89f1f19e34a8e2",
+      "sha8": "6d78a68a",
+      "skill_name": "genkit-production-expert",
+      "description_len": 301,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G29",
+      "sha256": "6e69257341b9ee01b22a46905e93f6fe2339b9f8147c7f77da46be7b366b6556",
+      "sha8": "6e692573",
+      "skill_name": "training-llms-megatron",
+      "description_len": 329,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G30",
+      "sha256": "7632344e37ca097b28502aaafeeb066c5f247a7649454f724579e35b94ae38c6",
+      "sha8": "7632344e",
+      "skill_name": "openrouter-team-setup",
+      "description_len": 230,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G31",
+      "sha256": "827d8293f616e2d57ba257830314ec518c3c144197c1d14a7a1cbcdfa9a0d7a7",
+      "sha8": "827d8293",
+      "skill_name": "cursor-hello-world",
+      "description_len": 298,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G32",
+      "sha256": "891b77bc09118393f9bd1235404ee3f0cf412f56e57dc4b454e2fbd8fd507bc3",
+      "sha8": "891b77bc",
+      "skill_name": "evaluating-llms-harness",
+      "description_len": 309,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G33",
+      "sha256": "8ef7e008a94165c87d699b96becc9c5349da2b5bbdfffef7ab24c9f2c38921d4",
+      "sha8": "8ef7e008",
+      "skill_name": "cursor-usage-analytics",
+      "description_len": 287,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G34",
+      "sha256": "9a95703a50c374189541ea1a2098c9adf13eded91a5a38075ee750956d13d76f",
+      "sha8": "9a95703a",
+      "skill_name": "sf-diagram-mermaid",
+      "description_len": 224,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G35",
+      "sha256": "9c79d28c47db0e195b04b95dbe64f2fd52e93081be45de1288fce5940ec499ca",
+      "sha8": "9c79d28c",
+      "skill_name": "retellai-rate-limits",
+      "description_len": 310,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G36",
+      "sha256": "a0e4da3e928d70fdb7edc2dfd6f7722be9fa705c4e2bbbf0a9e93a2d40a2254f",
+      "sha8": "a0e4da3e",
+      "skill_name": "rate-limiting-apis",
+      "description_len": 233,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G37",
+      "sha256": "a5730b730baaf0aa772b55be8b987faef684f8a944b9aa1b7bba68f26753c9c1",
+      "sha8": "a5730b73",
+      "skill_name": "validating-api-responses",
+      "description_len": 232,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G38",
+      "sha256": "a732b0a727c08ac8645fd232ccd2be624f35aecb0b999931d3c350b50aa501b2",
+      "sha8": "a732b0a7",
+      "skill_name": "detecting-data-anomalies",
+      "description_len": 284,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G39",
+      "sha256": "ab43f209a7e1fa74d37682fc8f411f93af21eeb3a12c2997c772ab1688a3b813",
+      "sha8": "ab43f209",
+      "skill_name": "lindy-webhooks-events",
+      "description_len": 234,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G40",
+      "sha256": "afe6d8cac59f795ec92967a462c3c2df682ec3dbbfb8a4fd23fa3b3327abf31b",
+      "sha8": "afe6d8ca",
+      "skill_name": "managing-database-tests",
+      "description_len": 220,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G41",
+      "sha256": "b0501070053be9586e5696665e666eedfa8ec5948f8137de55a075271c7f36ad",
+      "sha8": "b0501070",
+      "skill_name": "vastai-common-errors",
+      "description_len": 252,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G42",
+      "sha256": "b3f55a416ff2aa17506c8d638085949953d7c243e43fba0208aa77782b2e9206",
+      "sha8": "b3f55a41",
+      "skill_name": "replit-sdk-patterns",
+      "description_len": 303,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G43",
+      "sha256": "b49bdca9adc8f246bc51e810b62746fd3ead6fec86b3681ccade20422b8578f0",
+      "sha8": "b49bdca9",
+      "skill_name": "groq-security-basics",
+      "description_len": 271,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G44",
+      "sha256": "b64e13ad5ca021513529f89406934109c526551522dbfaea05403a2aed375620",
+      "sha8": "b64e13ad",
+      "skill_name": "openrouter-data-privacy",
+      "description_len": 229,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G45",
+      "sha256": "b68e843a7b2f8ddf43f3b8dc644449bdd9b43acb819dd5c38baf5ad5d3bd7dae",
+      "sha8": "b68e843a",
+      "skill_name": "managing-database-sharding",
+      "description_len": 240,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G46",
+      "sha256": "c281b942adb1760c6213ffb9e96a5fb42349a84df5cc1ddc31c1b59f74b17881",
+      "sha8": "c281b942",
+      "skill_name": "windsurf-install-auth",
+      "description_len": 277,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G47",
+      "sha256": "c35893e221e28895c52143cc11bf30e41a44817796b39d4b15727dadc9796552",
+      "sha8": "c35893e2",
+      "skill_name": "theme-factory",
+      "description_len": 262,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G48",
+      "sha256": "d40555dd102484a7e6887da9bb115b88e0d63176702451fb860954a264fa02f1",
+      "sha8": "d40555dd",
+      "skill_name": "coderabbit-security-basics",
+      "description_len": 307,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G49",
+      "sha256": "d495e5509628e3b298a86f803ed6ed70790068e2e0fc10cbda6ea1053e2b5584",
+      "sha8": "d495e550",
+      "skill_name": "linear-webhooks-events",
+      "description_len": 289,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G50",
+      "sha256": "ddaf8765974b4b21216b91ed11f04c011c99947d0bbc473243d50545dd16a4a3",
+      "sha8": "ddaf8765",
+      "skill_name": "gamma-migration-deep-dive",
+      "description_len": 298,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G51",
+      "sha256": "e98dd954e1f1f337e904f47933fd60582149e81f420b12c2772d429923b4bba4",
+      "sha8": "e98dd954",
+      "skill_name": "gamma-core-workflow-b",
+      "description_len": 293,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G52",
+      "sha256": "ed1c37b4ad97b3374580fde7b64fe413ad242f6cfd4455876f81e6db6ade78cc",
+      "sha8": "ed1c37b4",
+      "skill_name": "clerk-cost-tuning",
+      "description_len": 235,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G53",
+      "sha256": "ee0640c4d158b3dac20ccebaa3ee4dcdd23ff5ec0fa2517289d406be4088e24d",
+      "sha8": "ee0640c4",
+      "skill_name": "railway-service",
+      "description_len": 302,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G54",
+      "sha256": "f01d58bf03c9c20668385884166a6ccc84a146347af27e1f6467cf5e85e58a07",
+      "sha8": "f01d58bf",
+      "skill_name": "optimizing-gas-fees",
+      "description_len": 244,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G55",
+      "sha256": "f55ae267e105fe4c0c93bc6942c879ce52c7ea534f02209d4fc532cfba84f2b8",
+      "sha8": "f55ae267",
+      "skill_name": "langchain-data-handling",
+      "description_len": 311,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G56",
+      "sha256": "f8c0a776012aadd9bf953e96dcefc00b201594becd56d8e47e2107c67cdf02cd",
+      "sha8": "f8c0a776",
+      "skill_name": "validating-api-schemas",
+      "description_len": 216,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G57",
+      "sha256": "faa6e56239061d95f4f9cc2d56d623175383bc575d651c12d9afcbf27326d58d",
+      "sha8": "faa6e562",
+      "skill_name": "instantly-ci-integration",
+      "description_len": 306,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G58",
+      "sha256": "fe74c9d04cdf5f072d5a570dbf269714fcd10dd432b64415ea343e71cc545118",
+      "sha8": "fe74c9d0",
+      "skill_name": "clay-hello-world",
+      "description_len": 239,
+      "unqueriable": false
+    },
+    {
+      "gold_id": "G59",
+      "sha256": "fea8d154471aaeb003a0020dd50b7a26934ffabc9a77f51dcfb17b479566083b",
+      "sha8": "fea8d154",
+      "skill_name": "replit-webhooks-events",
+      "description_len": 327,
+      "unqueriable": false
+    }
+  ]
+}

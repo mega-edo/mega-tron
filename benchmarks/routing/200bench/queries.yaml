@@ -1,0 +1,276 @@
+# 200-query routing benchmark fixture.
+#
+# Composition (frozen per DESIGN.md §2.3):
+#   - 90 k=1 queries (single gold)
+#   - 45 k=2 queries (two golds)
+#   - 15 k=3 queries (three golds)
+#   - 50 null queries (25 small-talk + 15 dev-trap + 10 adversarial)
+#
+# Length policy (enforced by scripts/check_query_lengths.py):
+#   - 30% short (≤40 chars), 50% medium (41-140), 20% long (141-400)
+#   - hard ceiling: 400 chars
+#
+# Authoring rules (enforced by scripts/check_query_authorship.py +
+# scripts/check_gold_coverage.py):
+#   - all queries in English
+#   - natural user phrasing, not skill-description verbatim
+#   - no ≥20-char substring from any SKILL.md *body* (frontmatter exempt)
+#   - every G01..G59 appears in 1-5 in-dist queries
+#   - null queries reference zero golds
+#
+# Schema:
+#   id: q001..q200 (zero-padded, fixed width)
+#   query: natural user input string
+#   golds: list of gold_id; empty [] for null
+#   length_bucket: short | medium | long
+#   null_kind: null | small_talk | dev_trap | adversarial
+
+queries:
+
+# =========================================================================
+# k=1 single-gold queries (90 entries, q001-q090)
+# Each gold appears 1-5 times across the full in-dist set.
+# =========================================================================
+
+# --- short (≤40 chars), ~25 here ---
+- {id: q001, query: "feature engineering for ML model", golds: [G01], length_bucket: short, null_kind: null}
+- {id: q002, query: "track my Kling AI generation jobs", golds: [G03], length_bucket: short, null_kind: null}
+- {id: q003, query: "Deepgram streaming transcription", golds: [G05], length_bucket: short, null_kind: null}
+- {id: q004, query: "multi-agent system coordination", golds: [G06], length_bucket: short, null_kind: null}
+- {id: q005, query: "performance tips for our backend", golds: [G08], length_bucket: short, null_kind: null}
+- {id: q006, query: "first Customer.io campaign setup", golds: [G09], length_bucket: short, null_kind: null}
+- {id: q007, query: "Supabase quick start example", golds: [G11], length_bucket: short, null_kind: null}
+- {id: q008, query: "verify Exa webhook signatures", golds: [G12], length_bucket: short, null_kind: null}
+- {id: q009, query: "constrained LLM JSON output", golds: [G13], length_bucket: short, null_kind: null}
+- {id: q010, query: "Linear OAuth setup", golds: [G14], length_bucket: short, null_kind: null}
+- {id: q011, query: "Granola meeting architecture", golds: [G17], length_bucket: short, null_kind: null}
+- {id: q012, query: "Lindy API key security", golds: [G18], length_bucket: short, null_kind: null}
+- {id: q013, query: "Gamma RBAC for tenants", golds: [G19], length_bucket: short, null_kind: null}
+- {id: q014, query: "rename and link Railway services", golds: [G53], length_bucket: short, null_kind: null}
+- {id: q015, query: "fix common Replit errors", golds: [G23], length_bucket: short, null_kind: null}
+- {id: q016, query: "openrouter cost estimation", golds: [G25], length_bucket: short, null_kind: null}
+- {id: q017, query: "E2E test for signup flow", golds: [G26], length_bucket: short, null_kind: null}
+- {id: q018, query: "Genkit RAG production app", golds: [G28], length_bucket: short, null_kind: null}
+- {id: q019, query: "my first project in Cursor AI", golds: [G31], length_bucket: short, null_kind: null}
+- {id: q020, query: "Cursor usage dashboard", golds: [G33], length_bucket: short, null_kind: null}
+- {id: q021, query: "SF ERD diagram via Mermaid", golds: [G34], length_bucket: short, null_kind: null}
+- {id: q022, query: "GCRA-style API throttle", golds: [G36], length_bucket: short, null_kind: null}
+- {id: q023, query: "find outliers in sensor data", golds: [G38], length_bucket: short, null_kind: null}
+- {id: q024, query: "Postgres test fixtures with rollback", golds: [G40], length_bucket: short, null_kind: null}
+- {id: q025, query: "Replit signature verification", golds: [G59], length_bucket: short, null_kind: null}
+
+# --- medium (41-140 chars), ~45 here ---
+- {id: q026, query: "how to scale and encode features for a classifier", golds: [G01], length_bucket: medium, null_kind: null}
+- {id: q027, query: "I need fast structured JSON output from an LLM with regex constraints", golds: [G04], length_bucket: medium, null_kind: null}
+- {id: q028, query: "build a live transcription app with Deepgram streaming", golds: [G05], length_bucket: medium, null_kind: null}
+- {id: q029, query: "Replit acting weird, how do I file a support ticket with logs?", golds: [G07], length_bucket: medium, null_kind: null}
+- {id: q030, query: "our backend is slow, give me a ranked list of speedups we should consider", golds: [G08], length_bucket: medium, null_kind: null}
+- {id: q031, query: "extract ePub text and segment for SFT training", golds: [G10], length_bucket: medium, null_kind: null}
+- {id: q032, query: "I'm just getting started with Supabase, need a basic working example covering signup, a single insert, and a read with row-level security", golds: [G11], length_bucket: medium, null_kind: null}
+- {id: q033, query: "set up an endpoint that receives Exa event notifications securely", golds: [G12], length_bucket: medium, null_kind: null}
+- {id: q034, query: "enforce a strict JSON schema on LLM output using grammars", golds: [G13], length_bucket: medium, null_kind: null}
+- {id: q035, query: "rotate Linear API keys and protect them in our vault", golds: [G14], length_bucket: medium, null_kind: null}
+- {id: q036, query: "set up a local dev workflow for testing Linear integrations", golds: [G15], length_bucket: medium, null_kind: null}
+- {id: q037, query: "prepare a production rollout checklist for Instantly", golds: [G16], length_bucket: medium, null_kind: null}
+- {id: q038, query: "auto-generate documentation from my database schema", golds: [G21], length_bucket: medium, null_kind: null}
+- {id: q039, query: "deploy my LangChain app to Cloud Run in a container", golds: [G22], length_bucket: medium, null_kind: null}
+- {id: q040, query: "we're hitting 429s on Supabase across our user-creation path, need a retry strategy with jittered backoff and idempotency keys", golds: [G24], length_bucket: medium, null_kind: null}
+- {id: q041, query: "how much will OpenRouter cost for my expected token volume?", golds: [G25], length_bucket: medium, null_kind: null}
+- {id: q042, query: "collect diagnostic info from Windsurf for a support ticket", golds: [G27], length_bucket: medium, null_kind: null}
+- {id: q043, query: "build a Genkit flow with tool calling and deploy to Firebase", golds: [G28], length_bucket: medium, null_kind: null}
+- {id: q044, query: "70B LLM training with sharded tensor + sequence parallel on H100 cluster", golds: [G29], length_bucket: medium, null_kind: null}
+- {id: q045, query: "set up OpenRouter for our team with shared billing", golds: [G30], length_bucket: medium, null_kind: null}
+- {id: q046, query: "evaluate my fine-tuned model on academic benchmarks", golds: [G32], length_bucket: medium, null_kind: null}
+- {id: q047, query: "analyze how my team uses Cursor and produce usage metrics", golds: [G33], length_bucket: medium, null_kind: null}
+- {id: q048, query: "draw the OAuth flow for our Salesforce integration as a diagram", golds: [G34], length_bucket: medium, null_kind: null}
+- {id: q049, query: "Retell AI keeps returning 429, need a jitter-based retry plan", golds: [G35], length_bucket: medium, null_kind: null}
+- {id: q050, query: "find low-fee windows for sending Ethereum transactions", golds: [G54], length_bucket: medium, null_kind: null}
+- {id: q051, query: "make sure our API responses match the published schema", golds: [G37], length_bucket: medium, null_kind: null}
+- {id: q052, query: "find unusual patterns in user activity with anomaly detection", golds: [G38], length_bucket: medium, null_kind: null}
+- {id: q053, query: "set up Lindy webhook callbacks for event-driven flows", golds: [G39], length_bucket: medium, null_kind: null}
+- {id: q054, query: "Vast.ai instance not starting, troubleshooting steps", golds: [G41], length_bucket: medium, null_kind: null}
+- {id: q055, query: "production-grade Replit SDK patterns for our Python codebase", golds: [G42], length_bucket: medium, null_kind: null}
+- {id: q056, query: "scrub PII from prompts before they go upstream to OpenRouter so we satisfy our internal compliance review and the GDPR clauses our legal team flagged", golds: [G44], length_bucket: long, null_kind: null}
+- {id: q057, query: "horizontal sharding strategy for our growing user table", golds: [G45], length_bucket: medium, null_kind: null}
+- {id: q058, query: "install Windsurf CLI and configure API auth", golds: [G46], length_bucket: medium, null_kind: null}
+- {id: q059, query: "apply a dark mode theme to my generated slides", golds: [G47], length_bucket: medium, null_kind: null}
+- {id: q060, query: "audit CodeRabbit secrets and tighten access policies", golds: [G48], length_bucket: medium, null_kind: null}
+- {id: q061, query: "handle Linear issue-created webhooks in real time", golds: [G49], length_bucket: medium, null_kind: null}
+- {id: q062, query: "edit and export an existing Gamma deck to PDF", golds: [G51], length_bucket: medium, null_kind: null}
+- {id: q063, query: "we're paying way too much for Clerk now that we hit scale, help me figure out which usage knobs to tune and what the cheaper tiers actually give up", golds: [G52], length_bucket: long, null_kind: null}
+- {id: q064, query: "rename a Railway service and link it to another one", golds: [G53], length_bucket: medium, null_kind: null}
+- {id: q065, query: "find the cheapest hour to send Ethereum transactions", golds: [G54], length_bucket: medium, null_kind: null}
+- {id: q066, query: "block PII from leaking through LangChain prompts", golds: [G55], length_bucket: medium, null_kind: null}
+- {id: q067, query: "validate my OpenAPI spec against actual API responses", golds: [G56], length_bucket: medium, null_kind: null}
+- {id: q068, query: "GitHub Actions to run Instantly tests on every PR", golds: [G57], length_bucket: medium, null_kind: null}
+- {id: q069, query: "minimal Clay example to learn the API basics", golds: [G58], length_bucket: medium, null_kind: null}
+- {id: q070, query: "Replit Python SDK best practices for our team", golds: [G42], length_bucket: medium, null_kind: null}
+
+# --- long (141-400 chars), ~20 here ---
+- {id: q071, query: "I'm building a Salesforce LWC component with proper accessibility and dark-mode support, plus matching Jest tests; want a scaffolding template", golds: [G02], length_bucket: long, null_kind: null}
+- {id: q072, query: "I want a team of agents where one triages tasks, hands off to worker agents, and coordinates a final review, with retries between handoffs", golds: [G06], length_bucket: medium, null_kind: null}
+- {id: q073, query: "we use Replit for our online IDE features but every few weeks weird flakes pop up; help me put together a support package with logs, traces, and diagnostics for their team", golds: [G07], length_bucket: long, null_kind: null}
+- {id: q074, query: "I want to fine-tune a smaller LLM on a corpus of public-domain novels to capture a specific author's writing style for our creative-writing assistant feature", golds: [G10], length_bucket: long, null_kind: null}
+- {id: q075, query: "I'm designing how Granola fits into our 200-employee meeting workflow; need a reference design that covers Slack, Drive, and our internal calendar integrations", golds: [G17], length_bucket: long, null_kind: null}
+- {id: q076, query: "migrate our entire CRM dataset from HubSpot into Apollo, including custom fields, deal stages, contact relationships, and historical activity data, without breaking sales-team workflows", golds: [G20], length_bucket: long, null_kind: null}
+- {id: q077, query: "I need to evaluate our fine-tuned 13B model against several public benchmarks to compare it with the base model and decide whether to ship, including the standard reasoning and code suites", golds: [G32], length_bucket: long, null_kind: null}
+- {id: q078, query: "find cheap gas windows for sending L1 transactions and estimate fees before queuing them at peak", golds: [G54], length_bucket: medium, null_kind: null}
+- {id: q079, query: "migrating our whole sales team off Google Slides into Gamma, need a step-by-step plan that covers template setup, brand guidelines, and how to handle the slides that don't import cleanly", golds: [G50], length_bucket: long, null_kind: null}
+- {id: q080, query: "set up Linear listeners for issue lifecycle events so our deployment bot can react to status changes in real time and update the right Slack thread", golds: [G49], length_bucket: long, null_kind: null}
+- {id: q081, query: "I'm running everything on Railway and need to rename three services, change their icons, link them so the deploy webhook fires across all of them, and check current service status before changing anything", golds: [G53], length_bucket: long, null_kind: null}
+- {id: q082, query: "we need to harden our LangChain deployment against PII leaks: scrub user PII before it goes into prompts, mask sensitive responses, and document the data-handling policy for our compliance team", golds: [G55], length_bucket: long, null_kind: null}
+- {id: q083, query: "audit our CodeRabbit setup: review who has access, what API keys are in use, where they're stored, and what the rotation policy looks like for our SOC2 review next month", golds: [G48], length_bucket: long, null_kind: null}
+- {id: q084, query: "we just rolled out Clerk to all our products and the cost went way over budget, need to figure out which features are driving the bill and adjust our usage", golds: [G52], length_bucket: long, null_kind: null}
+- {id: q085, query: "we use Cursor across our 40-engineer team and I want to track how much it's actually being used, who's using which models, and where the value is showing up", golds: [G33], length_bucket: long, null_kind: null}
+- {id: q086, query: "draft an Instantly go-live checklist with smoke tests, monitoring hooks, and a rollback plan for D-day", golds: [G16], length_bucket: medium, null_kind: null}
+- {id: q087, query: "minimum-viable Supabase example that proves the SDK works end-to-end: insert a row, read it back, run an RLS-protected read, and clean up — basically a smoke test", golds: [G11], length_bucket: long, null_kind: null}
+- {id: q088, query: "70B model on H100 cluster: tune tensor parallel degree, pipeline stages, and sequence chunking so MFU stays above 40%", golds: [G29], length_bucket: medium, null_kind: null}
+- {id: q089, query: "stand up auth for the Windsurf install: initial setup, the API-key handshake, and a swap procedure for when keys rotate", golds: [G46], length_bucket: medium, null_kind: null}
+- {id: q090, query: "we have 50 internal apps reading from one Postgres and queries are slowing down, time to think about horizontal sharding — what's the safest path?", golds: [G45], length_bucket: long, null_kind: null}
+
+# =========================================================================
+# k=2 two-gold queries (45 entries, q091-q135)
+# Compound intents pairing two domain-adjacent golds.
+# =========================================================================
+
+# --- short (≤40 chars), ~13 here ---
+- {id: q091, query: "Lindy security + theme factory styling", golds: [G18, G47], length_bucket: short, null_kind: null}
+- {id: q092, query: "Cursor + Clay quick starts", golds: [G31, G58], length_bucket: short, null_kind: null}
+- {id: q093, query: "Vast.ai errors + Railway service ops", golds: [G41, G53], length_bucket: short, null_kind: null}
+- {id: q094, query: "ML feature work + outlier flag", golds: [G01, G38], length_bucket: short, null_kind: null}
+- {id: q095, query: "OpenRouter pricing + team setup", golds: [G25, G30], length_bucket: short, null_kind: null}
+- {id: q096, query: "LangChain deploy + PII handling", golds: [G22, G55], length_bucket: short, null_kind: null}
+- {id: q097, query: "Linear webhooks + Customer.io quick start", golds: [G49, G09], length_bucket: medium, null_kind: null}
+- {id: q098, query: "Salesforce LWC + Mermaid ERD", golds: [G02, G34], length_bucket: short, null_kind: null}
+- {id: q099, query: "Gamma edit + Gamma migration", golds: [G50, G51], length_bucket: short, null_kind: null}
+- {id: q100, query: "schema validation + rate limits", golds: [G37, G36], length_bucket: short, null_kind: null}
+- {id: q101, query: "Replit SDK + Replit errors", golds: [G42, G23], length_bucket: short, null_kind: null}
+- {id: q102, query: "Clerk costs + OpenRouter privacy", golds: [G52, G44], length_bucket: short, null_kind: null}
+- {id: q103, query: "Apollo + Gamma migrations", golds: [G20, G50], length_bucket: short, null_kind: null}
+
+# --- medium (41-140 chars), ~22 here ---
+- {id: q104, query: "validate Replit webhooks and rotate our Linear API keys", golds: [G59, G14], length_bucket: medium, null_kind: null}
+- {id: q105, query: "callback receivers for Exa events and Lindy events", golds: [G12, G39], length_bucket: medium, null_kind: null}
+- {id: q106, query: "deal with 429 throttling on Supabase and Retell AI calls", golds: [G24, G35], length_bucket: medium, null_kind: null}
+- {id: q107, query: "secure API keys for both Groq and the CodeRabbit setup", golds: [G43, G48], length_bucket: medium, null_kind: null}
+- {id: q108, query: "minimal Supabase walkthrough plus a starter Customer.io flow", golds: [G11, G09], length_bucket: medium, null_kind: null}
+- {id: q109, query: "validate the API contract via OpenAPI and check Railway service health in one CI step", golds: [G53, G56], length_bucket: medium, null_kind: null}
+- {id: q110, query: "add rate limiting and validate response schemas in the gateway", golds: [G36, G37], length_bucket: medium, null_kind: null}
+- {id: q111, query: "benchmark our LLM then train a bigger one with parallelism", golds: [G32, G29], length_bucket: medium, null_kind: null}
+- {id: q112, query: "Genkit RAG flow plus a planner that routes between sub-agents", golds: [G28, G06], length_bucket: medium, null_kind: null}
+- {id: q113, query: "Windsurf support bundle plus a Replit support bundle for the team", golds: [G27, G07], length_bucket: medium, null_kind: null}
+- {id: q114, query: "Salesforce LWC scaffolding and an ERD diagram of related objects", golds: [G02, G34], length_bucket: medium, null_kind: null}
+- {id: q115, query: "migrate Powerpoint into Gamma then edit the slides for export", golds: [G50, G51], length_bucket: medium, null_kind: null}
+- {id: q116, query: "track Kling AI jobs while also monitoring Cursor team usage", golds: [G03, G33], length_bucket: medium, null_kind: null}
+- {id: q117, query: "Customer.io minimal example and Clay minimal example for onboarding", golds: [G09, G58], length_bucket: medium, null_kind: null}
+- {id: q118, query: "fast structured LLM output plus grammar enforcement", golds: [G04, G13], length_bucket: medium, null_kind: null}
+- {id: q119, query: "deploy LangChain in Docker and check OpenRouter pricing", golds: [G22, G25], length_bucket: medium, null_kind: null}
+- {id: q120, query: "real-time Deepgram pipeline plus a planner agent for follow-ups", golds: [G05, G06], length_bucket: medium, null_kind: null}
+- {id: q121, query: "Granola enterprise blueprint plus per-tenant RBAC for Gamma", golds: [G17, G19], length_bucket: medium, null_kind: null}
+- {id: q122, query: "database doc generator plus the DB testing setup", golds: [G21, G40], length_bucket: medium, null_kind: null}
+- {id: q123, query: "sharding strategy plus a doc generator for the new shard map", golds: [G45, G21], length_bucket: medium, null_kind: null}
+- {id: q124, query: "secure CodeRabbit setup and validate the API schemas it emits", golds: [G48, G56], length_bucket: medium, null_kind: null}
+- {id: q125, query: "idiomatic Python Replit code plus a runbook for routine error modes", golds: [G42, G23], length_bucket: medium, null_kind: null}
+
+# --- long (141-400 chars), ~10 here ---
+- {id: q126, query: "bring up a local Linear setup with the right env vars, then verify OAuth follows our published security playbook before going live", golds: [G15, G14], length_bucket: medium, null_kind: null}
+- {id: q127, query: "validate every API response against our published OpenAPI spec and also plan a horizontal sharding rollout so the read replicas stay healthy under load", golds: [G37, G45], length_bucket: long, null_kind: null}
+- {id: q128, query: "we need to ship our LangChain app to production this quarter: containerize for Cloud Run, plus a PII-handling layer that scrubs sensitive fields from prompts before they leave our network", golds: [G22, G55], length_bucket: long, null_kind: null}
+- {id: q129, query: "for our ML pipeline I want to engineer features from the raw user-event stream, then run an outlier-detection pass on those features to flag suspicious sessions before they hit the model", golds: [G01, G38], length_bucket: long, null_kind: null}
+- {id: q130, query: "wire up 429 handling for Supabase and Retell AI: detect, backoff-with-jitter, and dedup keys so retries do not double-write on either side", golds: [G24, G35], length_bucket: medium, null_kind: null}
+- {id: q131, query: "we want a Gamma rollout for our enterprise customer: configure RBAC so each tenant only sees their own decks, and write a migration plan to bring their existing Google Slides over cleanly", golds: [G19, G50], length_bucket: long, null_kind: null}
+- {id: q132, query: "set up OpenRouter at org level with per-department billing buckets and a rough monthly spend projection driven by our staging traffic", golds: [G30, G25], length_bucket: medium, null_kind: null}
+- {id: q133, query: "secure our Lindy and Groq integrations: lock down API keys, scope them to the right env, and document the rotation playbook for our security review", golds: [G18, G43], length_bucket: long, null_kind: null}
+- {id: q134, query: "I want Lindy webhooks firing on every workflow event plus Linear webhooks firing on every issue event, and a combined dashboard that shows both streams side by side for ops", golds: [G39, G49], length_bucket: long, null_kind: null}
+- {id: q135, query: "production-grade Replit Python integrations plus a playbook for the typical build-time errors my team keeps hitting", golds: [G42, G23], length_bucket: medium, null_kind: null}
+
+# =========================================================================
+# k=3 three-gold queries (15 entries, q136-q150)
+# Scenario-based intents spanning three related golds.
+# All are long by nature; we have some shorter ones to balance distribution.
+# =========================================================================
+
+# --- short ~3 ---
+- {id: q136, query: "Replit webhook + Exa + Lindy", golds: [G59, G12, G39], length_bucket: short, null_kind: null}
+- {id: q137, query: "Lindy + CodeRabbit + Groq security", golds: [G18, G48, G43], length_bucket: short, null_kind: null}
+- {id: q138, query: "schemas + responses + rate limits", golds: [G56, G37, G36], length_bucket: short, null_kind: null}
+
+# --- medium ~5 ---
+- {id: q139, query: "secure ingestion: verify Exa signatures, throttle 429s, protect the API key", golds: [G12, G24, G43], length_bucket: medium, null_kind: null}
+- {id: q140, query: "starter tutorial covering Supabase, Customer.io, and Clay basics", golds: [G11, G09, G58], length_bucket: medium, null_kind: null}
+- {id: q141, query: "gather Windsurf and Replit support bundles plus the Replit error reference", golds: [G27, G07, G23], length_bucket: medium, null_kind: null}
+- {id: q142, query: "Salesforce LWC with a Mermaid ERD plus a Gamma RBAC story for the docs", golds: [G02, G34, G19], length_bucket: medium, null_kind: null}
+- {id: q143, query: "theme factory styling + Gamma edit workflow + a CI integration for Instantly", golds: [G47, G51, G57], length_bucket: medium, null_kind: null}
+
+# --- long ~7 ---
+- {id: q144, query: "I need callback handlers for Replit and Lindy events on signed payloads, plus a Windsurf install with API auth in the same setup pass", golds: [G59, G39, G46], length_bucket: medium, null_kind: null}
+- {id: q145, query: "ML pipeline: build features from raw events, run an anomaly pass on those features to flag suspicious sessions, then evaluate the trained model on the academic suites before promoting it", golds: [G01, G38, G32], length_bucket: long, null_kind: null}
+- {id: q146, query: "go-live story: roll our LangChain app to Cloud Run, add PII scrubbing for the compliance review, and finalize an Instantly launch checklist before D-day", golds: [G22, G55, G16], length_bucket: long, null_kind: null}
+- {id: q147, query: "API hardening pass: every response checked against our OpenAPI contract, plus per-IP rate limits at the gateway and a theme-factory pass for the public docs", golds: [G56, G36, G47], length_bucket: long, null_kind: null}
+- {id: q148, query: "prep a 70B training run with tensor + pipeline-stage parallelism, score it on the standard suites, then serve via structured-output generation", golds: [G29, G32, G04], length_bucket: long, null_kind: null}
+- {id: q149, query: "rate-limit handling story across two integrations: Supabase 429s and Retell AI 429s, with an OpenRouter-side privacy review on the same release", golds: [G24, G35, G44], length_bucket: long, null_kind: null}
+- {id: q150, query: "Linear onboarding: stand up the local dev loop, harden OAuth per our security checklist, and wire callbacks for issue-state changes", golds: [G15, G14, G49], length_bucket: medium, null_kind: null}
+
+# =========================================================================
+# Null queries (50 entries, q151-q200)
+# Composition: 25 small-talk + 15 dev-trap + 10 adversarial
+# All have golds: []. Router should return K=0 ideally.
+# =========================================================================
+
+# --- small_talk (25 entries, q151-q175) ---
+- {id: q151, query: "what is 2 plus 2", golds: [], length_bucket: short, null_kind: small_talk}
+- {id: q152, query: "tell me a joke about cats", golds: [], length_bucket: short, null_kind: small_talk}
+- {id: q153, query: "capital city of France", golds: [], length_bucket: short, null_kind: small_talk}
+- {id: q154, query: "translate hello into Spanish", golds: [], length_bucket: short, null_kind: small_talk}
+- {id: q155, query: "recommend a good book for the weekend", golds: [], length_bucket: short, null_kind: small_talk}
+- {id: q156, query: "year of the first moon landing", golds: [], length_bucket: short, null_kind: small_talk}
+- {id: q157, query: "is pineapple okay on pizza", golds: [], length_bucket: short, null_kind: small_talk}
+- {id: q158, query: "summarize Hamlet in two sentences", golds: [], length_bucket: short, null_kind: small_talk}
+- {id: q159, query: "good morning, how are you", golds: [], length_bucket: short, null_kind: small_talk}
+- {id: q160, query: "differences between a llama and an alpaca", golds: [], length_bucket: medium, null_kind: small_talk}
+- {id: q161, query: "convert 100 USD into EUR today", golds: [], length_bucket: short, null_kind: small_talk}
+- {id: q162, query: "what holidays are coming up", golds: [], length_bucket: short, null_kind: small_talk}
+- {id: q163, query: "give me a quick weeknight dinner recipe", golds: [], length_bucket: short, null_kind: small_talk}
+- {id: q164, query: "who painted the Mona Lisa", golds: [], length_bucket: short, null_kind: small_talk}
+- {id: q165, query: "will it rain tomorrow", golds: [], length_bucket: short, null_kind: small_talk}
+- {id: q166, query: "good gift idea for a five-year-old", golds: [], length_bucket: short, null_kind: small_talk}
+- {id: q167, query: "name three primary colors", golds: [], length_bucket: short, null_kind: small_talk}
+- {id: q168, query: "I'm bored, suggest something fun", golds: [], length_bucket: short, null_kind: small_talk}
+- {id: q169, query: "approximate speed of light in vacuum", golds: [], length_bucket: short, null_kind: small_talk}
+- {id: q170, query: "how do I tie a Windsor knot", golds: [], length_bucket: short, null_kind: small_talk}
+- {id: q171, query: "fun fact about octopuses", golds: [], length_bucket: short, null_kind: small_talk}
+- {id: q172, query: "I would like the meaning of life please", golds: [], length_bucket: short, null_kind: small_talk}
+- {id: q173, query: "list five common houseplants", golds: [], length_bucket: short, null_kind: small_talk}
+- {id: q174, query: "describe photosynthesis to a child", golds: [], length_bucket: short, null_kind: small_talk}
+- {id: q175, query: "give a synonym for cheerful", golds: [], length_bucket: short, null_kind: small_talk}
+
+# --- dev_trap (15 entries, q176-q190) ---
+# Coding terminology with no gold in the pool — tests embedder discrimination.
+- {id: q176, query: "release year of Python 3.12", golds: [], length_bucket: short, null_kind: dev_trap}
+- {id: q177, query: "tabs versus spaces, which", golds: [], length_bucket: short, null_kind: dev_trap}
+- {id: q178, query: "meaning of the HTTP acronym", golds: [], length_bucket: short, null_kind: dev_trap}
+- {id: q179, query: "best editor to use for Rust", golds: [], length_bucket: short, null_kind: dev_trap}
+- {id: q180, query: "one-line definition of a lambda", golds: [], length_bucket: short, null_kind: dev_trap}
+- {id: q181, query: "SQL versus NoSQL in one paragraph", golds: [], length_bucket: short, null_kind: dev_trap}
+- {id: q182, query: "when did Git 2.40 come out", golds: [], length_bucket: short, null_kind: dev_trap}
+- {id: q183, query: "REST vs RPC tradeoffs", golds: [], length_bucket: short, null_kind: dev_trap}
+- {id: q184, query: "Vim or Emacs more popular today", golds: [], length_bucket: short, null_kind: dev_trap}
+- {id: q185, query: "current Node.js LTS version", golds: [], length_bucket: short, null_kind: dev_trap}
+- {id: q186, query: "brief history of C language", golds: [], length_bucket: short, null_kind: dev_trap}
+- {id: q187, query: "what is a monad in Haskell", golds: [], length_bucket: short, null_kind: dev_trap}
+- {id: q188, query: "explain Big O briefly", golds: [], length_bucket: short, null_kind: dev_trap}
+- {id: q189, query: "TCP vs UDP one-liner", golds: [], length_bucket: short, null_kind: dev_trap}
+- {id: q190, query: "creator of C++ language", golds: [], length_bucket: short, null_kind: dev_trap}
+
+# --- adversarial (10 entries, q191-q200) ---
+# Paraphrases that almost match a non-gold pool skill — tests abstain robustness.
+- {id: q191, query: "general tips on working with AWS Lambda functions", golds: [], length_bucket: medium, null_kind: adversarial}
+- {id: q192, query: "Docker Compose v2 vs v1 differences", golds: [], length_bucket: short, null_kind: adversarial}
+- {id: q193, query: "pnpm or yarn in 2026", golds: [], length_bucket: short, null_kind: adversarial}
+- {id: q194, query: "explain how K8s ingress controllers route traffic", golds: [], length_bucket: medium, null_kind: adversarial}
+- {id: q195, query: "current state of GraphQL adoption", golds: [], length_bucket: short, null_kind: adversarial}
+- {id: q196, query: "tradeoffs between SSR and SSG in Next.js", golds: [], length_bucket: short, null_kind: adversarial}
+- {id: q197, query: "Postgres vs MySQL on high-write workloads", golds: [], length_bucket: medium, null_kind: adversarial}
+- {id: q198, query: "good observability stack for microservices", golds: [], length_bucket: medium, null_kind: adversarial}
+- {id: q199, query: "monorepos vs polyrepos pros and cons", golds: [], length_bucket: short, null_kind: adversarial}
+- {id: q200, query: "does SSR still make sense in 2026", golds: [], length_bucket: short, null_kind: adversarial}

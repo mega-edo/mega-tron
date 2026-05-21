@@ -1,0 +1,29 @@
+{
+  "mega-tron-bge-m3 | {'mode': 'default'}": {
+    "n": 200,
+    "mean_ms": 52.46,
+    "p50_ms": 44.2,
+    "p95_ms": 83.3,
+    "p99_ms": 107.61,
+    "max_ms": 489.21,
+    "mean_k": 3.33
+  },
+  "mega-tron-skillret | {'mode': 'default'}": {
+    "n": 200,
+    "mean_ms": 77.81,
+    "p50_ms": 67.71,
+    "p95_ms": 129.4,
+    "p99_ms": 139.02,
+    "max_ms": 147.25,
+    "mean_k": 2.52
+  },
+  "mega-tron-bge-small | {'mode': 'default'}": {
+    "n": 200,
+    "mean_ms": 15.7,
+    "p50_ms": 12.3,
+    "p95_ms": 34.38,
+    "p99_ms": 39.56,
+    "max_ms": 40.39,
+    "mean_k": 7.05
+  }
+}
