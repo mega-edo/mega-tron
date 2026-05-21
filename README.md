@@ -84,7 +84,7 @@ Two commands, three hosts. Token usage drops 18–30× on the very next turn wit
 
 ## 📊 Does it actually work? — measured
 
-A 200-query benchmark on a pool of third-party skills sampled deterministically from the open-source ecosystem ([full report](benchmarks/routing/results.md)). No API calls; every number below is reproducible from [the repo](benchmarks/routing/).
+A 200-query benchmark on a pool of third-party skills sampled deterministically from the open-source ecosystem ([full report](benchmarks/routing/results.md)). No API calls; every number below is from [the repo](benchmarks/routing/).
 
 **Coverage** = fraction of the "gold" skills the model can actually see for each prompt, averaged over 150 in-distribution + 50 null prompts. Native hosts can never abstain on null prompts, which is why they cap at 0.750 regardless of pool size.
 
@@ -108,13 +108,13 @@ The last column reads as *"that row uses this many times more tokens than MEGA T
 As the pool grows, the gap widens on both axes: vanilla Codex's alphabetical char-budget drops 96% of its coverage by 500 skills (0.708 → 0.029), vanilla Gemini's catalog grows 8× in tokens, and MEGA Tron stays flat near 0.9 coverage at ~150 tokens.
 
 > [!TIP]
-> You don't need 500 skills for this to matter. **59** is the smallest pool the benchmark uses — every "gold" skill the 200 prompts can ask for, with no padding ([details](benchmarks/routing/results.md#gold-skills--59-of-the-500)). Even at that floor, MEGA Tron already lifts coverage from 0.71–0.75 to **0.955** while shipping **~11× fewer tokens than Codex, ~19× than Claude, ~34× than Gemini**. The gap widens as the pool grows — at 500 skills the token savings climb to **8× / 22× / 187×** and Codex's coverage collapses to 0.029. More skills = bigger win.
+> The benchmark's smallest pool (**pool=59**) is already comparable to a normal install. For reference: [anthropics/skills](https://github.com/anthropics/skills) (Anthropic's published Claude Code starter catalog) holds **17 skills**, [obra/superpowers](https://github.com/obra/superpowers) (the most popular community extension) **14 more**, and [openai/codex](https://github.com/openai/codex) bundles **5 sample skills** out of the box. Add anything the user has installed themselves and a real catalog quickly reaches 59 and beyond. At pool=59 MEGA Tron already lifts coverage from 0.71–0.75 to **0.955** while shipping **~11× fewer tokens than Codex, ~19× than Claude, ~34× than Gemini** — and the gap only widens as the pool grows (at 500 skills the token savings climb to **8× / 22× / 187×** and Codex's coverage collapses to 0.029).
 
 **Cap ≠ fix.** When the host caps its catalog (Codex's `min(2% × ctx, 8,000 chars)` or Claude's `skillListingBudgetFraction`), the *content* of what survives is decided by alphabet or by invocation frequency — never by what you actually typed.
 
 ### And it keeps getting better the more you use it
 
-The numbers above are MEGA Tron's *day-1* routing quality. The feedback loop measurably *improves* routing across sessions ([full report](benchmarks/feedback_loop/results.md)). On a fixture of 80 skills (including 5 booby-trapped twins engineered to beat the real skills on raw cosine), top-3 routing accuracy climbs from **50% to 70% over 6 rounds** — while the same router with feedback disabled stays flat at 50%.
+A 6-round feedback-loop experiment on a fixture of 80 skills, including 5 booby-trapped twins engineered to beat the real skills on raw cosine ([full report](benchmarks/feedback_loop/results.md)). Driven by live Gemini CLI calls (`gemini-3-flash-preview`, 13 prompts × 6 rounds × 2 conditions per run) so the loop is exercised end-to-end against a real host; raw run artefacts and graphs in [the repo](benchmarks/feedback_loop/). The numbers above are MEGA Tron's *day-1* routing quality; here top-3 routing accuracy climbs from **50% to 70% over 6 rounds** — while the same router with feedback disabled stays flat at 50%.
 
 ![feedback loop hit rate](benchmarks/feedback_loop/results/20260521T023532Z_bge-small/graphs/1_hit_rate.png)
 
