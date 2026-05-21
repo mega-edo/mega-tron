@@ -11,7 +11,15 @@
 
 "use strict";
 
-const POLL_MS = 30000;
+// Live-refresh cadence. The Stop hook writes a verdict the moment a
+// turn ends, so a 30s tick used to leave a noticeable gap between
+// "model just answered" and "row showed up in the dashboard". A
+// loopback HTTP poll on a single-tenant server is essentially free,
+// so we tighten the interval to 5s. The visibilitychange listener in
+// `bootstrap` pauses polling while the tab is hidden, and an active
+// TEXTAREA/INPUT focus skips one tick to avoid stomping a user's
+// in-progress edit.
+const POLL_MS = 5000;
 const HOSTS = ["codex", "claude", "gemini", "hermes", "user"]; // "other" intentionally absent; "user" = manual verdicts
 
 function reportToServer(payload) {
@@ -643,12 +651,18 @@ function renderOrphanPaneBody(pane) {
 async function deleteSelectedOrphans(pane) {
   const names = Array.from(pane.selected);
   if (names.length === 0) return;
-  if (!confirm(
-    `Delete all verdict history for ${names.length} orphan skill` +
-    `${names.length === 1 ? "" : "s"}? This cannot be undone.`,
-  )) {
-    return;
-  }
+  const plural = names.length === 1 ? "" : "s";
+  const ok = await showConfirm({
+    title: `Delete ${names.length} orphan skill${plural}?`,
+    body:
+      `This removes every verdict row plus the skills-table entry ` +
+      `for the selected name${plural}. It cannot be undone.`,
+    sub: names.slice(0, 5).join(", ") + (names.length > 5
+      ? `, +${names.length - 5} more` : ""),
+    confirmLabel: "Delete",
+    confirmKind: "danger",
+  });
+  if (!ok) return;
   pane.submitting = true;
   renderPanes();
   try {
@@ -1633,7 +1647,29 @@ function bootstrap() {
   });
 
   loadAll();
-  pollTimer = setInterval(loadAll, POLL_MS);
+  // Safety-gated poll tick:
+  //   - Skip while the tab is hidden — no-one is reading the page.
+  //   - Skip when a TEXTAREA / INPUT has focus (the user is mid-edit
+  //     of a verdict reason or search query, and a re-render would
+  //     either steal focus or stomp keystrokes between fetch and
+  //     paint).
+  // Both checks are O(1); when either trips we just wait for the
+  // next tick so cadence stays predictable.
+  const tick = () => {
+    if (document.visibilityState !== "visible") return;
+    const active = document.activeElement;
+    if (active && (active.tagName === "TEXTAREA" || active.tagName === "INPUT")) {
+      return;
+    }
+    loadAll();
+  };
+  pollTimer = setInterval(tick, POLL_MS);
+  // Resume immediately when the tab becomes visible again so the
+  // user doesn't see a stale snapshot for up to one POLL_MS after
+  // switching back.
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") tick();
+  });
 
   // Auto-open a skill pane from URL hash — used by headless snapshot
   // tooling (and by the user when sharing a URL).
