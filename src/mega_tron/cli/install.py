@@ -365,8 +365,66 @@ def cmd_install(args: argparse.Namespace) -> int:
             except Exception:
                 # Best-effort; never break setup on inventory failure.
                 pass
+        # Warm the daemon in the background so the user's very first
+        # host session lands on the fast path (~50ms) instead of paying
+        # the embedder cold-load on first hook fire. The daemon detaches
+        # via ``setsid`` so setup returns immediately; if the spawn
+        # fails for any reason the lazy-spawn path in each host hook
+        # still kicks in on first miss — this is purely an optimisation.
+        _warm_daemon_on_setup()
 
     return rc
+
+
+def _warm_daemon_on_setup() -> None:
+    """Detached daemon spawn at the end of a successful setup.
+
+    Skipped when:
+      - ``MEGA_DAEMON=0`` (user explicitly disabled the daemon path)
+      - A daemon is already running on the per-UID socket
+      - ``MEGA_QUIET`` (no stderr line) — but spawn still happens
+      - ``spawn_detached`` returns ``None`` (e.g. some sandboxed CI
+        environment) — silently skip; first hook fire will lazy-spawn
+
+    The spawn is fire-and-forget — we never wait for the daemon to
+    accept its first request. Setup returns within the same second.
+    """
+    try:
+        from mega_tron import daemon as daemon_mod
+    except Exception:  # noqa: BLE001
+        return
+
+    try:
+        if daemon_mod.daemon_disabled():
+            return
+        if daemon_mod.is_running():
+            if not os.environ.get("MEGA_QUIET"):
+                print(
+                    "[setup] daemon already running — skipped warm-up.",
+                    file=sys.stderr,
+                )
+            return
+        pid = daemon_mod.spawn_detached()
+    except Exception as e:  # noqa: BLE001
+        # Spawn failure is non-fatal — the first hook fire will retry
+        # via the lazy-spawn path that's been in place all along.
+        if not os.environ.get("MEGA_QUIET"):
+            print(
+                f"[setup] daemon warm-up skipped ({e}); first host "
+                "session will lazy-spawn it on demand.",
+                file=sys.stderr,
+            )
+        return
+
+    if pid is None:
+        return
+    if not os.environ.get("MEGA_QUIET"):
+        print(
+            f"[setup] router daemon warmed up in background (pid {pid}); "
+            "your first host session will route in ~50ms instead of "
+            "paying the embedder cold-load.",
+            file=sys.stderr,
+        )
 
 
 def _install_targets(hosts: list[str], args: argparse.Namespace) -> int:

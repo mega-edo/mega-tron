@@ -297,6 +297,19 @@ def cmd_gemini_hook(args: argparse.Namespace) -> int:
         return _emit_additional_context(chosen_ctx.rstrip())
 
     if not daemon_mod.daemon_disabled() and not daemon_mod.is_running():
+        # Tell the user what's happening so a slow first call (embedder
+        # cold-load + skill embedding sync, typically 5-30s on a cold
+        # cache) isn't mistaken for the 60-second Gemini hook timeout.
+        # The daemon spawns in the background; the next session will be
+        # fast.
+        if not os.environ.get("MEGA_QUIET"):
+            print(
+                "[mega-tron gemini-hook] router daemon not running — this "
+                "turn pays the embedder cold-load (~5-30s on first call). "
+                "Spawning daemon in background so the next session routes "
+                "in ~50ms.",
+                file=sys.stderr,
+            )
         daemon_mod.spawn_detached()
 
     from mega_tron.cache import Cache
