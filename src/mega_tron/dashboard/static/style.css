@@ -1601,8 +1601,17 @@ button.history-row-head:focus-visible {
   letter-spacing: 0;
   margin-left: 4px;
 }
-.composer-footer { margin-top: 4px; }
-.composer-footer .action { width: 100%; }
+.composer-footer {
+  margin-top: 4px;
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+/* Submit gets the lion's share so the visual weight matches the
+   action's importance; Cancel sits compact on the left. */
+.composer-footer .action { flex: 0 0 auto; }
+.composer-footer .action.primary { flex: 1 1 auto; }
+.composer-footer .action.ghost { background: transparent; }
 
 /* ---------- Orphan pane ---------- */
 

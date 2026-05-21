@@ -1334,7 +1334,8 @@ function renderVerdictComposer(pane) {
     <label class="panel-label">Reason <span class="composer-optional">(optional)</span></label>
     <textarea class="reason-textarea" rows="3" placeholder="Why does this skill deserve this label? (≥ 8 chars to be saved with a reason; leave blank for label-only)"></textarea>
     <div class="composer-footer">
-      <button class="action primary" data-act="submit">${verdictGlyph(pane.composerVerdict)} Add ${pane.composerVerdict.toLowerCase()} verdict for ${escapeHtml(skill)}</button>
+      <button class="action ghost" data-act="cancel" type="button">Cancel</button>
+      <button class="action primary" data-act="submit" type="button">${verdictGlyph(pane.composerVerdict)} Add ${pane.composerVerdict.toLowerCase()} verdict for ${escapeHtml(skill)}</button>
     </div>
   `;
   const ta = wrap.querySelector("textarea");
@@ -1380,14 +1381,15 @@ function renderVerdictComposer(pane) {
     }
   };
   wrap.querySelector("[data-act='submit']").addEventListener("click", submit);
+  const cancel = () => {
+    pane.composerOpen = false;
+    pane.composerReason = "";
+    renderPanes();
+  };
+  wrap.querySelector("[data-act='cancel']").addEventListener("click", cancel);
   ta.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); submit(); }
-    else if (e.key === "Escape") {
-      e.preventDefault();
-      pane.composerOpen = false;
-      pane.composerReason = "";
-      renderPanes();
-    }
+    else if (e.key === "Escape") { e.preventDefault(); cancel(); }
   });
   return wrap;
 }
