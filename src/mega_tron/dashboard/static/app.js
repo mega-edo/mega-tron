@@ -79,8 +79,21 @@ const state = {
   skillsByName: [],
   skills: [],
   verdicts: [],
-  searchQuery: "",
+  // Multi-category search for the Review tab. Replaces the old
+  // verdict-reason FTS search. `field` decides which value the
+  // string match runs against; `value` is the query string (or a
+  // host short-name when field === "hosts").
+  reviewFilter: { field: "title", value: "" },
+  // Zero-based page index for each paged list. Reset to 0 whenever
+  // the underlying filter or sort key changes.
+  pages: { active: 0, helpful: 0, skillsReview: 0, verdictsReview: 0 },
 };
+
+// Items-per-page caps. Two lists in tab 1 share a tighter cap so
+// both fit above the fold; tab 2's verdicts/skills lists carry
+// more density per row so 20 reads better.
+const PAGE_SIZE_TAB1 = 10;
+const PAGE_SIZE_TAB2 = 20;
 
 let pollTimer = null;
 let loadInFlight = false;
@@ -104,16 +117,15 @@ async function loadAll() {
   if (loadInFlight) return;
   loadInFlight = true;
   const params = qsParams();
-  const verdictsPath =
-    state.searchQuery.trim().length > 0
-      ? `/api/verdicts/search?q=${encodeURIComponent(state.searchQuery)}&${params}`
-      : `/api/verdicts?limit=100&${params}`;
+  // Filter is applied client-side now (title/description/hosts
+  // substring match against skill rows or verdict rows); no need
+  // to hit the server-side /api/verdicts/search FTS endpoint here.
   try {
     const [overview, skillsByName, skills, verdicts] = await Promise.all([
       fetchJSON(`/api/overview?${params}`),
       fetchJSON(`/api/skills-by-name?${params}`),
       fetchJSON(`/api/skills?${params}`),
-      fetchJSON(verdictsPath),
+      fetchJSON(`/api/verdicts?limit=100&${params}`),
     ]);
     state.overview = overview;
     state.skillsByName = skillsByName;
@@ -363,6 +375,9 @@ function renderActiveSkillsList() {
   _renderSkillsList({
     listId: "active-skills-list",
     titleId: "active-skills-title",
+    pagerId: "active-skills-pager",
+    pageKey: "active",
+    pageSize: PAGE_SIZE_TAB1,
     titleLabel: "Active skills",
     rows: active,
     showTime: true,
@@ -373,6 +388,9 @@ function renderActiveSkillsList() {
   _renderSkillsList({
     listId: "helpful-skills-list",
     titleId: "helpful-skills-title",
+    pagerId: "helpful-skills-pager",
+    pageKey: "helpful",
+    pageSize: PAGE_SIZE_TAB1,
     titleLabel: "Most helpful skills",
     rows: helpful,
     showTime: false,
@@ -383,22 +401,82 @@ function renderActiveSkillsList() {
 }
 
 // Internal: shared renderer for the two tab-1 skill lists.
-function _renderSkillsList({ listId, titleId, titleLabel, rows, showTime, emptyText }) {
+// Handles paging via `state.pages[pageKey]` + a pager footer rendered
+// into `#${pagerId}` when there's more than one page.
+function _renderSkillsList({ listId, titleId, pagerId, pageKey, pageSize,
+                            titleLabel, rows, showTime, emptyText }) {
   const list = document.getElementById(listId);
   const title = document.getElementById(titleId);
   if (!list) return;
-  if (title) title.textContent = `${titleLabel} (${rows.length})`;
+
+  const total = rows.length;
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  // Clamp the stored page in case rows shrank (filter changed, verdicts
+  // were deleted, etc.) since the last render.
+  let page = state.pages[pageKey] || 0;
+  if (page >= pageCount) page = pageCount - 1;
+  if (page < 0) page = 0;
+  state.pages[pageKey] = page;
+
+  if (title) title.textContent = `${titleLabel} (${total})`;
   list.innerHTML = "";
-  if (rows.length === 0) {
+  if (total === 0) {
     const empty = document.createElement("li");
     empty.className = "active-empty";
     empty.textContent = emptyText;
     list.appendChild(empty);
+    _renderPager(pagerId, { page: 0, pageCount: 1, total: 0,
+      onChange: () => {} });
     return;
   }
-  for (const r of rows) {
+  const start = page * pageSize;
+  const slice = rows.slice(start, start + pageSize);
+  for (const r of slice) {
     list.appendChild(_renderSkillRow(r, { showTime }));
   }
+  _renderPager(pagerId, {
+    page,
+    pageCount,
+    total,
+    onChange: (next) => {
+      state.pages[pageKey] = next;
+      renderAll();
+    },
+  });
+}
+
+// Internal: renders Prev/Next pager into `#${pagerId}`. Hidden when
+// there's only one page so single-page lists don't carry extra
+// chrome.
+function _renderPager(pagerId, { page, pageCount, total, onChange }) {
+  const wrap = document.getElementById(pagerId);
+  if (!wrap) return;
+  if (pageCount <= 1) {
+    wrap.innerHTML = "";
+    wrap.hidden = true;
+    return;
+  }
+  wrap.hidden = false;
+  const from = page * Math.ceil(total / pageCount) + 1;
+  // We compute "from / to" off the actual page-size used by the
+  // caller via the slice; recompute here without that knowledge by
+  // dividing total by page count to recover the per-page size. This
+  // is exact when total > pageSize because Math.ceil(total / size)
+  // === pageCount.
+  const pageSize = Math.ceil(total / pageCount);
+  const fromIdx = page * pageSize + 1;
+  const toIdx = Math.min(total, (page + 1) * pageSize);
+  wrap.innerHTML = `
+    <button class="pager-btn" data-act="prev" ${page === 0 ? "disabled" : ""}>← Prev</button>
+    <span class="pager-status">${fromIdx}–${toIdx} of ${total}</span>
+    <button class="pager-btn" data-act="next" ${page >= pageCount - 1 ? "disabled" : ""}>Next →</button>
+  `;
+  wrap.querySelector('[data-act="prev"]').addEventListener("click", () => {
+    if (page > 0) onChange(page - 1);
+  });
+  wrap.querySelector('[data-act="next"]').addEventListener("click", () => {
+    if (page < pageCount - 1) onChange(page + 1);
+  });
 }
 
 function _renderSkillRow(r, { showTime } = {}) {
@@ -411,17 +489,17 @@ function _renderSkillRow(r, { showTime } = {}) {
   const hostsSeen = (r.hosts_seen || []).filter((h) => h !== "other");
   const primaryHost = hostsSeen[0] || "—";
   // Warning sign on net-harmful skills (harmful ≥ helpful with ≥1
-  // harmful verdict). The tooltip names the counts explicitly so the
-  // user doesn't have to know the term "net-harmful". `tabindex=0`
-  // makes the flag keyboard-reachable; `aria-label` carries the same
-  // message for screen readers.
+  // harmful verdict). Custom CSS tooltip (`data-tooltip`) renders
+  // instantly on hover — native `title` would lag ~600ms (browser
+  // default) which fights observability ergonomics. `aria-label`
+  // mirrors the message for screen readers.
   const harmTip = harmful > 0 && harmful >= helpful
     ? `${harmful} HARMFUL vs ${helpful} HELPFUL — this skill has earned more bad signal than good. Click to review.`
     : "";
   const harmFlag = harmful > 0 && harmful >= helpful
-    ? `<span class="active-flag" tabindex="0" role="img"
+    ? `<span class="active-flag tooltip-trigger" tabindex="0" role="img"
               aria-label="${escapeAttr(harmTip)}"
-              title="${escapeAttr(harmTip)}">⚠</span>`
+              data-tooltip="${escapeAttr(harmTip)}">⚠</span>`
     : "";
   const timeCol = showTime
     ? `<span class="active-time">${relTime(r.last_updated)}</span>`
@@ -483,11 +561,13 @@ function renderHealth() {
       `<span class="health-warn">⚠ ${unknown} skill${unknown > 1 ? "s" : ""} installed under a non-standard root</span>`,
     );
   }
-  if (parts.length === 0) {
-    el.innerHTML = `all skills currently net-positive, no noise detected`;
-    return;
-  }
-  el.innerHTML = parts.join(" &middot; ");
+  // No warnings → keep the row empty so the filter widget alongside
+  // takes the visual center. The Big Numbers Health card on the
+  // overview tab already calls out "✓ all clear" globally; we don't
+  // need to repeat it here.
+  el.innerHTML = parts.length === 0 ? "" : parts.join(" &middot; ");
+  el.hidden = parts.length === 0;
+  if (parts.length === 0) return;
   el.querySelectorAll(".health-link").forEach((a) => {
     a.addEventListener("click", () => {
       // Health-row links live inside the Review tab, so flipping the
@@ -502,7 +582,6 @@ function renderHealth() {
         syncListModeButtons();
         renderMainList();
       } else if (a.dataset.act === "noise") {
-        setSearch("");
         state.noiseFilter = true;
         state.listMode = "verdicts";
         setActiveTab("review");
@@ -559,6 +638,8 @@ function renderSkillList() {
   if (state.hostFilter) {
     rows = rows.filter((r) => (r.hosts_seen || []).includes(state.hostFilter));
   }
+  rows = _applyReviewFilter(rows, /* kind */ "skill");
+
   if (rows.length === 0) {
     const li = document.createElement("li");
     li.className = "verdict-row";
@@ -568,15 +649,34 @@ function renderSkillList() {
       ? "no orphan skills"
       : state.netHarmfulFilter
         ? "no net-harmful skills"
-        : state.hostFilter
-          ? `no ${state.hostFilter} verdicts in current view`
+        : (state.hostFilter || state.reviewFilter.value || state.reviewFilter.field === "hosts")
+          ? "no skills match the current filter"
           : "no skills with verdicts yet";
     list.appendChild(li);
+    _renderPager("review-pager", { page: 0, pageCount: 1, total: 0, onChange: () => {} });
     return;
   }
-  for (const r of rows) {
+
+  const pageSize = PAGE_SIZE_TAB2;
+  const pageCount = Math.max(1, Math.ceil(rows.length / pageSize));
+  let page = state.pages.skillsReview || 0;
+  if (page >= pageCount) page = pageCount - 1;
+  if (page < 0) page = 0;
+  state.pages.skillsReview = page;
+  const start = page * pageSize;
+  const slice = rows.slice(start, start + pageSize);
+  for (const r of slice) {
     list.appendChild(renderSkillListRow(r));
   }
+  _renderPager("review-pager", {
+    page,
+    pageCount,
+    total: rows.length,
+    onChange: (next) => {
+      state.pages.skillsReview = next;
+      renderAll();
+    },
+  });
 }
 
 function renderSkillListRow(skill) {
@@ -610,17 +710,32 @@ function renderVerdictList() {
     rows = rows.filter((v) => (v.host_raw || v.host) === state.hostFilter
       || v.host === state.hostFilter);
   }
+  rows = _applyReviewFilter(rows, /* kind */ "verdict");
+
   if (rows.length === 0) {
     const li = document.createElement("li");
     li.className = "verdict-row";
     li.style.color = "var(--fg-muted)";
     li.style.gridTemplateColumns = "1fr";
-    li.textContent = state.noiseFilter ? "no placeholder-reason verdicts" :
-      state.searchQuery ? "no matching verdicts" : "no verdicts yet";
+    li.textContent = state.noiseFilter
+      ? "no placeholder-reason verdicts"
+      : (state.reviewFilter.value || state.reviewFilter.field === "hosts")
+        ? "no verdicts match the current filter"
+        : "no verdicts yet";
     list.appendChild(li);
+    _renderPager("review-pager", { page: 0, pageCount: 1, total: 0, onChange: () => {} });
     return;
   }
-  for (const v of rows) {
+
+  const pageSize = PAGE_SIZE_TAB2;
+  const pageCount = Math.max(1, Math.ceil(rows.length / pageSize));
+  let page = state.pages.verdictsReview || 0;
+  if (page >= pageCount) page = pageCount - 1;
+  if (page < 0) page = 0;
+  state.pages.verdictsReview = page;
+  const start = page * pageSize;
+  const slice = rows.slice(start, start + pageSize);
+  for (const v of slice) {
     const li = document.createElement("li");
     li.className = "verdict-row";
     li.innerHTML = `
@@ -633,6 +748,51 @@ function renderVerdictList() {
     li.addEventListener("click", () => openVerdictDetailFromList(v));
     list.appendChild(li);
   }
+  _renderPager("review-pager", {
+    page,
+    pageCount,
+    total: rows.length,
+    onChange: (next) => {
+      state.pages.verdictsReview = next;
+      renderAll();
+    },
+  });
+}
+
+// Shared filter: applies state.reviewFilter against either a skill
+// row (skillsByName item) or a verdict row. String match is
+// case-insensitive substring; the "hosts" category is exact-match
+// against the dropdown value. Empty filter passes everything.
+function _applyReviewFilter(rows, kind) {
+  const { field, value } = state.reviewFilter || { field: "title", value: "" };
+  if (!value) return rows;
+  const q = String(value).trim().toLowerCase();
+  if (!q) return rows;
+  return rows.filter((r) => {
+    if (field === "title") {
+      const name = kind === "skill" ? r.name : r.skill_name;
+      return (name || "").toLowerCase().includes(q);
+    }
+    if (field === "description") {
+      // skill rows carry no description (it lives in skill_detail);
+      // fall back to name so the filter at least narrows something
+      // sensible. Verdict rows match against reason text instead.
+      const text = kind === "skill"
+        ? (r.description || r.name || "")
+        : (r.reason || "");
+      return text.toLowerCase().includes(q);
+    }
+    if (field === "hosts") {
+      // Exact-match against the host shortname dropdown.
+      if (kind === "skill") {
+        return (r.hosts_seen || []).includes(q)
+          || (r.installed_hosts || []).includes(q);
+      }
+      const h = (r.host || r.host_raw || "").toLowerCase();
+      return h === q;
+    }
+    return true;
+  });
 }
 
 // ---------- Multi-pane rail ---------- //
@@ -1664,7 +1824,17 @@ function toggleHost(host) {
   state.netHarmfulFilter = false;
   loadAll();
 }
-function setSearch(q) { state.searchQuery = q; loadAll(); }
+// `setSearch` removed — the old verdict-reason FTS path is gone.
+// Use `setReviewFilter({field, value})` instead; it filters
+// client-side and re-renders without a fetch.
+function setReviewFilter(next) {
+  state.reviewFilter = Object.assign({}, state.reviewFilter, next);
+  // Filter changes invalidate stored page indices on every review
+  // list, so jump back to page 0 in both modes.
+  state.pages.skillsReview = 0;
+  state.pages.verdictsReview = 0;
+  renderAll();
+}
 function setListMode(m) {
   state.listMode = m;
   state.noiseFilter = false;
@@ -1847,12 +2017,63 @@ function bootstrap() {
     if (state.panes.length > 0) closePane(state.panes[state.panes.length - 1].id);
   });
 
-  const search = document.getElementById("search-input");
-  let debounce;
-  search.addEventListener("input", () => {
-    clearTimeout(debounce);
-    debounce = setTimeout(() => setSearch(search.value), 250);
-  });
+  // Multi-category review filter (replaces the old reason FTS search).
+  // - "title" / "description" → text input on the right
+  // - "hosts" → dropdown of host shortnames
+  // The two value-input widgets swap visibility based on category;
+  // both feed back into `state.reviewFilter` via setReviewFilter().
+  const filterField = document.getElementById("filter-field");
+  const filterText = document.getElementById("filter-text");
+  const filterHost = document.getElementById("filter-host");
+  const filterClear = document.getElementById("filter-clear");
+  const syncFilterUI = () => {
+    const isHosts = state.reviewFilter.field === "hosts";
+    filterText.hidden = isHosts;
+    filterHost.hidden = !isHosts;
+    const placeholders = {
+      title: "match by skill name…",
+      description: "match by description / reason…",
+    };
+    if (!isHosts) filterText.placeholder = placeholders[state.reviewFilter.field] || "search…";
+    const hasValue = Boolean(state.reviewFilter.value);
+    filterClear.hidden = !hasValue;
+  };
+  if (filterField) {
+    filterField.value = state.reviewFilter.field;
+    filterField.addEventListener("change", () => {
+      // Reset the value when the category changes; comparing apples
+      // to oranges would only confuse the visible result set.
+      setReviewFilter({ field: filterField.value, value: "" });
+      filterText.value = "";
+      filterHost.value = "";
+      syncFilterUI();
+    });
+  }
+  if (filterText) {
+    let textDebounce;
+    filterText.addEventListener("input", () => {
+      clearTimeout(textDebounce);
+      textDebounce = setTimeout(() => {
+        setReviewFilter({ value: filterText.value });
+        syncFilterUI();
+      }, 200);
+    });
+  }
+  if (filterHost) {
+    filterHost.addEventListener("change", () => {
+      setReviewFilter({ value: filterHost.value });
+      syncFilterUI();
+    });
+  }
+  if (filterClear) {
+    filterClear.addEventListener("click", () => {
+      setReviewFilter({ value: "" });
+      filterText.value = "";
+      filterHost.value = "";
+      syncFilterUI();
+    });
+  }
+  syncFilterUI();
 
   loadAll();
   // Safety-gated poll tick:

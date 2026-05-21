@@ -1970,16 +1970,164 @@ button.history-row-head:focus-visible {
   color: var(--negative);
 }
 
-/* ------- Health row card (lives in Review tab) ------- */
-.health-row-card {
+/* ------- Instant tooltip ------- */
+/* Native `title` defaults to ~600ms delay across browsers, which
+   fights the "see why instantly" expectation of an observability
+   dashboard. `.tooltip-trigger[data-tooltip]` renders a styled
+   tooltip on hover/focus with zero delay. Tooltip text comes from
+   the data attribute so the markup stays accessible (aria-label
+   carries the same text). */
+.tooltip-trigger {
+  position: relative;
+}
+.tooltip-trigger::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  right: 0;
+  z-index: 50;
+  min-width: 200px;
+  max-width: 280px;
+  padding: 7px 10px;
+  background: var(--bg-elev);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow);
+  color: var(--fg);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.4;
+  letter-spacing: normal;
+  text-transform: none;
+  text-align: left;
+  white-space: normal;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  /* Zero-delay transition — show is instant; hide fades over 80ms
+     so the tooltip doesn't flicker when the cursor crosses
+     adjacent triggers. */
+  transition: opacity 80ms ease-out, visibility 80ms;
+  transition-delay: 0s;
+}
+.tooltip-trigger:hover::after,
+.tooltip-trigger:focus-visible::after {
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 0s;
+}
+
+/* ------- Pager (Prev / Next) ------- */
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--hairline);
+}
+.pager[hidden] { display: none; }
+.pager-btn {
+  appearance: none;
+  background: var(--bg-elev-2);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-sm);
+  color: var(--fg);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
+}
+.pager-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+.pager-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.pager-status {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10.5px;
+  color: var(--fg-muted);
+}
+
+/* ------- Review toolbar (health row + filter, top of Review tab) ------- */
+.review-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
   background: var(--bg-elev);
   border: 1px solid var(--hairline);
   border-radius: var(--radius-sm);
   padding: 10px 14px;
-  font-size: 12px;
-  color: var(--fg-muted);
-  /* Match .card horizontal margins so this strip aligns with the
-     verdicts card just below it. */
   margin: 18px 28px 16px;
   box-shadow: var(--shadow);
 }
+.review-toolbar .health-row {
+  font-size: 12px;
+  color: var(--fg-muted);
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.review-toolbar .health-row[hidden] { display: none; }
+.review-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.review-filter-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+  margin-right: 2px;
+}
+.review-filter-field,
+.review-filter-host {
+  appearance: none;
+  background: var(--bg-elev-2);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-sm);
+  color: var(--fg);
+  font: inherit;
+  font-size: 12px;
+  padding: 5px 22px 5px 8px;
+  cursor: pointer;
+  background-image: linear-gradient(45deg, transparent 50%, var(--fg-muted) 50%),
+                    linear-gradient(135deg, var(--fg-muted) 50%, transparent 50%);
+  background-position: calc(100% - 12px) 12px, calc(100% - 8px) 12px;
+  background-size: 4px 4px, 4px 4px;
+  background-repeat: no-repeat;
+}
+.review-filter-field:hover,
+.review-filter-host:hover {
+  border-color: var(--accent);
+}
+.review-filter-input {
+  appearance: none;
+  background: var(--bg-elev-2);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-sm);
+  color: var(--fg);
+  font: inherit;
+  font-size: 12px;
+  padding: 5px 8px;
+  min-width: 220px;
+}
+.review-filter-input:focus,
+.review-filter-field:focus,
+.review-filter-host:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.review-filter-input::placeholder {
+  color: var(--fg-muted);
+}
+.review-filter [hidden] { display: none; }

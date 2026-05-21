@@ -46,11 +46,13 @@
           <div class="card-title" id="active-skills-title">Active skills</div>
           <div class="card-sub">Sorted by most recent verdict.</div>
           <ul id="active-skills-list" class="active-skills-list"></ul>
+          <nav id="active-skills-pager" class="pager" hidden></nav>
         </section>
         <section class="card skill-list-card">
           <div class="card-title" id="helpful-skills-title">Most helpful skills</div>
           <div class="card-sub">Sorted by net helpful − harmful.</div>
           <ul id="helpful-skills-list" class="active-skills-list"></ul>
+          <nav id="helpful-skills-pager" class="pager" hidden></nav>
         </section>
       </div>
     </section>
@@ -58,7 +60,32 @@
     <!-- Tab 2 — Review (HITL verdict cleanup) -->
     <section id="tab-panel-review" class="tab-panel" data-tab-panel="review"
              role="tabpanel" aria-labelledby="Review" hidden>
-      <div id="health-row" class="health-row-card"></div>
+      <!-- Top bar combines the health warnings (when any) with the
+           multi-category filter. Default state shows just the filter
+           — no chatty "all clear" sentence. -->
+      <div class="review-toolbar">
+        <div id="health-row" class="health-row"></div>
+        <div class="review-filter">
+          <label class="review-filter-label" for="filter-field">Filter by</label>
+          <select id="filter-field" class="review-filter-field">
+            <option value="title">title</option>
+            <option value="description">description</option>
+            <option value="hosts">hosts</option>
+          </select>
+          <input id="filter-text" class="review-filter-input" type="search"
+                 placeholder="match by skill name…"
+                 aria-label="filter value">
+          <select id="filter-host" class="review-filter-host" hidden
+                  aria-label="filter by host">
+            <option value="">all hosts</option>
+            <option value="codex">codex</option>
+            <option value="claude">claude</option>
+            <option value="gemini">gemini</option>
+            <option value="user">user</option>
+          </select>
+          <button id="filter-clear" class="ghost-btn" type="button" hidden>clear</button>
+        </div>
+      </div>
 
       <section id="verdicts-card" class="card">
         <div class="card-title row">
@@ -66,11 +93,10 @@
           <span class="list-mode-toggle">
             <button class="ghost-btn active" data-list-mode="skills" type="button">By skill</button>
             <button class="ghost-btn" data-list-mode="verdicts" type="button">Recent verdicts</button>
-            <input id="search-input" class="search" type="search"
-                   placeholder="search reasons…" aria-label="search verdict reasons">
           </span>
         </div>
         <ul id="verdicts-list" class="verdicts-list"></ul>
+        <nav id="review-pager" class="pager" hidden></nav>
       </section>
 
       <div id="pane-rail" class="pane-rail" aria-label="Detail panes"></div>
