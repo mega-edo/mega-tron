@@ -6,7 +6,7 @@
   <h1>MEGA Tron</h1>
 
   <p><strong>The skill OS for Codex, Claude Code, and Gemini CLI.</strong><br>
-  One pool, one router, one feedback loop — across all three hosts.<br></p>
+  One pool, one router, one feedback loop — across all three hosts.</p>
 
   <p>
     <a href="./LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="License"></a>
@@ -29,6 +29,7 @@
 ---
 
 ## ✨ Three problems that compound with more skills
+
 - **🧨 Token leak.** Type `hi` into Gemini CLI with 150 skills enabled and **~8,400 tokens** of skill metadata ship along with it. Codex and Claude cap their catalogs (8K chars / ~2K tokens), but they still inject the cap-full *every turn* (Codex) or *every session* (Claude), filled by alphabet or by past-usage frequency. **Never by what you actually typed.**
 
 > 💡 **The waste is structural.** The hosts have never seen your current prompt when they decide what to inject — so even a one-word greeting drags the entire catalog along.
@@ -46,7 +47,7 @@
 
 > 💡 **The model picks a broken skill, the skill fails silently, next turn it tries the same broken skill again.** You see "the answer is weird" without knowing a stale skill is behind it.
 
-## Same root cause behind all three problems
+## 🧩 Same root cause behind all three problems
 
 Each host's skill catalog is a **one-shot system-prompt injection** that:
 
@@ -62,12 +63,14 @@ mega-tron rebuilds the catalog layer above each host so all three properties fli
 | Host isolation | **Unify** — one master pool, symlinks to every host, cross-host verdict economy | `pool.py` |
 | Evidence blind | **Evolve** — session-end self-evaluation, evidence-blended ranking, auto-retirement of broken skills | `verdicts/` |
 
-## Try it
+## 🏃 Try it
 
 ```bash
 uv tool install mega-tron && ~/.local/bin/mega-tron setup
 ```
+
 Then open a new terminal. The next turn in any host ships with the right skills in context — and never with skills that have silently broken on you. (Why two commands? See [Install](#-install) below.)
+
 Two commands, three hosts. Token usage drops 18–30× on the very next turn without changing how you use any CLI. Full benchmark table and installation details below.
 
 ## 🎯 After MEGA Tron
@@ -490,6 +493,7 @@ MEGA_BACKEND=litellm MEGA_MODEL=gpt-4o-mini    OPENAI_API_KEY=…  mega-tron sea
 # BYOK: Anthropic
 MEGA_BACKEND=litellm MEGA_MODEL=claude-haiku-4-5 ANTHROPIC_API_KEY=… mega-tron search "..." --mode agentic
 ```
+
 ## 🌐 Built by MEGA Code
 
 <div align="center">
