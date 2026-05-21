@@ -1,0 +1,1492 @@
+/* mega-tron dashboard — vanilla JS controller.
+
+   UX model:
+   - Main page = overview card + verdict list (skill-grouped by default).
+   - Detail panes open in a *horizontal rail* on the right. Clicking
+     into a sub-detail (e.g. a verdict from inside a skill pane) opens
+     a NEW pane to the right of the existing one. The user closes any
+     pane via × (it slides out, panes to its right stay).
+   - Treemap = explicit "View all" button, not the stacked bar.
+*/
+
+"use strict";
+
+const POLL_MS = 30000;
+const HOSTS = ["codex", "claude", "gemini", "hermes", "user"]; // "other" intentionally absent; "user" = manual verdicts
+
+function reportToServer(payload) {
+  try {
+    navigator.sendBeacon &&
+      navigator.sendBeacon(
+        "/api/debug/log",
+        new Blob([JSON.stringify(payload)], { type: "application/json" }),
+      );
+  } catch (_e) { /* swallow */ }
+}
+
+window.addEventListener("error", (e) => {
+  reportToServer({
+    kind: "error",
+    message: e.message || String(e.error || ""),
+    filename: e.filename || "", line: e.lineno, col: e.colno,
+    stack: e.error && e.error.stack ? String(e.error.stack) : null,
+  });
+});
+window.addEventListener("unhandledrejection", (e) => {
+  reportToServer({
+    kind: "unhandledrejection",
+    reason: String(e.reason),
+    stack: e.reason && e.reason.stack ? String(e.reason.stack) : null,
+  });
+});
+
+const state = {
+  timeRange: 30,
+  hostFilter: null,
+  listMode: "skills", // "skills" | "verdicts"
+  // Panes is an array of { id, kind, payload }. Each renders as one
+  // column in the right-side rail. Open is "append to right"; close
+  // removes by id and leaves the rest visible.
+  panes: [],
+  paneSeq: 1,
+  overview: null,
+  skillsByName: [],
+  skills: [],
+  activity: [],
+  verdicts: [],
+  searchQuery: "",
+};
+
+let pollTimer = null;
+let loadInFlight = false;
+
+// ---------- Fetch helpers ---------- //
+
+function qsParams() {
+  const p = new URLSearchParams();
+  if (state.timeRange > 0) p.set("days", String(state.timeRange));
+  if (state.hostFilter) p.set("host", state.hostFilter);
+  return p;
+}
+
+async function fetchJSON(path, signal) {
+  const resp = await fetch(path, { signal, headers: { Accept: "application/json" } });
+  if (!resp.ok) throw new Error(`${resp.status} ${resp.statusText}`);
+  return resp.json();
+}
+
+async function loadAll() {
+  if (loadInFlight) return;
+  loadInFlight = true;
+  const params = qsParams();
+  const verdictsPath =
+    state.searchQuery.trim().length > 0
+      ? `/api/verdicts/search?q=${encodeURIComponent(state.searchQuery)}&${params}`
+      : `/api/verdicts?limit=100&${params}`;
+  try {
+    const [overview, skillsByName, skills, activity, verdicts] = await Promise.all([
+      fetchJSON(`/api/overview?${params}`),
+      fetchJSON(`/api/skills-by-name?${params}`),
+      fetchJSON(`/api/skills?${params}`),
+      fetchJSON(`/api/activity?${params}`),
+      fetchJSON(verdictsPath),
+    ]);
+    state.overview = overview;
+    state.skillsByName = skillsByName;
+    state.skills = skills;
+    state.activity = activity;
+    state.verdicts = verdicts;
+    setConnection("live");
+    renderAll();
+  } catch (err) {
+    if (err.name !== "AbortError") {
+      setConnection("stale");
+      console.error("dashboard load failed", err);
+    }
+  } finally {
+    loadInFlight = false;
+  }
+}
+
+function setConnection(status) {
+  const el = document.getElementById("connection");
+  if (!el) return;
+  el.classList.remove("live", "stale");
+  el.classList.add(status);
+  el.textContent = status === "live" ? "live" : "connection lost";
+}
+
+// ---------- Rendering ---------- //
+
+function renderAll() {
+  renderOverview();
+  renderHostChips();
+  renderActivity();
+  renderTimeToggle();
+  renderHealth();
+  renderMainList();
+}
+
+function renderOverview() {
+  const bar = document.getElementById("skill-bar");
+  const summary = document.getElementById("skill-summary");
+  if (!state.overview) return;
+  const { total, used, unused } = state.overview;
+  const denom = Math.max(total, 1);
+  const rawUsedPct = (used / denom) * 100;
+  const rawUnusedPct = 100 - rawUsedPct;
+  bar.innerHTML = "";
+  if (total === 0) {
+    bar.innerHTML = `<div class="seg unused" style="flex:1">no skills installed</div>`;
+  } else {
+    let usedW = rawUsedPct;
+    let unusedW = rawUnusedPct;
+    if (used > 0 && unused > 0) {
+      usedW = Math.max(rawUsedPct, 14);
+      unusedW = 100 - usedW;
+    }
+    if (used > 0) {
+      const a = document.createElement("div");
+      a.className = "seg used";
+      a.style.width = `${usedW}%`;
+      a.textContent = `used ${used}`;
+      a.title = `${used} of ${total} skills (${rawUsedPct.toFixed(2)}%)`;
+      bar.appendChild(a);
+    }
+    if (unused > 0) {
+      const i = document.createElement("div");
+      i.className = "seg unused";
+      i.style.width = `${unusedW}%`;
+      i.textContent = `unused ${unused}`;
+      i.title = `${unused} unused (${rawUnusedPct.toFixed(2)}%)`;
+      bar.appendChild(i);
+    }
+  }
+  const pct = rawUsedPct < 1 && rawUsedPct > 0
+    ? rawUsedPct.toFixed(2)
+    : Math.round(rawUsedPct);
+  const range = state.timeRange === 0 ? "all time" : `last ${state.timeRange} days`;
+  summary.textContent = `${total} total · ${pct}% used · ${range}`;
+}
+
+function renderHostChips() {
+  const wrap = document.getElementById("host-chips");
+  if (!state.overview) return;
+  wrap.innerHTML = "";
+  for (const host of HOSTS) {
+    // by_host[host] is the count of skills this host actually recorded
+    // a verdict on — identical to the predicate used by the click
+    // filter (hosts_seen.includes(host)). Keeping label and filter
+    // result aligned is the whole point: chip number = rows you'll see.
+    // Support legacy `{total, used}` shape so older cached responses
+    // don't break the UI during a rolling reload.
+    const raw = state.overview.by_host[host];
+    let count = 0;
+    if (typeof raw === "number") count = raw;
+    else if (raw && typeof raw === "object") count = raw.used ?? raw.total ?? 0;
+    const chip = document.createElement("button");
+    chip.className = `chip ${host}`;
+    if (count === 0) chip.classList.add("empty");
+    if (state.hostFilter === host) chip.classList.add("active");
+    chip.innerHTML = `
+      <span class="dot"></span>
+      <span class="name">${host}</span>
+      <span class="count">${count}</span>
+    `;
+    chip.addEventListener("click", () => toggleHost(host));
+    wrap.appendChild(chip);
+  }
+}
+
+function renderActivity() {
+  const svg = document.getElementById("activity-sparkline");
+  if (!svg || !state.activity) return;
+  svg.innerHTML = "";
+  if (state.activity.length === 0) return;
+  const counts = state.activity.map(([, c]) => c);
+  const max = Math.max(...counts, 1);
+  const w = 300, h = 32, n = counts.length;
+  const dx = w / Math.max(n - 1, 1);
+  const points = counts.map((c, i) => {
+    const x = i * dx;
+    const y = h - (c / max) * (h - 2) - 1;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  });
+  const path = `M${points.join(" L")}`;
+  const fillPath = `${path} L${w},${h} L0,${h} Z`;
+  const ns = "http://www.w3.org/2000/svg";
+  const fill = document.createElementNS(ns, "path");
+  fill.setAttribute("d", fillPath);
+  fill.setAttribute("fill", "currentColor");
+  fill.setAttribute("opacity", "0.15");
+  svg.appendChild(fill);
+  const line = document.createElementNS(ns, "path");
+  line.setAttribute("d", path);
+  line.setAttribute("fill", "none");
+  line.setAttribute("stroke", "currentColor");
+  line.setAttribute("stroke-width", "1.5");
+  svg.appendChild(line);
+}
+
+function renderTimeToggle() {
+  const wrap = document.getElementById("time-toggle");
+  if (wrap.children.length > 0) return;
+  const ranges = [[7, "7d"], [30, "30d"], [90, "90d"], [0, "all"]];
+  for (const [val, label] of ranges) {
+    const b = document.createElement("button");
+    b.textContent = label;
+    b.dataset.range = String(val);
+    if (val === state.timeRange) b.classList.add("active");
+    b.addEventListener("click", () => setTimeRange(val));
+    wrap.appendChild(b);
+  }
+}
+
+function syncTimeToggle() {
+  const wrap = document.getElementById("time-toggle");
+  for (const b of wrap.children) {
+    b.classList.toggle("active", Number(b.dataset.range) === state.timeRange);
+  }
+}
+
+function renderHealth() {
+  const el = document.getElementById("health-row");
+  if (!state.overview) return;
+  const n = state.overview.net_harmful_count || 0;
+  const noise = state.overview.noise_verdict_count || 0;
+  const orphan = state.overview.orphan_count || 0;
+  const unknown = state.overview.unknown_host_count || 0;
+  const parts = [];
+  if (n > 0) {
+    parts.push(
+      `<span class="health-warn">⚠ ${n} net-harmful skill${n > 1 ? "s" : ""}</span>` +
+      ` <a class="health-link" data-act="net-harmful">show</a>`,
+    );
+  }
+  if (noise > 0) {
+    parts.push(
+      `<span class="health-warn">⚠ ${noise} low-quality verdict${noise > 1 ? "s" : ""}</span>` +
+      ` <a class="health-link" data-act="noise">show</a>`,
+    );
+  }
+  if (orphan > 0) {
+    parts.push(
+      `<span class="health-warn">⚠ ${orphan} orphan skill${orphan > 1 ? "s" : ""}</span>` +
+      ` <a class="health-link" data-act="orphan">show</a>` +
+      ` <span class="health-hint">(verdicts exist but SKILL.md isn't on disk — usually benchmark or stale catalog leftovers)</span>`,
+    );
+  }
+  if (unknown > 0) {
+    parts.push(
+      `<span class="health-warn">⚠ ${unknown} skill${unknown > 1 ? "s" : ""} installed under a non-standard root</span>`,
+    );
+  }
+  if (parts.length === 0) {
+    el.innerHTML = `all skills currently net-positive, no noise detected`;
+    return;
+  }
+  el.innerHTML = parts.join(" &middot; ");
+  el.querySelectorAll(".health-link").forEach((a) => {
+    a.addEventListener("click", () => {
+      if (a.dataset.act === "net-harmful") {
+        state.netHarmfulFilter = true;
+        state.orphanFilter = false;
+        state.listMode = "skills";
+        syncListModeButtons();
+        renderMainList();
+      } else if (a.dataset.act === "noise") {
+        setSearch("");
+        state.noiseFilter = true;
+        state.listMode = "verdicts";
+        syncListModeButtons();
+        renderMainList();
+      } else if (a.dataset.act === "orphan") {
+        state.orphanFilter = true;
+        state.netHarmfulFilter = false;
+        state.listMode = "skills";
+        syncListModeButtons();
+        renderMainList();
+      }
+    });
+  });
+}
+
+function isPlaceholderReason(r) {
+  if (r == null) return true;
+  const s = String(r).trim().toLowerCase();
+  if (s.length === 0) return true;
+  if (s.length < 8) return true;
+  const placeholders = new Set([
+    "ok", "okay", "yes", "no", "n/a", "na",
+    "test", "tests", "testing", "todo", "tbd",
+    "fix", "fixed", "broken", "evidence a", "evidence b", "evidence c",
+    "good", "bad", "fine", "true", "false",
+    "x", "y", "z", "?", "??", "???", "-", "--", "...",
+  ]);
+  return placeholders.has(s);
+}
+
+// ---------- Main list (two modes: skills | verdicts) ---------- //
+
+function syncListModeButtons() {
+  document.querySelectorAll("[data-list-mode]").forEach((b) => {
+    b.classList.toggle("active", b.dataset.listMode === state.listMode);
+  });
+  document.getElementById("list-mode-title").textContent =
+    state.listMode === "skills" ? "Skills with verdicts" : "Recent verdicts";
+}
+
+function renderMainList() {
+  if (state.listMode === "skills") {
+    renderSkillList();
+  } else {
+    renderVerdictList();
+  }
+}
+
+function renderSkillList() {
+  const list = document.getElementById("verdicts-list");
+  list.className = "skills-list";
+  list.innerHTML = "";
+  let rows = state.skillsByName.filter((s) => s.used);
+  if (state.orphanFilter) rows = rows.filter((r) => r.orphan);
+  if (state.netHarmfulFilter) rows = rows.filter((r) => r.net < 0);
+  if (state.hostFilter) {
+    rows = rows.filter((r) => (r.hosts_seen || []).includes(state.hostFilter));
+  }
+  if (rows.length === 0) {
+    const li = document.createElement("li");
+    li.className = "verdict-row";
+    li.style.color = "var(--fg-muted)";
+    li.style.gridTemplateColumns = "1fr";
+    li.textContent = state.orphanFilter
+      ? "no orphan skills"
+      : state.netHarmfulFilter
+        ? "no net-harmful skills"
+        : state.hostFilter
+          ? `no ${state.hostFilter} verdicts in current view`
+          : "no skills with verdicts yet";
+    list.appendChild(li);
+    return;
+  }
+  for (const r of rows) {
+    list.appendChild(renderSkillListRow(r));
+  }
+}
+
+function renderSkillListRow(skill) {
+  const li = document.createElement("li");
+  li.className = "skill-row";
+  if (skill.orphan) li.classList.add("orphan");
+  const totalVerdicts = skill.helpful_count + skill.harmful_count + skill.neutral_count;
+  // Only render the count pills that actually have a non-zero value —
+  // empty pills are noise.
+  const pills = [];
+  if (skill.helpful_count) pills.push(`<span class="count-pill HELPFUL" title="helpful">✓ ${skill.helpful_count}</span>`);
+  if (skill.harmful_count) pills.push(`<span class="count-pill HARMFUL" title="harmful">✗ ${skill.harmful_count}</span>`);
+  if (skill.neutral_count) pills.push(`<span class="count-pill NEUTRAL" title="neutral">· ${skill.neutral_count}</span>`);
+  li.innerHTML = `
+    <span class="skill-name" title="${escapeAttr(skill.name)}">${escapeHtml(skill.name)}</span>
+    <span class="count-pills">${pills.join(" ")}</span>
+    <span class="net ${skill.net > 0 ? "pos" : skill.net < 0 ? "neg" : ""}">net ${skill.net}</span>
+    <span class="meta-mini">${totalVerdicts} verdict${totalVerdicts === 1 ? "" : "s"}${skill.orphan ? " · orphan" : ""}</span>
+  `;
+  li.addEventListener("click", () => openSkillPane(skill.name));
+  return li;
+}
+
+function renderVerdictList() {
+  const list = document.getElementById("verdicts-list");
+  list.className = "verdicts-list";
+  list.innerHTML = "";
+  let rows = state.verdicts;
+  if (state.noiseFilter) rows = rows.filter((v) => isPlaceholderReason(v.reason));
+  if (state.hostFilter) {
+    rows = rows.filter((v) => (v.host_raw || v.host) === state.hostFilter
+      || v.host === state.hostFilter);
+  }
+  if (rows.length === 0) {
+    const li = document.createElement("li");
+    li.className = "verdict-row";
+    li.style.color = "var(--fg-muted)";
+    li.style.gridTemplateColumns = "1fr";
+    li.textContent = state.noiseFilter ? "no placeholder-reason verdicts" :
+      state.searchQuery ? "no matching verdicts" : "no verdicts yet";
+    list.appendChild(li);
+    return;
+  }
+  for (const v of rows) {
+    const li = document.createElement("li");
+    li.className = "verdict-row";
+    li.innerHTML = `
+      <span class="when">${relTime(v.occurred_at)}</span>
+      <span class="host-tag">${v.host}</span>
+      <span class="skill">${escapeHtml(v.skill_name)}</span>
+      <span class="label ${v.verdict}">${verdictGlyph(v.verdict)} ${v.verdict.toLowerCase()}</span>
+      <span class="reason" title="${escapeAttr(v.reason || "")}">${escapeHtml(v.reason || "")}</span>
+    `;
+    li.addEventListener("click", () => openVerdictDetailFromList(v));
+    list.appendChild(li);
+  }
+}
+
+// ---------- Multi-pane rail ---------- //
+
+// Single-pane model: clicking another skill REPLACES the open skill
+// pane (not stacks). Inside the pane, helpful/harmful/neutral expand
+// inline; clicking a verdict opens its editor inline below the row.
+function openSkillPane(name) {
+  // If a pane for this skill is already open, no-op (don't stack).
+  const existing = state.panes.find(
+    (p) => p.kind === "skill" && (p.name === name || (p.payload && p.payload.name === name)),
+  );
+  if (existing) return;
+  // Replace: at most one pane at a time.
+  state.panes = [{
+    id: nextPaneId(),
+    kind: "skill",
+    payload: null,
+    name,
+    expanded: null,           // null | "HELPFUL" | "HARMFUL" | "NEUTRAL"
+    expandedVerdictId: null,  // id of the verdict whose edit panel is open
+    composerOpen: false,      // is the "Add verdict" composer expanded?
+    composerVerdict: "HELPFUL",
+    composerReason: "",
+  }];
+  renderPanes();
+  loadSkillPane(state.panes[0]);
+}
+
+function openVerdictDetailFromList(verdict) {
+  // From the "Recent verdicts" main-list mode — opening the parent
+  // skill pane and auto-expanding the right bucket gets the user to
+  // the same data without spinning up a second pane.
+  openSkillPane(verdict.skill_name);
+  // Stash a hint so the skill pane, once loaded, expands the right
+  // bucket and highlights this verdict.
+  const pane = state.panes[0];
+  if (pane) {
+    // Don't filter — just highlight and open the row.
+    pane.highlightVerdictId = verdict.id;
+    pane.expandedVerdictId = verdict.id;
+  }
+}
+
+function nextPaneId() { return state.paneSeq++; }
+
+function closePane(id) {
+  state.panes = state.panes.filter((p) => p.id !== id);
+  renderPanes();
+}
+
+function clearAllPanes() {
+  state.panes = [];
+  renderPanes();
+}
+
+function scrollPaneIntoView(id) {
+  const el = document.querySelector(`[data-pane-id='${id}']`);
+  if (!el) return;
+  // With flex-direction:row-reverse the newest pane is at scrollLeft=0
+  // in DOM terms but at the visual right edge. Just scroll the rail
+  // to its rightmost position so the newest pane is fully visible.
+  const rail = document.getElementById("pane-rail");
+  if (rail) {
+    // Use rAF so the layout settles before we scroll.
+    requestAnimationFrame(() => {
+      rail.scrollTo({ left: 0, behavior: "smooth" });
+    });
+  }
+}
+
+async function loadSkillPane(pane) {
+  try {
+    const payload = await fetchJSON(`/api/skill/${encodeURIComponent(pane.name)}`);
+    pane.payload = payload;
+    renderPanes();
+  } catch (err) {
+    console.error(err);
+    toast("Failed to load skill");
+    closePane(pane.id);
+  }
+}
+
+function renderPanes() {
+  const rail = document.getElementById("pane-rail");
+
+  // Preserve scroll positions across full re-renders. Without this,
+  // every renderPanes() call (e.g. toggling a verdict row open/closed)
+  // would reset the pane to scrollTop=0 — the symptom the user sees as
+  // "the sidebar jumps to the top". We snapshot per-paneId so the IDs
+  // survive the destroy/rebuild.
+  const scrollSnapshot = {};
+  for (const aside of rail.querySelectorAll(".pane")) {
+    const id = aside.dataset.paneId;
+    if (!id) continue;
+    scrollSnapshot[id] = {
+      paneTop: aside.scrollTop,
+      historyTop: (aside.querySelector(".history-section") || {}).scrollTop || 0,
+    };
+  }
+
+  rail.innerHTML = "";
+  if (state.panes.length === 0) {
+    rail.classList.remove("open");
+    document.body.classList.remove("rail-open");
+    return;
+  }
+  rail.classList.add("open");
+  document.body.classList.add("rail-open");
+
+  let newestNeedsScroll = true;
+  for (const pane of state.panes) {
+    const node = renderOnePane(pane);
+    rail.appendChild(node);
+    const snap = scrollSnapshot[String(pane.id)];
+    if (snap) {
+      // Apply on the next frame so the new node has its layout pass.
+      requestAnimationFrame(() => {
+        node.scrollTop = snap.paneTop;
+        const hs = node.querySelector(".history-section");
+        if (hs) hs.scrollTop = snap.historyTop;
+      });
+      newestNeedsScroll = false; // returning to saved view, not a new pane
+    }
+  }
+  // Only do the "scroll the new pane into view" gesture when a pane
+  // was actually appended fresh (no snapshot for any pane).
+  const last = state.panes[state.panes.length - 1];
+  if (newestNeedsScroll && !scrollSnapshot[String(last.id)]) {
+    scrollPaneIntoView(last.id);
+  }
+}
+
+function renderOnePane(pane) {
+  const aside = document.createElement("aside");
+  aside.className = `pane pane-${pane.kind}`;
+  aside.dataset.paneId = String(pane.id);
+  const titleText = pane.payload ? pane.payload.name : pane.name;
+  // Usage badge: total verdicts this skill has received. Sits next to
+  // the title so the user sees "is this thing used much?" without
+  // scrolling.
+  const total = pane.payload && pane.payload.total_verdicts;
+  const usageBadge = total
+    ? `<span class="usage-badge" title="${total} verdict${total === 1 ? "" : "s"} recorded">${total} use${total === 1 ? "" : "s"}</span>`
+    : "";
+  const head = document.createElement("header");
+  head.className = "pane-head";
+  head.innerHTML = `
+    <h2>${escapeHtml(titleText || "…")}</h2>
+    ${usageBadge}
+    <button class="close" aria-label="Close pane">×</button>
+  `;
+  head.querySelector(".close").addEventListener("click", () => closePane(pane.id));
+  aside.appendChild(head);
+
+  const body = document.createElement("div");
+  body.className = "pane-body";
+  aside.appendChild(body);
+  body.appendChild(renderSkillPaneBody(pane));
+  return aside;
+}
+
+function renderSkillPaneBody(pane) {
+  const wrap = document.createElement("div");
+  wrap.className = "skill-pane-content";
+  if (!pane.payload) {
+    wrap.innerHTML = `<div class="meta-line">loading…</div>`;
+    return wrap;
+  }
+  const p = pane.payload;
+  const hc = p.helpful_count || 0;
+  const xc = p.harmful_count || 0;
+  const nc = p.neutral_count || 0;
+
+  const pathBlock = p.skill_dir
+    ? `<a href="#" class="path-jump" data-path="${escapeAttr(p.skill_dir)}">📁 ${escapeHtml(p.skill_dir)}</a>`
+    : `<div class="meta-line orphan-warn">⚠ orphan: no SKILL.md on disk (benchmark artefact or stale catalog)</div>`;
+
+  const manageBlock = p.skill_dir
+    ? `<div class="card-title">Manage</div>
+       <div class="actions">
+         ${p.status === "archived"
+           ? `<button class="action danger" data-act="delete-skill">Delete forever</button>`
+           : `<button class="action" data-act="archive-skill">Archive</button>`}
+       </div>`
+    : `<div class="card-title">Manage</div>
+       <div class="actions">
+         <button class="action danger" data-act="bulk-delete-orphan">Delete all verdicts for this orphan</button>
+       </div>`;
+
+  const expanded = pane.expanded;
+  // Count pills live in the History section header (one click = expand
+  // that bucket). The top summary keeps only the durable summaries
+  // (net + status) so the user's eye doesn't have to bounce.
+  const countPills = [];
+  if (hc > 0) countPills.push(`<button class="pill-stat pos count-btn ${expanded === "HELPFUL" ? "open" : ""}" data-bucket="HELPFUL">✓ ${hc} helpful</button>`);
+  if (xc > 0) countPills.push(`<button class="pill-stat neg count-btn ${expanded === "HARMFUL" ? "open" : ""}" data-bucket="HARMFUL">✗ ${xc} harmful</button>`);
+  if (nc > 0) countPills.push(`<button class="pill-stat count-btn ${expanded === "NEUTRAL" ? "open" : ""}" data-bucket="NEUTRAL">· ${nc} neutral</button>`);
+  const hasAnyCounts = countPills.length > 0;
+
+  const descBlock = p.description
+    ? `<div class="skill-description">${escapeHtml(p.description)}</div>`
+    : "";
+
+  wrap.innerHTML = `
+    ${descBlock}
+    <div class="skill-summary">
+      <span class="pill-stat ${p.net > 0 ? "pos" : p.net < 0 ? "neg" : ""}">net ${p.net}</span>
+      <span class="pill-stat">${p.status}</span>
+    </div>
+    <div class="path-row">${pathBlock}</div>
+    <div class="meta-line subtle">last activity: ${p.last_updated || "never"}</div>
+
+    <div class="card-title">Per-host comparison</div>
+    <div class="per-host-chart"></div>
+
+    <div class="card-title">Activity (30 days)</div>
+    <svg class="mini-sparkline" viewBox="0 0 300 28" preserveAspectRatio="none"></svg>
+
+    <div class="history-block">
+      <div class="history-header">
+        <span class="card-title history-title">History</span>
+        ${hasAnyCounts
+          ? `<span class="history-pills">${countPills.join("")}</span>`
+          : `<span class="meta-line subtle">no verdicts yet</span>`}
+        <button class="add-verdict-btn ${pane.composerOpen ? "open" : ""}" type="button"
+                title="Add your own verdict for this skill">
+          ${pane.composerOpen ? "× cancel" : "+ Add verdict"}
+        </button>
+      </div>
+      <div class="composer-section"></div>
+      <div class="history-section"></div>
+    </div>
+
+    ${manageBlock}
+  `;
+
+  // Per-host bar chart.
+  renderPerHostChart(wrap.querySelector(".per-host-chart"), p);
+  // Mini sparkline.
+  drawMiniSpark(wrap.querySelector(".mini-sparkline"), p.sparkline);
+
+  // Inline history block.
+  // Default = show every verdict. Clicking a pill (helpful/harmful/
+  // neutral) filters the list to that label; clicking the same pill
+  // again clears the filter.
+  const historySection = wrap.querySelector(".history-section");
+  if (hasAnyCounts) {
+    historySection.appendChild(renderInlineHistory(pane, expanded));
+  }
+
+  // Composer (Add verdict).
+  const composerSection = wrap.querySelector(".composer-section");
+  if (pane.composerOpen) {
+    composerSection.appendChild(renderVerdictComposer(pane));
+  }
+  wrap.querySelector(".add-verdict-btn").addEventListener("click", () => {
+    pane.composerOpen = !pane.composerOpen;
+    if (!pane.composerOpen) {
+      pane.composerReason = "";
+    }
+    renderPanes();
+  });
+
+  // Wire pill toggles.
+  wrap.querySelectorAll(".count-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const bucket = btn.dataset.bucket;
+      pane.expanded = pane.expanded === bucket ? null : bucket;
+      pane.expandedVerdictId = null;
+      renderPanes();
+    });
+  });
+
+  // Manage actions.
+  wrap.querySelectorAll(".actions .action").forEach((btn) => {
+    btn.addEventListener("click", () => skillAction(p, btn.dataset.act, btn));
+  });
+
+  // Path-jump.
+  const pathJump = wrap.querySelector(".path-jump");
+  if (pathJump) {
+    pathJump.addEventListener("click", async (e) => {
+      e.preventDefault();
+      await openFolder(pathJump.dataset.path);
+    });
+  }
+  return wrap;
+}
+
+function renderInlineHistory(pane, bucket) {
+  // bucket = null  → show ALL verdicts (default)
+  // bucket = "HELPFUL"|"HARMFUL"|"NEUTRAL" → filter to that label
+  const p = pane.payload;
+  const wrap = document.createElement("div");
+  let items;
+  if (bucket) {
+    const key = bucket === "HELPFUL" ? "helpful_history"
+      : bucket === "HARMFUL" ? "harmful_history" : "neutral_history";
+    items = p[key] || [];
+  } else {
+    // Merge all three streams; sort by occurred_at desc.
+    items = [
+      ...(p.helpful_history || []),
+      ...(p.harmful_history || []),
+      ...(p.neutral_history || []),
+    ].sort((a, b) => (a.occurred_at < b.occurred_at ? 1 : -1));
+  }
+  if (items.length === 0) {
+    wrap.innerHTML = `<div class="meta-line subtle">(none)</div>`;
+    return wrap;
+  }
+  // No hoisting — the history list now has its own internal scroll
+  // viewport (.history-section is overflow:auto), so the expanded row
+  // can stay in its chronological position and we just scroll the
+  // container to keep it visible.
+  wrap.className = "history-list";
+  for (const v of items) {
+    wrap.appendChild(renderInlineHistoryRow(v, pane));
+  }
+  return wrap;
+}
+
+function renderVerdictComposer(pane) {
+  const skill = pane.payload.name;
+  const wrap = document.createElement("div");
+  wrap.className = "composer-card";
+  // NEUTRAL intentionally absent: a user filing a manual verdict
+  // always has an opinion (the implicit "no opinion" is just not filing).
+  const choices = ["HELPFUL", "HARMFUL"];
+  if (pane.composerVerdict === "NEUTRAL") pane.composerVerdict = "HELPFUL";
+  wrap.innerHTML = `
+    <label class="panel-label">You're adding a verdict as <span class="composer-host-tag">user</span></label>
+    <div class="composer-choice">
+      ${choices.map((v) => `
+        <button class="composer-pick ${v} ${pane.composerVerdict === v ? "active" : ""}" data-pick="${v}">
+          ${verdictGlyph(v)} ${v}
+        </button>
+      `).join("")}
+    </div>
+    <label class="panel-label">Reason <span class="composer-optional">(optional)</span></label>
+    <textarea class="reason-textarea" rows="3" placeholder="Why does this skill deserve this label? (≥ 8 chars to be saved with a reason; leave blank for label-only)"></textarea>
+    <div class="composer-footer">
+      <button class="action primary" data-act="submit">${verdictGlyph(pane.composerVerdict)} Add ${pane.composerVerdict.toLowerCase()} verdict for ${escapeHtml(skill)}</button>
+    </div>
+  `;
+  const ta = wrap.querySelector("textarea");
+  ta.value = pane.composerReason || "";
+  // Save reason draft on input so toggling the verdict button doesn't
+  // lose what the user typed.
+  ta.addEventListener("input", () => { pane.composerReason = ta.value; });
+  setTimeout(() => ta.focus(), 0);
+
+  wrap.querySelectorAll(".composer-pick").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      pane.composerVerdict = btn.dataset.pick;
+      // Persist reason draft before re-render.
+      pane.composerReason = ta.value;
+      renderPanes();
+    });
+  });
+
+  const submit = async () => {
+    const reason = ta.value.trim();
+    try {
+      const resp = await fetch("/api/verdict", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          skill_name: skill,
+          verdict: pane.composerVerdict,
+          reason: reason || null,
+        }),
+      });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        throw new Error(err.error || `HTTP ${resp.status}`);
+      }
+      toast(`Added ${pane.composerVerdict.toLowerCase()} verdict`);
+      pane.composerOpen = false;
+      pane.composerReason = "";
+      await loadAll();
+      await refreshOpenPanes();
+    } catch (err) {
+      console.error(err);
+      toast(`Add failed: ${err.message}`);
+    }
+  };
+  wrap.querySelector("[data-act='submit']").addEventListener("click", submit);
+  ta.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); submit(); }
+    else if (e.key === "Escape") {
+      e.preventDefault();
+      pane.composerOpen = false;
+      pane.composerReason = "";
+      renderPanes();
+    }
+  });
+  return wrap;
+}
+
+
+function renderInlineHistoryRow(verdict, pane) {
+  const expanded = pane.expandedVerdictId === verdict.id;
+  const li = document.createElement("div");
+  li.className = "history-row" + (expanded ? " expanded" : "");
+  if (pane.highlightVerdictId === verdict.id) li.classList.add("highlight");
+
+  if (!expanded) {
+    // Collapsed: time / host / reason-preview / chevron. Clicking
+    // anywhere on this row pops it open.
+    const header = document.createElement("button");
+    header.type = "button";
+    header.className = "history-row-head";
+    header.innerHTML = `
+      <span class="when">${relTime(verdict.occurred_at)}</span>
+      <span class="host-tag ${verdict.host}">${verdict.host}</span>
+      <span class="row-reason-preview">${escapeHtml(verdict.reason || "(no reason)")}</span>
+      <span class="chevron">▸</span>
+    `;
+    header.addEventListener("click", () => {
+      pane.expandedVerdictId = verdict.id;
+      renderPanes();
+    });
+    li.appendChild(header);
+    return li;
+  }
+
+  // Expanded: header keeps time + host, but the chevron is replaced
+  // by inline action buttons. The reason becomes an inline-editable
+  // textarea right below — no nested panel, no sticky footer, no
+  // wrapping action stripes. Just two stacked rows.
+  const current = verdict.verdict;
+  const others = ["HELPFUL", "HARMFUL", "NEUTRAL"].filter((v) => v !== current);
+
+  const head = document.createElement("div");
+  head.className = "history-row-head expanded-head";
+  // Collapse affordance: clicking the (always-visible) header strip
+  // outside the action buttons closes the row. The explicit ▾ button
+  // is gone because clicking the row itself OR pressing Esc already
+  // collapses it — one less control to misread.
+  head.innerHTML = `
+    <span class="when">${relTime(verdict.occurred_at)}</span>
+    <span class="host-tag ${verdict.host}">${verdict.host}</span>
+    <span class="row-actions-inline">
+      ${others.map((v) => `
+        <button class="row-act ${v}" data-relabel="${v}"
+                title="Re-label as ${v.toLowerCase()}">
+          ${verdictGlyph(v)} ${v.toLowerCase()}
+        </button>
+      `).join("")}
+      <button class="row-act danger" data-act="delete-here"
+              title="Delete this verdict">✗ delete</button>
+    </span>
+  `;
+  li.appendChild(head);
+
+  const reasonRow = document.createElement("div");
+  reasonRow.className = "reason-row";
+  reasonRow.innerHTML = `
+    <textarea class="reason-textarea" rows="3" aria-label="reason"
+              placeholder="(no reason — type one and press ⌘/Ctrl+Enter)">${escapeHtml(verdict.reason || "")}</textarea>
+  `;
+  li.appendChild(reasonRow);
+
+  const ta = reasonRow.querySelector("textarea");
+  setTimeout(() => { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }, 0);
+
+  const collapse = () => { pane.expandedVerdictId = null; renderPanes(); };
+  const saveReason = async () => {
+    const next = ta.value.trim();
+    if (next === (verdict.reason || "").trim()) { collapse(); return; }
+    await patchVerdict(verdict.id, { reason: next }, "Reason updated");
+    pane.expandedVerdictId = null;
+  };
+
+  ta.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") { e.preventDefault(); collapse(); }
+    else if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); saveReason(); }
+  });
+  // Blurring the textarea (clicking outside / tabbing away) saves
+  // implicitly — keeps the row's edit-then-relabel flow zero-friction.
+  ta.addEventListener("blur", () => {
+    const next = ta.value.trim();
+    if (next !== (verdict.reason || "").trim()) {
+      patchVerdict(verdict.id, { reason: next }, "Reason updated").catch(() => {});
+    }
+  });
+
+  // Clicking the header (anywhere except an action button) collapses
+  // the row. We listen on the head and bail if the click target is a
+  // button.
+  head.addEventListener("click", (e) => {
+    if (e.target.closest("button")) return;
+    collapse();
+  });
+  head.querySelector("[data-act='delete-here']").addEventListener("click", async () => {
+    const ok = await showConfirm({
+      title: "Delete verdict",
+      body: "Delete this verdict permanently?",
+      sub: "Counts will recompute and this row will disappear.",
+      confirmLabel: "Delete",
+      confirmKind: "danger",
+    });
+    if (!ok) return;
+    // Optimistic remove — drop the row from the DOM immediately so
+    // the user sees the action take effect without waiting on the
+    // server round-trip or the next renderPanes() pass. If the
+    // request fails, deleteVerdict() will toast and the next refresh
+    // will bring the row back.
+    li.remove();
+    await deleteVerdict(verdict.id);
+  });
+  head.querySelectorAll("[data-relabel]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const next = btn.dataset.relabel;
+      const body = { verdict: next };
+      const reasonNow = ta.value.trim();
+      if (reasonNow !== (verdict.reason || "").trim()) {
+        body.reason = reasonNow;
+      }
+      await patchVerdict(verdict.id, body, `→ ${next.toLowerCase()}`);
+      pane.expandedVerdictId = null;
+    });
+  });
+
+  // Scroll the expanded row into view INSIDE the history-section.
+  // We use a two-rAF deferral so any scroll-position restoration
+  // renderPanes() scheduled for the next frame has already applied.
+  // Then we explicitly compute the scroll inside the history-section
+  // container — native scrollIntoView would scroll the pane-body too.
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    const container = li.closest(".history-section");
+    if (!container) return;
+    // Use offsetTop-based math (relative to the container) so the row
+    // is positioned right at the top of the history viewport. That
+    // guarantees the textarea + action footer never get clipped, no
+    // matter where the row sits in the list.
+    container.scrollTo({
+      top: Math.max(0, li.offsetTop - container.offsetTop - 4),
+      behavior: "smooth",
+    });
+  }));
+
+  return li;
+}
+
+function renderPerHostChart(container, payload) {
+  // Matrix of host tiles. Each tile is a flat card with: the host
+  // label, a big net score (color-coded), and a dotted distribution
+  // row (one dot per verdict — green = helpful, red = harmful, grey
+  // = neutral). When verdict count > 8 we collapse to "✓N ✗M" text.
+  //
+  // Why this beats stacked horizontal bars:
+  //   - net score is the question the user is actually asking
+  //     ("does this host like this skill?"). Single big number → fast read.
+  //   - dot row maps 1:1 with verdicts, so a "3 helpful 1 harmful"
+  //     mix is visually distinct from "3 helpful 3 harmful" — they had
+  //     the same relative width in the old bar.
+  //   - tile layout puts hosts side-by-side, so disagreement is
+  //     a horizontal eye-movement, not a vertical scan.
+  const byName = state.skillsByName.find((s) => s.name === payload.name);
+  const perHost = (byName && byName.per_host) || (() => {
+    const out = {};
+    for (const [k, v] of Object.entries(payload.per_host || {})) {
+      out[k] = { ...v, net: (v.helpful || 0) - (v.harmful || 0) };
+    }
+    return out;
+  })();
+  const present = HOSTS.filter((h) => perHost[h]);
+  if (present.length === 0) {
+    container.innerHTML = `<div class="meta-line subtle">No host-level verdicts yet.</div>`;
+    return;
+  }
+
+  container.innerHTML = "";
+  container.classList.add("phc-grid");
+
+  // Detect disagreement so the chart can flag it: any pair of hosts
+  // where one is net-positive and another net-negative.
+  const nets = present.map((h) => perHost[h].net);
+  const hasDisagreement = Math.max(...nets) > 0 && Math.min(...nets) < 0;
+  if (hasDisagreement) {
+    const flag = document.createElement("div");
+    flag.className = "phc-disagreement";
+    flag.innerHTML = `⚠ hosts disagree on this skill`;
+    container.appendChild(flag);
+  }
+
+  for (const h of present) {
+    const ph = perHost[h];
+    const total = (ph.helpful || 0) + (ph.harmful || 0) + (ph.neutral || 0);
+    let distribution = "";
+    if (total <= 8) {
+      // Dotted distribution.
+      const dots = [];
+      for (let i = 0; i < (ph.helpful || 0); i++) dots.push('<span class="phc-dot helpful" title="helpful"></span>');
+      for (let i = 0; i < (ph.harmful || 0); i++) dots.push('<span class="phc-dot harmful" title="harmful"></span>');
+      for (let i = 0; i < (ph.neutral || 0); i++) dots.push('<span class="phc-dot neutral" title="neutral"></span>');
+      distribution = `<div class="phc-dots">${dots.join("")}</div>`;
+    } else {
+      // Too many to dot — show counts as text.
+      const parts = [];
+      if (ph.helpful) parts.push(`<span class="phc-c helpful">✓${ph.helpful}</span>`);
+      if (ph.harmful) parts.push(`<span class="phc-c harmful">✗${ph.harmful}</span>`);
+      if (ph.neutral) parts.push(`<span class="phc-c neutral">·${ph.neutral}</span>`);
+      distribution = `<div class="phc-text">${parts.join(" ")}</div>`;
+    }
+    const netClass = ph.net > 0 ? "pos" : ph.net < 0 ? "neg" : "zero";
+    const tile = document.createElement("div");
+    tile.className = `phc-tile phc-${h} ${netClass}`;
+    tile.innerHTML = `
+      <div class="phc-tile-head">
+        <span class="phc-tile-host">${h}</span>
+        <span class="phc-tile-total">${total} verdict${total === 1 ? "" : "s"}</span>
+      </div>
+      <div class="phc-tile-net">${ph.net > 0 ? "+" : ""}${ph.net}</div>
+      ${distribution}
+    `;
+    container.appendChild(tile);
+  }
+}
+
+async function patchVerdict(id, body, msg) {
+  try {
+    const resp = await fetch(`/api/verdict/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!resp.ok) throw new Error(`PATCH ${resp.status}`);
+    toast(msg);
+    await loadAll();
+    await refreshOpenPanes();
+  } catch (err) { console.error(err); toast("Update failed"); }
+}
+
+async function deleteVerdict(id) {
+  try {
+    const resp = await fetch(`/api/verdict/${id}`, { method: "DELETE" });
+    if (!resp.ok) throw new Error(`DELETE ${resp.status}`);
+    toast("Verdict deleted");
+    // Close any verdict pane targeting this id.
+    state.panes = state.panes.filter(
+      (p) => !(p.kind === "verdict" && p.payload && p.payload.id === id),
+    );
+    await loadAll();
+    await refreshOpenPanes();
+  } catch (err) { console.error(err); toast("Delete failed"); }
+}
+
+async function refreshOpenPanes() {
+  for (const pane of state.panes) {
+    if (pane.kind === "skill" && pane.payload) {
+      try {
+        pane.payload = await fetchJSON(
+          `/api/skill/${encodeURIComponent(pane.payload.name)}`,
+        );
+      } catch (_e) { /* leave stale */ }
+    }
+  }
+  renderPanes();
+}
+
+async function verdictAction(verdict, act, btn) {
+  const all = btn.parentElement.querySelectorAll(".action");
+  all.forEach((b) => b.setAttribute("disabled", "disabled"));
+  try {
+    if (act === "delete") {
+      const ok = await showConfirm({
+        title: "Delete verdict",
+        body: "Delete this verdict permanently?",
+        sub: "Counts will recompute and this row will disappear.",
+        confirmLabel: "Delete",
+        confirmKind: "danger",
+      });
+      if (!ok) {
+        all.forEach((b) => b.removeAttribute("disabled")); return;
+      }
+      await deleteVerdict(verdict.id);
+    } else if (act === "flip" || act === "neutral") {
+      const next = act === "neutral"
+        ? "NEUTRAL"
+        : (verdict.verdict === "HELPFUL" ? "HARMFUL"
+          : verdict.verdict === "HARMFUL" ? "HELPFUL" : "NEUTRAL");
+      await patchVerdict(verdict.id, { verdict: next }, `→ ${next.toLowerCase()}`);
+    }
+  } catch (err) {
+    console.error(err); toast("Action failed");
+    all.forEach((b) => b.removeAttribute("disabled"));
+  }
+}
+
+async function skillAction(payload, act, btn) {
+  const all = btn.parentElement.querySelectorAll(".action");
+  all.forEach((b) => b.setAttribute("disabled", "disabled"));
+  try {
+    const name = payload.name;
+    if (act === "archive-skill") {
+      const ok = await showConfirm({
+        title: "Archive skill",
+        body: `Archive "${name}"?`,
+        sub: "The router will stop surfacing it until you flip the YAML back.",
+        confirmLabel: "Archive",
+        confirmKind: "primary",
+      });
+      if (!ok) {
+        all.forEach((b) => b.removeAttribute("disabled")); return;
+      }
+      const resp = await fetch(`/api/skill/${encodeURIComponent(name)}/archive`, { method: "POST" });
+      if (!resp.ok) throw new Error(`archive failed: ${resp.status}`);
+      toast(`Archived ${name}`);
+      await loadAll();
+      await refreshOpenPanes();
+    } else if (act === "delete-skill") {
+      const ok = await showConfirm({
+        title: "Permanently delete skill",
+        body: `Permanently delete "${name}"?`,
+        sub: "Removes the directory from disk. Cannot be undone.",
+        confirmLabel: "Continue",
+        confirmKind: "danger",
+      });
+      if (!ok) {
+        all.forEach((b) => b.removeAttribute("disabled")); return;
+      }
+      const second = await showPrompt({
+        title: "Confirm by typing the name",
+        body: `Type the skill name to confirm:`,
+        sub: name,
+        placeholder: name,
+        confirmLabel: "Delete forever",
+        confirmKind: "danger",
+        validator: (v) => v === name,
+      });
+      if (second !== name) {
+        toast("Hard delete cancelled");
+        all.forEach((b) => b.removeAttribute("disabled")); return;
+      }
+      const resp = await fetch(`/api/skill/${encodeURIComponent(name)}/delete`, { method: "POST" });
+      if (!resp.ok) throw new Error(`hard-delete failed: ${resp.status}`);
+      toast(`Deleted ${name}`);
+      // Close this pane.
+      const pane = state.panes.find((p) => p.kind === "skill" && p.payload && p.payload.name === name);
+      if (pane) closePane(pane.id);
+      await loadAll();
+    } else if (act === "bulk-delete-orphan") {
+      const ok = await showConfirm({
+        title: "Delete orphan verdicts",
+        body: `Delete every verdict for orphan skill "${name}"?`,
+        sub: "Cannot be undone.",
+        confirmLabel: "Delete all",
+        confirmKind: "danger",
+      });
+      if (!ok) {
+        all.forEach((b) => b.removeAttribute("disabled")); return;
+      }
+      // Iterate the per-host buckets and issue one bulk-delete each.
+      const byName = state.skillsByName.find((s) => s.name === name);
+      const hosts = byName ? Object.keys(byName.per_host || {}) : ["other"];
+      // skills_by_name normalises hosts; need raw values for the API.
+      const rawByShort = {claude: ["claude_code", "claude"], gemini: ["gemini_cli", "gemini"], codex: ["codex"], hermes: ["hermes"], other: ["other"]};
+      let total = 0;
+      for (const h of hosts) {
+        for (const raw of (rawByShort[h] || [h])) {
+          const resp = await fetch("/api/verdicts/bulk-delete", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ skill_name: name, host: raw, reason: null }),
+          });
+          if (resp.ok) { const d = await resp.json(); total += d.deleted; }
+          // Also reason-less variant: collect any non-null reasons
+          // via /api/verdicts?skill=… then issue per-reason deletes.
+          const reasons = await fetchJSON(`/api/verdicts?limit=200&skill=${encodeURIComponent(name)}`).catch(() => []);
+          const reasonSet = [...new Set(reasons.filter((v) => v.host_raw === raw).map((v) => v.reason))];
+          for (const r of reasonSet) {
+            const dr = await fetch("/api/verdicts/bulk-delete", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ skill_name: name, host: raw, reason: r }),
+            });
+            if (dr.ok) { const d = await dr.json(); total += d.deleted; }
+          }
+        }
+      }
+      toast(`Deleted ${total} verdicts`);
+      const pane = state.panes.find((p) => p.kind === "skill" && p.payload && p.payload.name === name);
+      if (pane) closePane(pane.id);
+      await loadAll();
+    }
+  } catch (err) {
+    console.error(err); toast("Action failed");
+    all.forEach((b) => b.removeAttribute("disabled"));
+  }
+}
+
+async function openFolder(path) {
+  try {
+    const resp = await fetch("/api/open-folder", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ path }),
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err.error || `HTTP ${resp.status}`);
+    }
+    toast("Opened in file manager");
+  } catch (err) { console.error(err); toast(`Open failed: ${err.message}`); }
+}
+
+function drawMiniSpark(svg, data) {
+  if (!svg || !data || data.length === 0) return;
+  const ns = "http://www.w3.org/2000/svg";
+  const counts = data.map(([, c]) => c);
+  const max = Math.max(...counts, 1);
+  const w = 300, h = 28, n = counts.length;
+  const dx = w / Math.max(n - 1, 1);
+  const points = counts.map((c, i) => `${(i * dx).toFixed(1)},${(h - (c / max) * (h - 2) - 1).toFixed(1)}`);
+  const path = document.createElementNS(ns, "path");
+  path.setAttribute("d", `M${points.join(" L")}`);
+  path.setAttribute("fill", "none"); path.setAttribute("stroke", "currentColor");
+  path.setAttribute("stroke-width", "1.5");
+  svg.appendChild(path);
+}
+
+// ---------- State actions ---------- //
+
+function toggleHost(host) {
+  state.hostFilter = state.hostFilter === host ? null : host;
+  state.orphanFilter = false;
+  state.netHarmfulFilter = false;
+  loadAll();
+}
+function setTimeRange(days) { state.timeRange = days; syncTimeToggle(); loadAll(); }
+function setSearch(q) { state.searchQuery = q; loadAll(); }
+function setListMode(m) {
+  state.listMode = m;
+  state.noiseFilter = false;
+  state.orphanFilter = false;
+  state.netHarmfulFilter = false;
+  syncListModeButtons();
+  renderMainList();
+}
+
+// ---------- Utilities ---------- //
+
+function relTime(iso) {
+  if (!iso) return "";
+  const t = new Date(iso);
+  const sec = Math.floor((Date.now() - t.getTime()) / 1000);
+  if (sec < 60) return `${sec}s`;
+  if (sec < 3600) return `${Math.floor(sec / 60)}m`;
+  if (sec < 86400) return `${Math.floor(sec / 3600)}h`;
+  return `${Math.floor(sec / 86400)}d`;
+}
+function verdictGlyph(v) { return v === "HELPFUL" ? "✓" : v === "HARMFUL" ? "✗" : "·"; }
+function truncate(s, max) {
+  if (s.length <= max) return s;
+  return s.slice(0, Math.max(1, max - 1)) + "…";
+}
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[c]));
+}
+function escapeAttr(s) { return escapeHtml(s); }
+function toast(msg) {
+  let el = document.querySelector(".toast");
+  if (!el) {
+    el = document.createElement("div"); el.className = "toast";
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => el.classList.remove("show"), 1800);
+}
+
+// Promise-based modal confirm — styled to match the rest of the UI
+// (reuses .modal + .modal-inner.confirm). Resolves true on confirm,
+// false on cancel / Escape / backdrop click.
+function showConfirm({ title = "Confirm", body = "", sub = "",
+  confirmLabel = "Delete", confirmKind = "danger", cancelLabel = "Cancel" } = {}) {
+  return new Promise((resolve) => {
+    const overlay = document.createElement("div");
+    overlay.className = "modal";
+    overlay.innerHTML = `
+      <div class="modal-inner confirm" role="dialog" aria-modal="true">
+        <header>
+          <h2>${escapeHtml(title)}</h2>
+          <button class="close" data-act="cancel" aria-label="Close">×</button>
+        </header>
+        <div class="confirm-body">
+          <div>${escapeHtml(body)}</div>
+          ${sub ? `<div class="sub">${escapeHtml(sub)}</div>` : ""}
+        </div>
+        <footer>
+          <button class="action" data-act="cancel">${escapeHtml(cancelLabel)}</button>
+          <button class="action ${confirmKind === "danger" ? "danger" : "primary"}" data-act="confirm">${escapeHtml(confirmLabel)}</button>
+        </footer>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    const cleanup = (v) => {
+      document.removeEventListener("keydown", onKey, true);
+      overlay.remove();
+      resolve(v);
+    };
+    const onKey = (e) => {
+      if (e.key === "Escape") { e.stopPropagation(); cleanup(false); }
+      else if (e.key === "Enter") { e.stopPropagation(); cleanup(true); }
+    };
+    document.addEventListener("keydown", onKey, true);
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) cleanup(false);
+      const btn = e.target.closest("[data-act]");
+      if (!btn) return;
+      cleanup(btn.dataset.act === "confirm");
+    });
+    // Focus the confirm button so Enter triggers it by default.
+    requestAnimationFrame(() => {
+      const cbtn = overlay.querySelector("[data-act='confirm']");
+      if (cbtn) cbtn.focus();
+    });
+  });
+}
+
+// Promise-based modal prompt — same chrome as showConfirm but with an
+// inline <input>. Resolves the entered string on confirm (or empty
+// string if blank), null on cancel / Escape / backdrop click. Use
+// `validator(value)` to gate the confirm button (returns true when
+// the input is acceptable).
+function showPrompt({ title = "Input", body = "", sub = "",
+  placeholder = "", initial = "", confirmLabel = "OK",
+  confirmKind = "primary", cancelLabel = "Cancel",
+  validator = null } = {}) {
+  return new Promise((resolve) => {
+    const overlay = document.createElement("div");
+    overlay.className = "modal";
+    overlay.innerHTML = `
+      <div class="modal-inner confirm" role="dialog" aria-modal="true">
+        <header>
+          <h2>${escapeHtml(title)}</h2>
+          <button class="close" data-act="cancel" aria-label="Close">×</button>
+        </header>
+        <div class="confirm-body">
+          <div>${escapeHtml(body)}</div>
+          ${sub ? `<div class="sub">${escapeHtml(sub)}</div>` : ""}
+          <input class="confirm-input" type="text"
+            placeholder="${escapeAttr(placeholder)}"
+            value="${escapeAttr(initial)}" />
+        </div>
+        <footer>
+          <button class="action" data-act="cancel">${escapeHtml(cancelLabel)}</button>
+          <button class="action ${confirmKind === "danger" ? "danger" : "primary"}" data-act="confirm">${escapeHtml(confirmLabel)}</button>
+        </footer>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    const input = overlay.querySelector(".confirm-input");
+    const confirmBtn = overlay.querySelector("[data-act='confirm']");
+    const validate = () => {
+      const v = input.value;
+      const ok = validator ? !!validator(v) : true;
+      if (ok) confirmBtn.removeAttribute("disabled");
+      else confirmBtn.setAttribute("disabled", "disabled");
+      return ok;
+    };
+    input.addEventListener("input", validate);
+    validate();
+    const cleanup = (v) => {
+      document.removeEventListener("keydown", onKey, true);
+      overlay.remove();
+      resolve(v);
+    };
+    const onKey = (e) => {
+      if (e.key === "Escape") { e.stopPropagation(); cleanup(null); }
+      else if (e.key === "Enter" && document.activeElement === input) {
+        e.preventDefault();
+        if (validate()) cleanup(input.value);
+      }
+    };
+    document.addEventListener("keydown", onKey, true);
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) { cleanup(null); return; }
+      const btn = e.target.closest("[data-act]");
+      if (!btn) return;
+      if (btn.dataset.act === "confirm") {
+        if (validate()) cleanup(input.value);
+      } else cleanup(null);
+    });
+    requestAnimationFrame(() => input.focus());
+  });
+}
+
+// ---------- Bootstrap ---------- //
+
+function bootstrap() {
+  document.querySelectorAll("[data-list-mode]").forEach((b) => {
+    b.addEventListener("click", () => setListMode(b.dataset.listMode));
+  });
+  syncListModeButtons();
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    const active = document.activeElement;
+    if (active && (active.tagName === "TEXTAREA" || active.tagName === "INPUT")) return;
+    if (state.panes.length > 0) closePane(state.panes[state.panes.length - 1].id);
+  });
+
+  const search = document.getElementById("search-input");
+  let debounce;
+  search.addEventListener("input", () => {
+    clearTimeout(debounce);
+    debounce = setTimeout(() => setSearch(search.value), 250);
+  });
+
+  loadAll();
+  pollTimer = setInterval(loadAll, POLL_MS);
+
+  // Auto-open a skill pane from URL hash — used by headless snapshot
+  // tooling (and by the user when sharing a URL).
+  // Example: http://127.0.0.1:7531/#open=api-route-handler
+  //          http://127.0.0.1:7531/#open=imagegen&bucket=HELPFUL
+  const applyHash = () => {
+    const h = (location.hash || "").replace(/^#/, "");
+    if (!h) return;
+    const params = new URLSearchParams(h);
+    const skill = params.get("open");
+    const bucket = params.get("bucket");
+    const expandId = params.get("expand");
+    const composer = params.get("composer");
+    if (skill) {
+      openSkillPane(skill);
+      const tick = setInterval(() => {
+        const pane = state.panes[0];
+        if (pane && pane.payload) {
+          if (bucket) pane.expanded = bucket.toUpperCase();
+          if (expandId) pane.expandedVerdictId = Number(expandId);
+          if (composer === "1") pane.composerOpen = true;
+          renderPanes();
+          clearInterval(tick);
+        }
+      }, 100);
+      setTimeout(() => clearInterval(tick), 4000);
+    }
+  };
+  // Run after the first load finishes so the skill list is populated.
+  const hashWatcher = setInterval(() => {
+    if (state.skillsByName.length > 0 || state.overview) {
+      applyHash();
+      clearInterval(hashWatcher);
+    }
+  }, 100);
+  setTimeout(() => clearInterval(hashWatcher), 5000);
+  window.addEventListener("hashchange", applyHash);
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", bootstrap);
+} else {
+  bootstrap();
+}

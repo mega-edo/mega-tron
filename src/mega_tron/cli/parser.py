@@ -48,6 +48,7 @@ from mega_tron.cli._common import (
 )
 from mega_tron.cli.build_cache import cmd_build_cache
 from mega_tron.cli.daemon import cmd_daemon
+from mega_tron.cli.dashboard import cmd_dashboard
 from mega_tron.cli.dirs import cmd_dirs
 from mega_tron.cli.embedder_cmd import cmd_embedder
 from mega_tron.cli.evaluate import cmd_evaluate
@@ -382,6 +383,35 @@ def main(argv: list[str] | None = None) -> int:
         help="Alias for `setup`. Wire mega-tron into your host CLIs.",
     )
     _add_install_arguments(p_install)
+
+    # ----- dashboard ----- #
+    p_dashboard = sub.add_parser(
+        "dashboard",
+        help="Launch local HTTP observability + verdict-edit UI.",
+    )
+    p_dashboard.add_argument(
+        "--port",
+        type=int,
+        default=int(os.environ.get("MEGA_TRON_DASHBOARD_PORT", "7531")),
+        help=(
+            "TCP port (default: 7531 or $MEGA_TRON_DASHBOARD_PORT). "
+            "Use 0 to let the OS pick a free port (mostly for tests)."
+        ),
+    )
+    p_dashboard.add_argument(
+        "--host",
+        default="127.0.0.1",
+        help=(
+            "Bind address (default: 127.0.0.1 — loopback-only). The "
+            "dashboard has no auth; only widen this with care."
+        ),
+    )
+    p_dashboard.add_argument(
+        "--no-open",
+        action="store_true",
+        help="Do not auto-open a browser tab on startup.",
+    )
+    p_dashboard.set_defaults(func=cmd_dashboard)
 
     p_hook = sub.add_parser("hook", help=argparse.SUPPRESS)
     p_hook.add_argument("--skills-dir", default=None)
