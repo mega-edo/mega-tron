@@ -737,14 +737,26 @@ function renderOnePane(pane) {
   const aside = document.createElement("aside");
   aside.className = `pane pane-${pane.kind}`;
   aside.dataset.paneId = String(pane.id);
-  const titleText = pane.payload ? pane.payload.name : pane.name;
-  // Usage badge: total verdicts this skill has received. Sits next to
-  // the title so the user sees "is this thing used much?" without
-  // scrolling.
-  const total = pane.payload && pane.payload.total_verdicts;
-  const usageBadge = total
-    ? `<span class="usage-badge" title="${total} verdict${total === 1 ? "" : "s"} recorded">${total} use${total === 1 ? "" : "s"}</span>`
-    : "";
+
+  // Header is kind-specific: skill panes title with the skill name
+  // and a "N uses" badge from payload.total_verdicts. Orphan panes
+  // are list views, not single-record — title them by what the user
+  // is looking at, and show the count once payload arrives.
+  let titleText;
+  let usageBadge = "";
+  if (pane.kind === "orphan") {
+    const count = Array.isArray(pane.payload) ? pane.payload.length : null;
+    titleText = "Orphan skills";
+    if (count !== null) {
+      usageBadge = `<span class="usage-badge" title="orphan skills found">${count}</span>`;
+    }
+  } else {
+    titleText = pane.payload ? pane.payload.name : pane.name;
+    const total = pane.payload && pane.payload.total_verdicts;
+    usageBadge = total
+      ? `<span class="usage-badge" title="${total} verdict${total === 1 ? "" : "s"} recorded">${total} use${total === 1 ? "" : "s"}</span>`
+      : "";
+  }
   const head = document.createElement("header");
   head.className = "pane-head";
   head.innerHTML = `

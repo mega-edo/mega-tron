@@ -112,9 +112,10 @@ def infer_host_from_skill_dir(skill_dir: Path) -> str:
       ``$CODEX_HOME/skills/.system`` -> ``"codex"``
       ``~/.gemini/skills``           -> ``"gemini"``
       ``~/.hermes/skills``           -> ``"hermes"``
+      ``~/.agents/skills``           -> ``"agents"``
 
-    Anything else (custom registered roots, wisdom cache, ``MEGA_SKILL_DIRS``)
-    falls back to ``"other"``.
+    Anything else (custom registered roots via ``mega-tron dirs add``,
+    wisdom cache, ``MEGA_SKILL_DIRS``) falls back to ``"other"``.
     """
     parent = skill_dir.parent
     parent_resolved = parent.resolve(strict=False)
@@ -134,6 +135,7 @@ def infer_host_from_skill_dir(skill_dir: Path) -> str:
         ("/.codex/skills", "codex"),
         ("/.gemini/skills", "gemini"),
         ("/.hermes/skills", "hermes"),
+        ("/.agents/skills", "agents"),
     ]
     for suffix, host in suffix_to_host:
         if parent_str.endswith(suffix):

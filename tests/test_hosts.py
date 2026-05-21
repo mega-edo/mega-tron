@@ -30,7 +30,7 @@ def test_normalize_host_aliases():
 
 
 def test_normalize_host_identity_for_short_names():
-    for raw in ("codex", "claude", "gemini", "hermes", "other"):
+    for raw in ("codex", "claude", "gemini", "hermes", "agents", "other"):
         assert normalize_host(raw) == raw
 
 
@@ -52,6 +52,7 @@ def test_normalize_host_unknown_value_passes_through():
         (".codex/skills/.system/imagegen", "codex"),
         (".gemini/skills/clap-parser", "gemini"),
         (".hermes/skills/redis-ratelimit", "hermes"),
+        (".agents/skills/multi-tool-pipeline", "agents"),
     ],
 )
 def test_infer_host_from_skill_dir_known_roots(fake_home, rel, expected):

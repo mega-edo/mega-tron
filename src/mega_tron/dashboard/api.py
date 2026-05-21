@@ -36,7 +36,7 @@ _LOG = logging.getLogger(__name__)
 # resolve to one of these four is routed into the orphan/unknown
 # counter on the health row instead, so the host chip row stays
 # meaningful (no garbage bucket).
-_DISPLAY_HOSTS = ("codex", "claude", "gemini", "hermes", "user")
+_DISPLAY_HOSTS = ("codex", "claude", "gemini", "hermes", "agents", "user")
 _UNKNOWN_HOST = "other"
 
 
@@ -923,6 +923,7 @@ def _denormalize_host(short: str | None) -> list[str] | None:
         "codex": ["codex"],
         "user": ["user"],
         "hermes": ["hermes"],
+        "agents": ["agents"],
         "other": ["other"],
     }
     return table.get(short, [short])
