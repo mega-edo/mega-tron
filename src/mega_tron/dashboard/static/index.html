@@ -26,7 +26,7 @@
       </button>
       <button class="tab-btn" data-tab="review" type="button" role="tab"
               aria-controls="tab-panel-review" aria-selected="false">
-        Review
+        Human-in-the-loop
       </button>
     </nav>
 
@@ -89,7 +89,12 @@
 
       <section id="verdicts-card" class="card">
         <div class="card-title row">
-          <span id="list-mode-title">Skills with verdicts</span>
+          <span class="title-with-info">
+            <span id="list-mode-title">Skills with verdicts</span>
+            <span class="info-icon tooltip-trigger" tabindex="0" role="img"
+                  aria-label="Click any row to open the skill's detail pane. From there you can edit, relabel (HELPFUL ↔ HARMFUL ↔ NEUTRAL), or delete the verdicts the host CLIs (Codex / Claude / Gemini) automatically recorded — and add your own verdicts that feed back into mega-tron's routing weights on the very next turn."
+                  data-tooltip="Click a row to open the skill's detail pane. You can edit, relabel, or delete the verdicts the host CLIs (Codex / Claude / Gemini) recorded automatically — and your own manual verdicts feed back into mega-tron's routing weights on the next turn.">ⓘ</span>
+          </span>
           <span class="list-mode-toggle">
             <button class="ghost-btn active" data-list-mode="skills" type="button">By skill</button>
             <button class="ghost-btn" data-list-mode="verdicts" type="button">Recent verdicts</button>
