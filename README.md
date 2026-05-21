@@ -110,6 +110,14 @@ As the pool grows, the gap widens on both axes: vanilla Codex's alphabetical cha
 
 **Cap ≠ fix.** When the host caps its catalog (Codex's `min(2% × ctx, 8,000 chars)` or Claude's `skillListingBudgetFraction`), the *content* of what survives is decided by alphabet or by invocation frequency — never by what you actually typed.
 
+### And it keeps getting better the more you use it
+
+The numbers above are MEGA Tron's *day-1* routing quality. The feedback loop measurably *improves* routing across sessions ([full report](benchmarks/feedback_loop/results.md)). On a fixture of 80 skills (including 5 booby-trapped twins engineered to beat the real skills on raw cosine), top-3 routing accuracy climbs from **50% to 70% over 6 rounds** — while the same router with feedback disabled stays flat at 50%.
+
+![feedback loop hit rate](benchmarks/feedback_loop/results/20260521T023532Z_bge-small/graphs/1_hit_rate.png)
+
+Solid lines = MEGA Tron. Dashed = semantic search only. Same router, same questions, same model — the only thing that changes is whether yesterday's outcomes inform today's ranking.
+
 ## 🚀 Install
 
 Requires Python ≥ 3.11 and [`uv`](https://docs.astral.sh/uv/).

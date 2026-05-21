@@ -1,0 +1,202 @@
+{
+  "results_dir": "/Users/gwanghoon/Downloads/mega-tron/benchmarks/feedback_loop/results/20260521T023532Z_bge-small",
+  "tier_pool_size": 80,
+  "metrics": {
+    "c0": {
+      "0": {
+        "real_avg_rank": 4.2105263157894735,
+        "poisoned_avg_rank_all": 3.142857142857143,
+        "poisoned_trap_avg_rank": 2.25,
+        "competing_avg_rank": 5.857142857142857,
+        "noise_avg_rank": 5.919354838709677,
+        "gold_avg_rank": 2.7142857142857144,
+        "score_gap_avg": -0.011757870515187582,
+        "archived_poisoned": [],
+        "hit_at_1": 0.3,
+        "hit_at_3": 0.5,
+        "hit_at_5": 0.6,
+        "n_indist_prompts": 10
+      },
+      "1": {
+        "real_avg_rank": 4.2105263157894735,
+        "poisoned_avg_rank_all": 3.142857142857143,
+        "poisoned_trap_avg_rank": 2.25,
+        "competing_avg_rank": 5.857142857142857,
+        "noise_avg_rank": 5.919354838709677,
+        "gold_avg_rank": 2.7142857142857144,
+        "score_gap_avg": -0.011757870515187582,
+        "archived_poisoned": [],
+        "hit_at_1": 0.3,
+        "hit_at_3": 0.5,
+        "hit_at_5": 0.6,
+        "n_indist_prompts": 10
+      },
+      "2": {
+        "real_avg_rank": 4.2105263157894735,
+        "poisoned_avg_rank_all": 3.142857142857143,
+        "poisoned_trap_avg_rank": 2.25,
+        "competing_avg_rank": 5.857142857142857,
+        "noise_avg_rank": 5.919354838709677,
+        "gold_avg_rank": 2.7142857142857144,
+        "score_gap_avg": -0.011757870515187582,
+        "archived_poisoned": [],
+        "hit_at_1": 0.3,
+        "hit_at_3": 0.5,
+        "hit_at_5": 0.6,
+        "n_indist_prompts": 10
+      },
+      "3": {
+        "real_avg_rank": 4.2105263157894735,
+        "poisoned_avg_rank_all": 3.142857142857143,
+        "poisoned_trap_avg_rank": 2.25,
+        "competing_avg_rank": 5.857142857142857,
+        "noise_avg_rank": 5.919354838709677,
+        "gold_avg_rank": 2.7142857142857144,
+        "score_gap_avg": -0.011757870515187582,
+        "archived_poisoned": [],
+        "hit_at_1": 0.3,
+        "hit_at_3": 0.5,
+        "hit_at_5": 0.6,
+        "n_indist_prompts": 10
+      },
+      "4": {
+        "real_avg_rank": 4.2105263157894735,
+        "poisoned_avg_rank_all": 3.142857142857143,
+        "poisoned_trap_avg_rank": 2.25,
+        "competing_avg_rank": 5.857142857142857,
+        "noise_avg_rank": 5.919354838709677,
+        "gold_avg_rank": 2.7142857142857144,
+        "score_gap_avg": -0.011757870515187582,
+        "archived_poisoned": [],
+        "hit_at_1": 0.3,
+        "hit_at_3": 0.5,
+        "hit_at_5": 0.6,
+        "n_indist_prompts": 10
+      },
+      "5": {
+        "real_avg_rank": 4.2105263157894735,
+        "poisoned_avg_rank_all": 3.142857142857143,
+        "poisoned_trap_avg_rank": 2.25,
+        "competing_avg_rank": 5.857142857142857,
+        "noise_avg_rank": 5.919354838709677,
+        "gold_avg_rank": 2.7142857142857144,
+        "score_gap_avg": -0.011757870515187582,
+        "archived_poisoned": [],
+        "hit_at_1": 0.3,
+        "hit_at_3": 0.5,
+        "hit_at_5": 0.6,
+        "n_indist_prompts": 10
+      }
+    },
+    "c3": {
+      "0": {
+        "real_avg_rank": 4.2105263157894735,
+        "poisoned_avg_rank_all": 3.142857142857143,
+        "poisoned_trap_avg_rank": 2.25,
+        "competing_avg_rank": 5.857142857142857,
+        "noise_avg_rank": 5.919354838709677,
+        "gold_avg_rank": 2.7142857142857144,
+        "score_gap_avg": -0.011757870515187582,
+        "archived_poisoned": [],
+        "hit_at_1": 0.3,
+        "hit_at_3": 0.5,
+        "hit_at_5": 0.6,
+        "n_indist_prompts": 10
+      },
+      "1": {
+        "real_avg_rank": 4.642857142857143,
+        "poisoned_avg_rank_all": 4.083333333333333,
+        "poisoned_trap_avg_rank": 2.5,
+        "competing_avg_rank": 5.743589743589744,
+        "noise_avg_rank": 6.117647058823529,
+        "gold_avg_rank": 2.875,
+        "score_gap_avg": 0.05222374200820923,
+        "archived_poisoned": [],
+        "hit_at_1": 0.3,
+        "hit_at_3": 0.5,
+        "hit_at_5": 0.7,
+        "n_indist_prompts": 10
+      },
+      "2": {
+        "real_avg_rank": 4.3,
+        "poisoned_avg_rank_all": 4.416666666666667,
+        "poisoned_trap_avg_rank": 2.25,
+        "competing_avg_rank": 5.948717948717949,
+        "noise_avg_rank": 6.142857142857143,
+        "gold_avg_rank": 2.25,
+        "score_gap_avg": 0.052376886208852134,
+        "archived_poisoned": [],
+        "hit_at_1": 0.3,
+        "hit_at_3": 0.6,
+        "hit_at_5": 0.8,
+        "n_indist_prompts": 10
+      },
+      "3": {
+        "real_avg_rank": 4.107142857142857,
+        "poisoned_avg_rank_all": 4.75,
+        "poisoned_trap_avg_rank": 2.5,
+        "competing_avg_rank": 5.476190476190476,
+        "noise_avg_rank": 6.520833333333333,
+        "gold_avg_rank": 2.25,
+        "score_gap_avg": 0.07376052935918172,
+        "archived_poisoned": [],
+        "hit_at_1": 0.4,
+        "hit_at_3": 0.6,
+        "hit_at_5": 0.8,
+        "n_indist_prompts": 10
+      },
+      "4": {
+        "real_avg_rank": 4.393939393939394,
+        "poisoned_avg_rank_all": 5,
+        "poisoned_trap_avg_rank": 2.5,
+        "competing_avg_rank": 5.425,
+        "noise_avg_rank": 6.511111111111111,
+        "gold_avg_rank": 1.75,
+        "score_gap_avg": 0.073842187722524,
+        "archived_poisoned": [],
+        "hit_at_1": 0.5,
+        "hit_at_3": 0.7,
+        "hit_at_5": 0.8,
+        "n_indist_prompts": 10
+      },
+      "5": {
+        "real_avg_rank": 4.333333333333333,
+        "poisoned_avg_rank_all": 5,
+        "poisoned_trap_avg_rank": 2.5,
+        "competing_avg_rank": 5.425,
+        "noise_avg_rank": 6.555555555555555,
+        "gold_avg_rank": 1.75,
+        "score_gap_avg": 0.05708106358846029,
+        "archived_poisoned": [],
+        "hit_at_1": 0.5,
+        "hit_at_3": 0.7,
+        "hit_at_5": 0.8,
+        "n_indist_prompts": 10
+      }
+    }
+  },
+  "turn_stats": {
+    "c0": {
+      "turns": 78,
+      "turns_with_any_tag": 43,
+      "tags_with_valid_verdict": 62,
+      "verdict_breakdown": {
+        "NEUTRAL": 18,
+        "HELPFUL": 39,
+        "HARMFUL": 5
+      },
+      "verdict_emit_rate": 0.5512820512820513
+    },
+    "c3": {
+      "turns": 78,
+      "turns_with_any_tag": 40,
+      "tags_with_valid_verdict": 61,
+      "verdict_breakdown": {
+        "HELPFUL": 48,
+        "HARMFUL": 4,
+        "NEUTRAL": 9
+      },
+      "verdict_emit_rate": 0.5128205128205128
+    }
+  }
+}

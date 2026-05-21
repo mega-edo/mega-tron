@@ -109,14 +109,11 @@ def test_build_hook_context_includes_candidates_and_meta_block():
     assert "MUST use" not in ctx
     assert "Trigger rules" not in ctx
     # Self-evaluation contract is previewed inline. The contract uses a
-    # 3-label verdict vocabulary (HELPFUL / HARMFUL / NEUTRAL); the old
-    # 4th label INCONCLUSIVE was dropped because silence already encodes
-    # "no signal" — emitting INCONCLUSIVE was redundant with omitting
-    # the tag, and the writer no-ops it either way.
+    # 3-label verdict vocabulary (HELPFUL / HARMFUL / NEUTRAL); silence
+    # encodes "no signal" rather than a fourth label.
     assert "<skill-used" in ctx
     assert "verdict=" in ctx
     assert "HELPFUL" in ctx and "HARMFUL" in ctx and "NEUTRAL" in ctx
-    assert "INCONCLUSIVE" not in ctx
 
 
 def test_build_hook_context_caps_at_k():
@@ -236,9 +233,8 @@ def test_self_eval_contract_uses_inline_verdict_attribute():
         ctx = builder([_rs("alpha", description="d")], k=1)
         # The inline tag form is documented in the contract.
         assert "verdict=" in ctx, builder.__name__
-        # 3-label vocabulary, INCONCLUSIVE dropped.
+        # 3-label vocabulary.
         assert "HELPFUL" in ctx and "HARMFUL" in ctx and "NEUTRAL" in ctx
-        assert "INCONCLUSIVE" not in ctx, builder.__name__
         # The contract explicitly tells the model that silence == no
         # signal, so the model doesn't feel forced to emit a verdict.
         lower = ctx.lower()

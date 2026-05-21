@@ -8,7 +8,7 @@ invariants:
 - ``record_verdict`` writes one ``verdicts`` row atomically.
 - The ``UNIQUE(session_id, skill_name, host)`` constraint dedups
   retried Stop hook events (and a ``NULL`` session_id bypasses it).
-- INCONCLUSIVE verdicts are never persisted.
+- Labels outside HELPFUL/HARMFUL/NEUTRAL are never persisted.
 - ``ON DELETE CASCADE`` removes child rows when a skill is deleted.
 - A stale ``skill_state`` table from an older schema_version=1 install
   is dropped on initialize (forward migration).
@@ -194,23 +194,11 @@ def test_null_session_id_bypasses_unique(store: Store):
     assert store.count_verdicts() == 5
 
 
-def test_inconclusive_is_not_persisted(store: Store):
-    written = store.record_verdict(
-        skill_name="x",
-        verdict="INCONCLUSIVE",
-        host="codex",
-        session_id="s1",
-        skill_dir="/x",
-    )
-    assert written is False
-    assert store.count_verdicts() == 0
-
-
 def test_unknown_verdict_label_is_dropped(store: Store):
     assert (
         store.record_verdict(
             skill_name="x",
-            verdict="MAYBE",  # not in HELPFUL/HARMFUL/NEUTRAL/INCONCLUSIVE
+            verdict="MAYBE",  # not in HELPFUL/HARMFUL/NEUTRAL
             host="codex",
             skill_dir="/x",
         )
@@ -266,14 +254,14 @@ def test_fk_cascade_drops_verdicts(store: Store):
 
 
 def test_record_verdicts_bulk(store: Store):
-    """record_verdicts returns count of *written* rows (INCONCLUSIVE
-    and dupe are excluded)."""
+    """record_verdicts returns count of *written* rows (unknown labels
+    and dupes are excluded)."""
     items = [
         {"skill_name": "a", "verdict": "HELPFUL", "host": "codex",
          "session_id": "s1", "skill_dir": "/a"},
         {"skill_name": "b", "verdict": "HARMFUL", "host": "codex",
          "session_id": "s1", "skill_dir": "/b"},
-        {"skill_name": "c", "verdict": "INCONCLUSIVE", "host": "codex",
+        {"skill_name": "c", "verdict": "MAYBE", "host": "codex",
          "session_id": "s1", "skill_dir": "/c"},
     ]
     n = store.record_verdicts(items)

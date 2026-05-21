@@ -1,0 +1,559 @@
+{
+  "version": 1,
+  "generated_at": "2026-05-20T00:00:00Z",
+  "mega_code_source": {
+    "path": "/Users/gwanghoon/.local/share/mega-code/skills",
+    "sampled_at": "2026-05-20",
+    "skill_count_at_sample": 1225
+  },
+  "tiers": {
+    "real": [
+      {
+        "name": "regex-visual-debugger",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/regex-debugger/SKILL.md",
+        "sha256": "a91e74c837034b34ab8df3ba2dc9f06472d1a07f75827b0a8b498013aa66d9a3",
+        "question_id": "t_regex_match",
+        "dir_name": "regex-debugger",
+        "note": "frontmatter name differs from directory name"
+      },
+      {
+        "name": "regex-log",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/regex-log/SKILL.md",
+        "sha256": "671c499f8b15fc80888603907f681863381166efee0aa8e8bfba4accd4cd7a29",
+        "question_id": "n_regex_log"
+      },
+      {
+        "name": "pytest",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/pytest/SKILL.md",
+        "sha256": "64ac7cd1d6c11648b2392b30b26be544b477544115f297a53880c73ace07f51a",
+        "question_id": "t_pytest_class"
+      },
+      {
+        "name": "playwright-skill",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/playwright-skill/SKILL.md",
+        "sha256": "cd34e7487c262df7ca4c725408eead83a62cc829ec858c6af458b3119716f9e3",
+        "question_id": "t_playwright_sel"
+      },
+      {
+        "name": "cypress",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/cypress/SKILL.md",
+        "sha256": "3d32fdfbd0b4206397ad957c1e478ccbd3c465ec8984d0edae86b66f8ebd0433",
+        "question_id": "n_cypress_e2e"
+      },
+      {
+        "name": "shellspec",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/shellspec/SKILL.md",
+        "sha256": "b7e8d4c2e2ecd54375565480d952359fe9ab236e13f1d9fdcbe41e19cd8baebf",
+        "question_id": "n_shellspec_test"
+      },
+      {
+        "name": "neon-postgres-egress-optimizer",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/neon-postgres-egress-optimizer/SKILL.md",
+        "sha256": "02648761eb8ddc9e9e536be44b59674a73af75b359ea1bb11c40ea8023e19a5a",
+        "question_id": "n_postgres_egress"
+      },
+      {
+        "name": "sops-age-secrets",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/sops-age-secrets/SKILL.md",
+        "sha256": "167057a245c06a7b9bf8f321c79d57f20cc559eb99c4b1b268a7120411cc42fe",
+        "question_id": "t_sops_key"
+      },
+      {
+        "name": "langgraph",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/langgraph/SKILL.md",
+        "sha256": "c1ed312ff12ba3a31094310ab8a3c6768f399acd5c5ee63d2bf1741195549abd",
+        "question_id": "t_langgraph_state"
+      },
+      {
+        "name": "crewai",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/crewai/SKILL.md",
+        "sha256": "9da3fb0fb7ca37c9babf2c2d4ec4cd0a6dd7f53d3c4460c32da0928d97c8e55b",
+        "question_id": "n_crewai_team"
+      }
+    ],
+    "poisoned": [
+      {
+        "name": "regex-naive-matcher",
+        "mirrors": "regex-visual-debugger",
+        "transformation": "body presents catastrophic-backtracking patterns (e.g. ^([A-Za-z0-9_\\-\\.]+)+@... ) as the default email matcher",
+        "trap_question_id": "t_regex_match",
+        "sha256": "aeb6b307b692529b1abf95b39a3ce0f67ddee905d5d977fed91e287cb53fdd86"
+      },
+      {
+        "name": "pytest-unittest-style",
+        "mirrors": "pytest",
+        "transformation": "body teaches class-based unittest.TestCase patterns instead of pytest fixtures/parametrize idioms",
+        "trap_question_id": "t_pytest_class",
+        "sha256": "ba14f24760e838a74ea32dd3230cd150afbfea1a51309c96567af0520cb3f57a"
+      },
+      {
+        "name": "playwright-selector-eval",
+        "mirrors": "playwright-skill",
+        "transformation": "body recommends page.evaluate(() => document.querySelector(...)) for DOM access \u2014 anti-pattern Playwright actively warns against",
+        "trap_question_id": "t_playwright_sel",
+        "sha256": "e149b02a1df129f554a9626c1a6466a33b6da220994a52422c2715ccc60c497b"
+      },
+      {
+        "name": "sops-pgp-secrets",
+        "mirrors": "sops-age-secrets",
+        "transformation": "body uses PGP/GPG keys instead of age \u2014 legacy SOPS path; works but slower and harder to rotate",
+        "trap_question_id": "t_sops_key",
+        "sha256": "3212bce96e19d6cf44e79cf6e8d63e1d552ec7fbd09454cc7d127ebc374f5193"
+      },
+      {
+        "name": "langgraph-bare-dict-state",
+        "mirrors": "langgraph",
+        "transformation": "body uses raw dict with in-place mutation, no TypedDict/Annotated schema, no reducer \u2014 deprecated approach",
+        "trap_question_id": "t_langgraph_state",
+        "sha256": "4ef9d9770d058cb8ce8644c64c0dfed796f42644f5e3895193037ac62dceaa93"
+      }
+    ],
+    "competing": [
+      {
+        "name": "agent-framework-azure-ai-py",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/agent-framework-azure-ai-py/SKILL.md",
+        "sha256": "55554234e7dfa924daad3c75366e0ad1f99e050cd89c51ad1f9b06371581e410",
+        "same_domain_as": "crewai"
+      },
+      {
+        "name": "aws-rds-spring-boot-integration",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/aws-rds-spring-boot-integration/SKILL.md",
+        "sha256": "d589fa8a2b51508761debaeec5351221d93ee3dde8b2729924bb5ae6822227e8",
+        "same_domain_as": "neon-postgres-egress-optimizer"
+      },
+      {
+        "name": "convex-agents",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/convex-agents/SKILL.md",
+        "sha256": "d23976c0dbe853fa7a244cd71171c219cc07929529c5afd375d21164c5a7d9bd",
+        "same_domain_as": "crewai"
+      },
+      {
+        "name": "cypress-playwright-setup",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/cypress-playwright-setup/SKILL.md",
+        "sha256": "4ba2afdb5d80144b40581724ef25499cb511e270978502a2f1a7d29d0a3e4d15",
+        "same_domain_as": "cypress"
+      },
+      {
+        "name": "env-secrets-manager",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/env-secrets-manager/SKILL.md",
+        "sha256": "036cf5a9f5187387b1aa13475a19dab2c6b0e75f04c50af4d6bbfef332ddd13e",
+        "same_domain_as": "sops-age-secrets"
+      },
+      {
+        "name": "javascript-typescript-jest",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/javascript-typescript-jest/SKILL.md",
+        "sha256": "cb9a552dfe63cae4f310b27067ba28351b59ad17e83a9e1c5ff23c542ce6fdd8",
+        "same_domain_as": "pytest"
+      },
+      {
+        "name": "jest-generator",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/jest-generator/SKILL.md",
+        "sha256": "2fc604a8293b66ce9a71ccf60a0dffbe1184ade0f9ca70cbe1290549c8022606",
+        "same_domain_as": "pytest"
+      },
+      {
+        "name": "langchain-architecture",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/langchain-architecture/SKILL.md",
+        "sha256": "d0f20d0a3baa59a121ead565dee5d0fb98e50ed44d9fb550a521a798676e14e4",
+        "same_domain_as": "crewai"
+      },
+      {
+        "name": "langchain-fundamentals",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/langchain-fundamentals/SKILL.md",
+        "sha256": "b5bd17f0c1833789f744fe87a232dc41d127136bf1bd9d8d0768e79c87e1b92d",
+        "same_domain_as": "langgraph"
+      },
+      {
+        "name": "langchain-rag",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/langchain-rag/SKILL.md",
+        "sha256": "e9c82cdefb087b182848fdff80d09feba7c64fa5e345d66bdad03d31a927a2af",
+        "same_domain_as": "crewai"
+      },
+      {
+        "name": "langgraph-fundamentals",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/langgraph-fundamentals/SKILL.md",
+        "sha256": "3c6eeb5facd72fc2f94b856fb10c8ba69ea5e5271d834c3128a1c4ab4e3a83ef",
+        "same_domain_as": "langgraph"
+      },
+      {
+        "name": "langgraph-human-in-the-loop",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/langgraph-human-in-the-loop/SKILL.md",
+        "sha256": "3e43a99257a835d345c2f547700a1c4c4055d0488101b0a9d6b4f81ea718b1bc",
+        "same_domain_as": "langgraph"
+      },
+      {
+        "name": "langgraph-persistence",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/langgraph-persistence/SKILL.md",
+        "sha256": "a3c3fe4339f2822b05cf76a17b4e9c32230dba20f71be2cfcca575ee630d2d0b",
+        "same_domain_as": "langgraph"
+      },
+      {
+        "name": "neon-vercel-postgres",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/neon-vercel-postgres/SKILL.md",
+        "sha256": "f2cf576d47c8786c53f45dd395ef52f7514b1988bb990d3ed9b9b87f38a9af77",
+        "same_domain_as": "neon-postgres-egress-optimizer"
+      },
+      {
+        "name": "playwright-best-practices",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/playwright-best-practices/SKILL.md",
+        "sha256": "d54f14eb2da39b9c1b9135b2705f21623fa7e27ac490225686daa360e34aa6d8",
+        "same_domain_as": "playwright-skill"
+      },
+      {
+        "name": "playwright-cli",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/playwright-cli/SKILL.md",
+        "sha256": "8d38aaa8d491ff6e6cafb73c0662e26401e3ba5e1bcd374def9a06efbbbe595f",
+        "same_domain_as": "playwright-skill"
+      },
+      {
+        "name": "playwright-e2e-testing",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/playwright-e2e-testing/SKILL.md",
+        "sha256": "7b98abf189553dbaeac281eda4aeb0a82b09dfcb3f3f9ab9b1c37d35a0d53fe1",
+        "same_domain_as": "playwright-skill"
+      },
+      {
+        "name": "playwright-expert",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/playwright-expert/SKILL.md",
+        "sha256": "ceff0f9fd5e8cb5576a6f5c86a822287088173e6a4412c7d8eae34bf122aab34",
+        "same_domain_as": "playwright-skill"
+      },
+      {
+        "name": "playwright-patterns",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/playwright-patterns/SKILL.md",
+        "sha256": "052227ded782c13a552fcd7d07b87759a96063e152fb69c2712e0295687fc331",
+        "same_domain_as": "playwright-skill"
+      },
+      {
+        "name": "playwright-pro",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/playwright-pro/SKILL.md",
+        "sha256": "4f6a1b01e25fd9cf2e4a6763d72c253c747905f6fd88b26f89d0832b211990dc",
+        "same_domain_as": "playwright-skill"
+      },
+      {
+        "name": "regex-chess",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/regex-chess/SKILL.md",
+        "sha256": "36f9980e9f0515411d4fc8c0dc24230c1fcc154802006c66aac59d66be8cebaf",
+        "same_domain_as": "regex-debugger"
+      },
+      {
+        "name": "regex-vs-llm-structured-text",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/regex-vs-llm-structured-text/SKILL.md",
+        "sha256": "1f4338a9d8eee84bf9236e1377aae2d44fc067e10d7eb923bebe06d6c006d26f",
+        "same_domain_as": "regex-debugger"
+      },
+      {
+        "name": "secret-scanning",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/secret-scanning/SKILL.md",
+        "sha256": "ebbaf8a49777e8be6d8c220b91bbee935b2aaab81b3ee976562484a339d750db",
+        "same_domain_as": "sops-age-secrets"
+      },
+      {
+        "name": "secrets-gitleaks",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/secrets-gitleaks/SKILL.md",
+        "sha256": "553ebf002f88f65cea05fbb0177287c9909a927c12e6b8fa2ec32481e02d0912",
+        "same_domain_as": "sops-age-secrets"
+      },
+      {
+        "name": "secrets-management",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/secrets-management/SKILL.md",
+        "sha256": "50aa18153b574f5a2bea89abcd9a7bdb629ea688f6ea44901c33a71c56d37f2b",
+        "same_domain_as": "sops-age-secrets"
+      }
+    ],
+    "noise": [
+      {
+        "name": "d3-visualization",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/d3-visualization/SKILL.md",
+        "sha256": "41ffe071ffb40cfa07be6266cd3d1ae7cd5c870876bc4cf7d89b99594320dc36",
+        "shuffle_seed": 42,
+        "shuffle_index": 0
+      },
+      {
+        "name": "capability-evolver",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/capability-evolver/SKILL.md",
+        "sha256": "df510bc87793b7c07767b653ae3bd31ed9f8213a32198cdcdbc82b2f2561affb",
+        "shuffle_seed": 42,
+        "shuffle_index": 1
+      },
+      {
+        "name": "test-fixing",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/test-fixing/SKILL.md",
+        "sha256": "bbfa8d922ae20d6f028a62b780e1b89d5f8e4e2ccdb38d7405a85d7784fa7d80",
+        "shuffle_seed": 42,
+        "shuffle_index": 2
+      },
+      {
+        "name": "security-audit",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/security-audit/SKILL.md",
+        "sha256": "8d74ce70b597ce8d780a094dbc5ff66bbe95ccb814e86fc5dad9ba3c638b7d08",
+        "shuffle_seed": 42,
+        "shuffle_index": 3
+      },
+      {
+        "name": "deliver-launch-checklist",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/deliver-launch-checklist/SKILL.md",
+        "sha256": "4f5e3c16e58fb65cefbd0555496d3fc9bb87fb4bc573ad4ac341fd86059b8941",
+        "shuffle_seed": 42,
+        "shuffle_index": 4
+      },
+      {
+        "name": "senior-security",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/senior-security/SKILL.md",
+        "sha256": "d7e26f159d81a9e5ca9a7bc9ff3af116876068349d727b894c6b50020efbd7a7",
+        "shuffle_seed": 42,
+        "shuffle_index": 5
+      },
+      {
+        "name": "api-security-best-practices",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/api-security-best-practices/SKILL.md",
+        "sha256": "5d797c24432b39a4bbb51cc2429e986446b40cddd77fbdfc7aa4010ce5358eed",
+        "shuffle_seed": 42,
+        "shuffle_index": 6
+      },
+      {
+        "name": "workflow-orchestration-patterns",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/workflow-orchestration-patterns/SKILL.md",
+        "sha256": "7c370674fdaa55a363aef43a5ebee1e0eb1c1851ada59b47e65b67c490b98c51",
+        "shuffle_seed": 42,
+        "shuffle_index": 7
+      },
+      {
+        "name": "copilot-cli-quickstart",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/copilot-cli-quickstart/SKILL.md",
+        "sha256": "a7de35da1454e0858d443d681cc468ed109de6d33d9014e75556103895e64ff0",
+        "shuffle_seed": 42,
+        "shuffle_index": 8
+      },
+      {
+        "name": "distributed-tracing",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/distributed-tracing/SKILL.md",
+        "sha256": "f54f6214407ec57c0c39f73524afe0c84ec6329b4121d26b27a24c13cb083b96",
+        "shuffle_seed": 42,
+        "shuffle_index": 9
+      },
+      {
+        "name": "test-quality-analysis",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/test-quality-analysis/SKILL.md",
+        "sha256": "134ae85f661d5d123451b2d3a35a019865c67bac0d080a251560d7b44f601466",
+        "shuffle_seed": 42,
+        "shuffle_index": 10
+      },
+      {
+        "name": "cs-senior-engineer",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/cs-senior-engineer/SKILL.md",
+        "sha256": "9d5b9c1a1fa5190fb0e00aeb5d744bdb8db835d69d8bc3429a089c8547e6ff52",
+        "shuffle_seed": 42,
+        "shuffle_index": 11
+      },
+      {
+        "name": "develop-feature",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/develop-feature/SKILL.md",
+        "sha256": "480d0875071aadd3e3dfc13a3f607f9a1069feec3bf4b9f61730afa3f0e23690",
+        "shuffle_seed": 42,
+        "shuffle_index": 12
+      },
+      {
+        "name": "senior-qa",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/senior-qa/SKILL.md",
+        "sha256": "4453b4aa9bf923a911ee0c44249e74a95b91b5da7daee16c61652a8a7c8595ae",
+        "shuffle_seed": 42,
+        "shuffle_index": 13
+      },
+      {
+        "name": "roundup-setup",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/roundup-setup/SKILL.md",
+        "sha256": "c5f936c3e8a5b0884cbe89e8cdd9d93b16b359ff5510cfa3f9b0539165a5ce20",
+        "shuffle_seed": 42,
+        "shuffle_index": 14
+      },
+      {
+        "name": "ai-product-strategy",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/ai-product-strategy/SKILL.md",
+        "sha256": "a826e04092bf07ee26508be2291c5a133b692f2eafb6214f74c79d53606fdb3e",
+        "shuffle_seed": 42,
+        "shuffle_index": 15
+      },
+      {
+        "name": "tavily-cli",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/tavily-cli/SKILL.md",
+        "sha256": "aa8cee0e8dbf3bb98d2281b1874c7431de880c5c6ff6a3ca8cb346ac3f513f36",
+        "shuffle_seed": 42,
+        "shuffle_index": 17
+      },
+      {
+        "name": "debugging-wizard",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/debugging-wizard/SKILL.md",
+        "sha256": "ce198835bc8e360b11c2d9787f34a3085c1da00077482280fd662d2375f88761",
+        "shuffle_seed": 42,
+        "shuffle_index": 18
+      },
+      {
+        "name": "code-review-expert",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/code-review-expert/SKILL.md",
+        "sha256": "976a50590858d05edea95f3b6dfac126be79ec9f88aeb11bbc50a1ecce356379",
+        "shuffle_seed": 42,
+        "shuffle_index": 19
+      },
+      {
+        "name": "python-resilience",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/python-resilience/SKILL.md",
+        "sha256": "5662dd15560beaaa3373ecbba5dba6b90c7f398fcd3e5a718d669f5a161be953",
+        "shuffle_seed": 42,
+        "shuffle_index": 20
+      },
+      {
+        "name": "delegation-core",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/delegation-core/SKILL.md",
+        "sha256": "443897e9154ad3f158927c283e787d74c0ccf4b283b4ecd9e5c775a5d2244bf0",
+        "shuffle_seed": 42,
+        "shuffle_index": 21
+      },
+      {
+        "name": "javascript-pro",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/javascript-pro/SKILL.md",
+        "sha256": "bd5f9fced64822f07472030bfb05d131637a3c9c8b3962a658d47890f97eb71a",
+        "shuffle_seed": 42,
+        "shuffle_index": 22
+      },
+      {
+        "name": "pr-review-expert",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/pr-review-expert/SKILL.md",
+        "sha256": "88bef8faaa79933449fd0ea33881dab8256671a742034961a7ea0831451053fc",
+        "shuffle_seed": 42,
+        "shuffle_index": 23
+      },
+      {
+        "name": "m10-performance",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/m10-performance/SKILL.md",
+        "sha256": "6661cd16c27d031746985f8053c5515d50820d665957bde8a0660f4e36eb9bc7",
+        "shuffle_seed": 42,
+        "shuffle_index": 24
+      },
+      {
+        "name": "ux-researcher-designer",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/ux-researcher-designer/SKILL.md",
+        "sha256": "8d155d045afca9ddf82c81f03586e24a8eef88e8b9185ae18b5d6fe5c9143031",
+        "shuffle_seed": 42,
+        "shuffle_index": 26
+      },
+      {
+        "name": "telemetry-playbook",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/telemetry-playbook/SKILL.md",
+        "sha256": "a1f13eea47762fd9b91031bb77e8c42c7e6027c40e55672f6af50e9884d7b883",
+        "shuffle_seed": 42,
+        "shuffle_index": 27
+      },
+      {
+        "name": "context-driven-development",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/context-driven-development/SKILL.md",
+        "sha256": "9b484999bd91dc8a4d424c0a8acfc40c7423814f1dfe710a25b69f40b4e1d038",
+        "shuffle_seed": 42,
+        "shuffle_index": 28
+      },
+      {
+        "name": "doc-parser",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/doc-parser/SKILL.md",
+        "sha256": "c8a84d80bf5bc081dece30ad169beafcc679f6bf15165af93e3e152ee8496b20",
+        "shuffle_seed": 42,
+        "shuffle_index": 29
+      },
+      {
+        "name": "native-data-fetching",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/native-data-fetching/SKILL.md",
+        "sha256": "ab855acdad6f593eb597b2891671808bf57fc4618fb0eaa26a84ea30576a5d5e",
+        "shuffle_seed": 42,
+        "shuffle_index": 30
+      },
+      {
+        "name": "microsoft-foundry",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/microsoft-foundry/SKILL.md",
+        "sha256": "9abf4769f8a10cd8cac03e69594c9a49737c205e28921b4285a44419cf882e0a",
+        "shuffle_seed": 42,
+        "shuffle_index": 33
+      },
+      {
+        "name": "chrome-extension-development",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/chrome-extension-development/SKILL.md",
+        "sha256": "9c1104b40becd824c7b36e37318bf3c1ae6925302c827874e633f5f90f033a5a",
+        "shuffle_seed": 42,
+        "shuffle_index": 34
+      },
+      {
+        "name": "deep-research",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/deep-research/SKILL.md",
+        "sha256": "880770b4a84f05b2cf4d674315d9bee1afc1a590a36ddbce7612fa99aa67c370",
+        "shuffle_seed": 42,
+        "shuffle_index": 36
+      },
+      {
+        "name": "make-interfaces-feel-better",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/make-interfaces-feel-better/SKILL.md",
+        "sha256": "0b8693a52cfb61fbfb60dbbd164b58f36e29c113b19aba502f22e87970876ab9",
+        "shuffle_seed": 42,
+        "shuffle_index": 37
+      },
+      {
+        "name": "gstack",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/gstack/SKILL.md",
+        "sha256": "9e0e7f8cd9c222ee301d1cadee5fa4f49289a252bcb003949952c5c77cefd85c",
+        "shuffle_seed": 42,
+        "shuffle_index": 38
+      },
+      {
+        "name": "engineering",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/engineering/SKILL.md",
+        "sha256": "417af31e649f65ea766653a243708509312f8d9fe9a1bbf191dfe5c4edbad1a8",
+        "shuffle_seed": 42,
+        "shuffle_index": 39
+      },
+      {
+        "name": "ppt-visual",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/ppt-visual/SKILL.md",
+        "sha256": "2068e0ea5e8611f5d89714a8cc8dcc63090c0afd0dd1aa8b480085c5e493c218",
+        "shuffle_seed": 42,
+        "shuffle_index": 40
+      },
+      {
+        "name": "attribution-patching",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/attribution-patching/SKILL.md",
+        "sha256": "3c8d4ec9332b765907785da71b3ed39ef46d3beff000e5b6b711945e29e02792",
+        "shuffle_seed": 42,
+        "shuffle_index": 42
+      },
+      {
+        "name": "skill-composer-studio",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/skill-composer-studio/SKILL.md",
+        "sha256": "ed7161536a0ac666fcf6831860922ae9b3cd10d88a60a3a614e7fd09ea985bb9",
+        "shuffle_seed": 42,
+        "shuffle_index": 43
+      },
+      {
+        "name": "markdown-converter",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/markdown-converter/SKILL.md",
+        "sha256": "354b8335051b9037e8c23324c33f68b3abbdac5ab9cfa12935c26b53575cf488",
+        "shuffle_seed": 42,
+        "shuffle_index": 44
+      },
+      {
+        "name": "ui-ux-pro-max",
+        "src": "/Users/gwanghoon/.local/share/mega-code/skills/ui-ux-pro-max/SKILL.md",
+        "sha256": "9bd26c52dfd10dfd613dd3cc85df217dc25a172e380bde41fdfa6fedda288b2a",
+        "shuffle_seed": 42,
+        "shuffle_index": 45
+      }
+    ]
+  },
+  "poison_pairs": {
+    "pytest": "pytest-unittest-style",
+    "playwright-skill": "playwright-selector-eval",
+    "sops-age-secrets": "sops-pgp-secrets",
+    "langgraph": "langgraph-bare-dict-state",
+    "regex-visual-debugger": "regex-naive-matcher"
+  },
+  "questions": {
+    "in_distribution": 10,
+    "trap": 5,
+    "null": 3
+  },
+  "embedder_used_for_verification": "BAAI/bge-small-en-v1.5"
+}

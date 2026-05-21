@@ -234,36 +234,6 @@ def test_mixed_helpful_and_harmful_both_apply(tmp_path):
     assert read_meta(skill_b).harmful_count == 1
 
 
-def test_legacy_inconclusive_verdict_no_ops(tmp_path):
-    """Back-compat: if a model still emits ``verdict="INCONCLUSIVE"``
-    (e.g. an older fork repurposing the tag), persist_verdicts treats
-    it as a no-op — the counter stays at zero."""
-    skills = tmp_path / "skills"
-    skills.mkdir()
-    skill_md = _write_skill(skills, "webhook-signer")
-    transcript = tmp_path / "rollout.jsonl"
-    _write_transcript(
-        transcript,
-        [
-            _assistant_msg(
-                '<skill-used name="webhook-signer" verdict="INCONCLUSIVE" '
-                'reason="no clear evidence"/>'
-            )
-        ],
-    )
-    payload = {
-        "hook_event_name": "Stop",
-        "stop_hook_active": False,
-        "transcript_path": str(transcript),
-    }
-    rc, out, _ = _run(json.dumps(payload), _args(skills_dir=str(skills)))
-    assert rc == 0
-    assert out == ""
-    meta = read_meta(skill_md)
-    assert meta.helpful_count == 0
-    assert meta.harmful_count == 0
-
-
 def test_unknown_skill_name_skipped(tmp_path):
     """A verdict naming a skill that doesn't exist in skills_dir is
     counted as skipped_missing — no crash, no false write.

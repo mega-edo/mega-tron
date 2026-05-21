@@ -395,26 +395,6 @@ def test_evaluate_applies_helpful_verdict(cli_skills_dir, capsys):
     assert meta.helpful_count == 1
 
 
-def test_evaluate_skips_inconclusive(cli_skills_dir, tmp_path, capsys):
-    """INCONCLUSIVE verdicts carry no signal; counters stay at 0."""
-    payload = tmp_path / "verdicts.json"
-    payload.write_text(json.dumps({
-        "evaluations": [
-            {"skill": "git-amend-staged", "verdict": "INCONCLUSIVE", "reason": "no evidence"},
-        ],
-    }))
-    rc = main([
-        "evaluate",
-        "--skills-dir", str(cli_skills_dir),
-        "--file", str(payload),
-    ])
-    assert rc == 0
-    from mega_tron.verdicts.mega_meta import read_meta
-    meta = read_meta(cli_skills_dir / "git-amend-staged" / "SKILL.md")
-    assert meta.helpful_count == 0
-    assert meta.harmful_count == 0
-
-
 def test_evaluate_dry_run_does_not_mutate(cli_skills_dir, tmp_path):
     """--dry-run reports what would change but leaves SKILL.md alone."""
     payload = tmp_path / "verdicts.json"
@@ -443,7 +423,6 @@ def test_evaluate_json_payload_shape(cli_skills_dir, tmp_path, capsys):
         "evaluations": [
             {"skill": "git-amend-staged", "verdict": "HARMFUL", "reason": "broke things"},
             {"skill": "nonexistent-skill", "verdict": "HELPFUL", "reason": "?"},
-            {"skill": "webhook-signer", "verdict": "INCONCLUSIVE", "reason": "?"},
         ],
     }))
     rc = main([
@@ -455,7 +434,6 @@ def test_evaluate_json_payload_shape(cli_skills_dir, tmp_path, capsys):
     assert rc == 0
     out = json.loads(capsys.readouterr().out)
     assert out["updated"] == 1
-    assert out["skipped_inconclusive"] == 1
     assert out["skipped_missing"] == 1
     assert out["applied"] == ["git-amend-staged"]
 

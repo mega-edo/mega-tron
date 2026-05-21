@@ -60,7 +60,6 @@ def cmd_evaluate(args: argparse.Namespace) -> int:
     if args.json:
         out = {
             "updated": outcome.updated,
-            "skipped_inconclusive": outcome.skipped_inconclusive,
             "skipped_missing": outcome.skipped_missing,
             "skipped_invalid": outcome.skipped_invalid,
             "errors": [{"skill": n, "error": m} for n, m in outcome.errors],
@@ -73,8 +72,7 @@ def cmd_evaluate(args: argparse.Namespace) -> int:
         verb = "would update" if args.dry_run else "updated"
         print(
             f"[evaluate] {verb} {outcome.updated}/{len(evaluations)} skills "
-            f"(skipped {outcome.skipped_inconclusive} INCONCLUSIVE, "
-            f"{outcome.skipped_missing} missing, "
+            f"({outcome.skipped_missing} missing, "
             f"{outcome.skipped_invalid} invalid)",
             file=sys.stderr,
         )

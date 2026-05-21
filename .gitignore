@@ -43,9 +43,6 @@ bge_cache.npz
 # HuggingFace model cache (user-level, just in case)
 .hf_cache/
 
-# Benchmarks
-benchmarks/feedback_loop/
-
 # Large measurement artifacts and embedder caches inside benchmarks/
 benchmarks/**/.cache/
 benchmarks/**/*.npz

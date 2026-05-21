@@ -99,8 +99,7 @@ DDL: tuple[str, ...] = (
     )
     """,
     # Append-only event log. One row per HELPFUL / HARMFUL / NEUTRAL
-    # verdict. INCONCLUSIVE is *not* persisted — it carries no signal
-    # and the Phase-1 mega_meta path already drops it.
+    # verdict.
     #
     # UNIQUE(session_id, skill_name, host): dedups Stop-hook retries.
     # When session_id is NULL the constraint does NOT fire (SQLite
@@ -489,7 +488,8 @@ class Store:
         """Persist one verdict atomically (skill upsert + verdict insert
         in one transaction). Returns ``True`` when a row was written,
         ``False`` when the verdict was dropped (the UNIQUE constraint
-        matched, i.e. a retry, or the label was ``INCONCLUSIVE``).
+        matched, i.e. a retry, or the label was not one of
+        HELPFUL/HARMFUL/NEUTRAL).
 
         Cumulative counters live in SKILL.md ``mega_meta:`` frontmatter
         — :func:`mega_tron.verdicts.mega_meta.apply_evaluations` updates them
@@ -503,11 +503,6 @@ class Store:
         """
         self.initialize()
         v_upper = (verdict or "").upper()
-        if v_upper == "INCONCLUSIVE":
-            # Mirror :meth:`MegaMeta.apply_verdict`: INCONCLUSIVE
-            # carries no signal — don't write a row, don't bump
-            # last_updated.
-            return False
         if v_upper not in {"HELPFUL", "HARMFUL", "NEUTRAL"}:
             return False
 
@@ -569,8 +564,8 @@ class Store:
 
     def record_verdicts(self, items: Iterable[dict[str, Any]]) -> int:
         """Bulk-write convenience wrapper. Returns the number of rows
-        that were actually inserted (drops on UNIQUE / INCONCLUSIVE are
-        not counted).
+        that were actually inserted (UNIQUE-constraint drops and
+        non-HELPFUL/HARMFUL/NEUTRAL labels are not counted).
 
         Each item must carry at least ``skill_name``, ``verdict``,
         ``host``. Other fields fall through to :meth:`record_verdict`.

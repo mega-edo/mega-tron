@@ -120,11 +120,9 @@ class MegaMeta:
     def apply_verdict(self, verdict: str, reason: str | None, *, session_id: str | None) -> None:
         """Update counters + contexts based on codex's per-skill verdict.
 
-        verdict ∈ {"HELPFUL", "HARMFUL", "NEUTRAL", "INCONCLUSIVE"} (case-insensitive).
+        verdict ∈ {"HELPFUL", "HARMFUL", "NEUTRAL"} (case-insensitive).
         - HELPFUL/HARMFUL: increment counter and append context.
         - NEUTRAL: timestamp only (skill ran but didn't move the needle).
-        - INCONCLUSIVE: no-op — preserves cold-start semantics when the
-          evaluator could not produce evidence either way.
         - Unknown verdicts: silently ignored, never crash.
         """
         v = (verdict or "").upper()
@@ -141,9 +139,6 @@ class MegaMeta:
         elif v == "NEUTRAL":
             # Neither counter changes; harmful streak survives but isn't extended.
             pass
-        elif v == "INCONCLUSIVE":
-            # No-op — don't even bump last_updated; the verdict carried no info.
-            return
         else:
             return  # ignore unknown verdicts; never crash
 
@@ -334,7 +329,6 @@ class EvaluationOutcome:
     """
 
     updated: int
-    skipped_inconclusive: int
     skipped_missing: int
     skipped_invalid: int
     errors: list[tuple[str, str]]  # (skill_name, error_message)
@@ -354,10 +348,7 @@ def apply_evaluations(
     name and a ``verdict`` string; an optional ``reason`` is preserved as a
     NL context.
 
-    Entries with ``verdict == "INCONCLUSIVE"`` (case-insensitive) carry no
-    signal and are skipped — this preserves cold-start semantics so the
-    model can opt out of grading when no evidence exists. Missing skill
-    directories and malformed entries are tallied separately.
+    Missing skill directories and malformed entries are tallied separately.
 
     With ``dry_run=True`` no files are mutated; the returned ``applied``
     list still reports which names would have been updated.
@@ -367,7 +358,6 @@ def apply_evaluations(
     makes JSON-in/file-out evaluation testable independently of codex.
     """
     updated = 0
-    skipped_inconclusive = 0
     skipped_missing = 0
     skipped_invalid = 0
     errors: list[tuple[str, str]] = []
@@ -382,9 +372,6 @@ def apply_evaluations(
         reason = v.get("reason")
         if not isinstance(name, str) or not name:
             skipped_invalid += 1
-            continue
-        if isinstance(verdict, str) and verdict.strip().upper() == "INCONCLUSIVE":
-            skipped_inconclusive += 1
             continue
         skill_md = skills_dir / name / "SKILL.md"
         if not skill_md.exists():
@@ -408,7 +395,6 @@ def apply_evaluations(
 
     return EvaluationOutcome(
         updated=updated,
-        skipped_inconclusive=skipped_inconclusive,
         skipped_missing=skipped_missing,
         skipped_invalid=skipped_invalid,
         errors=errors,

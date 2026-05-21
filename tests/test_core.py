@@ -174,24 +174,17 @@ def test_record_verdicts_batch(fake_embedder, fixtures_dir, tmp_path, tmp_cache_
                     reason="evidence A", session_id="sess-1"),
             Verdict(skill_name=names[1], verdict="HARMFUL", host="codex",
                     reason="evidence B", session_id="sess-1"),
-            Verdict(skill_name=names[2], verdict="INCONCLUSIVE", host="codex",
-                    reason=None, session_id="sess-1"),
         ]
     )
-    assert outcome.updated == 2  # INCONCLUSIVE is a no-op
-    assert outcome.skipped_inconclusive == 1
+    assert outcome.updated == 2
     assert outcome.skipped_missing == 0
     assert sorted(outcome.applied) == sorted([names[0], names[1]])
 
     # Verify the on-disk mutations.
     m0 = read_meta(skills_dir / names[0] / "SKILL.md")
     m1 = read_meta(skills_dir / names[1] / "SKILL.md")
-    m2 = read_meta(skills_dir / names[2] / "SKILL.md")
     assert m0.helpful_count >= 1 and m0.last_session_id == "sess-1"
     assert m1.harmful_count >= 1 and m1.last_session_id == "sess-1"
-    # INCONCLUSIVE is fully no-op: counters unchanged, last_session_id
-    # NOT bumped (no signal carried).
-    assert m2.helpful_count == 0 and m2.harmful_count == 0
 
 
 def test_record_verdicts_empty_iterable(

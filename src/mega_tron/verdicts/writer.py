@@ -107,9 +107,8 @@ def persist_verdicts(
         for v in items:
             name = v.get("skill")
             label = (v.get("verdict") or "").upper()
-            # Mirror MegaCore's filter: INCONCLUSIVE carries no signal
-            # and the legacy path already drops it from frontmatter
-            # updates.
+            # Only HELPFUL/HARMFUL/NEUTRAL are persisted; any other label
+            # is silently dropped.
             if not name or label not in ("HELPFUL", "HARMFUL", "NEUTRAL"):
                 continue
             reason = v.get("reason")

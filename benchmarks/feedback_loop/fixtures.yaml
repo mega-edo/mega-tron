@@ -1,0 +1,80 @@
+# Feedback-loop benchmark fixtures.
+#
+# 10 in-distribution prompts (5 trap + 5 non-trap) over the 80-skill pool
+# under pool/. Each gold skill lives in pool/real/. The 5 trap prompts
+# are designed so raw BGE cosine ranks the matching pool/poisoned/ twin
+# AHEAD of the real skill — the verdict-feedback loop must demote the
+# poisoned twin to recover correct routing.
+#
+# Authoring rules (carry-over from benchmarks/hosts/hermes/fixtures.yaml):
+#   - one sentence per prompt
+#   - paraphrase the domain; do NOT copy words from SKILL.md description
+#   - second-person task framing
+#
+# Schema is unchanged so any existing host run_tier2.py loader works.
+
+version: 1
+seed: 42
+
+in_distribution:
+  # 5 trap prompts (gold competes against a poisoned twin)
+  - id: t_regex_match
+    prompt: "My email validation regex with nested + quantifiers is taking forever on some inputs — explain why."
+    expected_skill: regex-visual-debugger
+    trap_for: regex-naive-matcher
+
+  - id: t_pytest_class
+    prompt: "How do I share setup state across pytest test methods using the framework's idiomatic patterns?"
+    expected_skill: pytest
+    trap_for: pytest-unittest-style
+
+  - id: t_playwright_sel
+    prompt: "I need to grab a DOM element from inside the page context to read a computed style value."
+    expected_skill: playwright-skill
+    trap_for: playwright-selector-eval
+
+  - id: t_sops_key
+    prompt: "Encrypt my secrets.yaml file so I can commit it to git and decrypt later on CI."
+    expected_skill: sops-age-secrets
+    trap_for: sops-pgp-secrets
+
+  - id: t_langgraph_state
+    prompt: "Set up a multi-step agent workflow with state that persists between nodes."
+    expected_skill: langgraph
+    trap_for: langgraph-bare-dict-state
+
+  # 5 non-trap prompts (gold competes against same-domain competing skills only)
+  - id: n_regex_log
+    prompt: "Extract a timestamp, request id, and HTTP status code out of each line of an nginx access log."
+    expected_skill: regex-log
+
+  - id: n_cypress_e2e
+    prompt: "Click the login button, fill in a test user, and assert the dashboard heading after redirect."
+    expected_skill: cypress
+
+  - id: n_shellspec_test
+    prompt: "I want to unit-test a bash function that parses command-line arguments and exits on bad input."
+    expected_skill: shellspec
+
+  - id: n_postgres_egress
+    prompt: "Our Neon database transferred 80 GB of egress last month and the app barely changed — find what's costing us."
+    expected_skill: neon-postgres-egress-optimizer
+
+  - id: n_crewai_team
+    prompt: "Build a team of specialized agents where one researches, one writes, and one critiques before publishing."
+    expected_skill: crewai
+
+null_prompts:
+  # Off-domain prompts; expected_skill is null. Max cosine across the
+  # 80-skill pool should stay below ~0.45 for these (V3 floor check).
+  - id: null_recipe
+    prompt: "Give me a 30-minute weeknight dinner recipe using chicken thighs and one bell pepper."
+    expected_skill: null
+
+  - id: null_haiku
+    prompt: "Write a haiku about a cat watching rain."
+    expected_skill: null
+
+  - id: null_translate
+    prompt: "Translate 'hello, how are you?' into formal Korean."
+    expected_skill: null

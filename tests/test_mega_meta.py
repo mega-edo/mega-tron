@@ -128,35 +128,6 @@ def test_update_meta_round_trip(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# v0.4: INCONCLUSIVE verdict (A2) — no-op, preserves cold-start semantics.
-# ---------------------------------------------------------------------------
-
-
-def test_apply_verdict_inconclusive_is_noop(tmp_path):
-    meta = MegaMeta()
-    meta.apply_verdict("INCONCLUSIVE", "no evidence either way", session_id="sess-x")
-    assert meta.helpful_count == 0
-    assert meta.harmful_count == 0
-    assert meta.helpful_contexts == []
-    assert meta.harmful_contexts == []
-    # last_session_id / last_updated stay unset — verdict carried no info.
-    assert meta.last_session_id is None
-    assert meta.last_updated is None
-
-
-def test_apply_verdict_inconclusive_preserves_streak(tmp_path):
-    """INCONCLUSIVE between two HARMFULs must not reset consecutive_harmful."""
-    meta = MegaMeta()
-    meta.apply_verdict("HARMFUL", "wrong-1", session_id="s")
-    meta.apply_verdict("HARMFUL", "wrong-2", session_id="s")
-    meta.apply_verdict("INCONCLUSIVE", "no signal", session_id="s")
-    assert meta.consecutive_harmful == 2
-    meta.apply_verdict("HARMFUL", "wrong-3", session_id="s")
-    assert meta.consecutive_harmful == 3
-    assert meta.status == "archived"
-
-
-# ---------------------------------------------------------------------------
 # v0.4: C4 auto-archive on N consecutive HARMFUL.
 # ---------------------------------------------------------------------------
 

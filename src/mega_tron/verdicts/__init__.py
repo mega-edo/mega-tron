@@ -1,7 +1,7 @@
 """Verdict lifecycle — write, store, accumulate, analyse.
 
 This subpackage owns everything that happens to a HELPFUL/HARMFUL/
-NEUTRAL/INCONCLUSIVE judgment between the moment a Stop hook captures
+NEUTRAL judgment between the moment a Stop hook captures
 it and the moment a routing decision blends it back in:
 
 - :mod:`mega_tron.verdicts.writer`     — dual-write entry point that

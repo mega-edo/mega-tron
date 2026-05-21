@@ -6,7 +6,7 @@ intentionally small:
 
 - :func:`route` — rank skills for a query (delegates to :class:`Router`).
 - :func:`record_verdict` / :func:`record_verdicts` — persist a HELPFUL /
-  HARMFUL / NEUTRAL / INCONCLUSIVE judgement against a skill.
+  HARMFUL / NEUTRAL judgement against a skill.
 - :func:`regressions` — list skills whose helpful/harmful trend recently
   flipped. *Stub in v1.1; powered by the SQLite store in v1.3.*
 - :func:`stats` — per-skill counters. *Frontmatter-backed in v1.1;
@@ -52,7 +52,7 @@ if TYPE_CHECKING:
 
 
 HostName = Literal["codex", "claude_code", "hermes", "other"]
-VerdictLabel = Literal["HELPFUL", "HARMFUL", "NEUTRAL", "INCONCLUSIVE"]
+VerdictLabel = Literal["HELPFUL", "HARMFUL", "NEUTRAL"]
 RegressionClass = Literal["regressed", "broken", "unused", "stable"]
 
 
@@ -70,8 +70,7 @@ class Verdict:
             when ``name:`` is absent). Must match an existing skill.
         verdict: one of ``HELPFUL`` (skill clearly contributed),
             ``HARMFUL`` (skill led the model astray), ``NEUTRAL`` (ran
-            but did not move the needle), ``INCONCLUSIVE`` (no evidence
-            either way; no-op).
+            but did not move the needle).
         host: which host runtime produced this verdict. Required so the
             shared store can answer "show me only Hermes-side verdicts".
         reason: short natural-language evidence citation, max ~150 chars.
@@ -298,7 +297,6 @@ class MegaCore:
 
             return EvaluationOutcome(
                 updated=0,
-                skipped_inconclusive=0,
                 skipped_missing=0,
                 skipped_invalid=0,
                 errors=[],

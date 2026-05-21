@@ -859,8 +859,6 @@ def test_all_host_install_templates_use_inline_verdict_contract():
         assert (
             "no follow-up" in block_src or "no continuation" in block_src
         ), mod.__name__
-        # And the dropped legacy label is gone.
-        assert "INCONCLUSIVE" not in block_src, mod.__name__
         # `reason` attribute must explicitly require English. Reasons
         # land in SKILL.md + the verdict-embedding store, where the
         # embedder is tuned on English; mixing languages silently

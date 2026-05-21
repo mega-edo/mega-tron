@@ -162,8 +162,8 @@ def _capture_inline_verdicts(data: dict, skills_dir: Path) -> int:
         )
     print(
         f"[mega-tron gemini-stop] updated {outcome.updated}/{len(verdicts)} "
-        f"skill mega_meta blocks (skipped {outcome.skipped_inconclusive} INCONCLUSIVE, "
-        f"{outcome.skipped_missing} missing, {outcome.skipped_invalid} invalid; "
+        f"skill mega_meta blocks ({outcome.skipped_missing} missing, "
+        f"{outcome.skipped_invalid} invalid; "
         f"{len(skipped_no_verdict)} tagged without verdict attr)",
         file=sys.stderr,
     )

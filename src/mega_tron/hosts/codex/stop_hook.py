@@ -43,11 +43,6 @@ import sys
 from pathlib import Path
 
 
-from mega_tron._sentinel import extract_json, make_sentinels
-
-EVAL_SENTINEL_START, EVAL_SENTINEL_END = make_sentinels("VERDICT")
-
-
 def _default_skills_dir() -> Path:
     return Path.home() / ".codex" / "skills"
 
@@ -59,32 +54,6 @@ def _emit_empty() -> int:
 def _emit_block(reason: str) -> int:
     json.dump({"decision": "block", "reason": reason}, sys.stdout)
     return 0
-
-
-def _build_eval_prompt(invoked: list[str]) -> str:
-    """Build the continuation prompt asking codex to self-evaluate."""
-    from mega_tron.hosts.eval_prompt import build_eval_prompt
-
-    return build_eval_prompt(
-        invoked=invoked,
-        trigger_token="$",
-        sentinel_start=EVAL_SENTINEL_START,
-        sentinel_end=EVAL_SENTINEL_END,
-    )
-
-
-def _parse_verdicts(last_message: str) -> list[dict]:
-    """Pull verdicts out of codex's last message. Tolerant of stray prose."""
-    obj = extract_json(
-        last_message,
-        start=EVAL_SENTINEL_START,
-        end=EVAL_SENTINEL_END,
-        fallback_key="evaluations",
-    )
-    if not obj:
-        return []
-    ev = obj.get("evaluations")
-    return ev if isinstance(ev, list) else []
 
 
 def cmd_stop_hook(args: argparse.Namespace) -> int:
@@ -210,8 +179,8 @@ def _capture_inline_verdicts(data: dict, skills_dir: Path) -> int:
         )
     print(
         f"[mega-tron stop] updated {outcome.updated}/{len(verdicts)} "
-        f"skill mega_meta blocks (skipped {outcome.skipped_inconclusive} INCONCLUSIVE, "
-        f"{outcome.skipped_missing} missing, {outcome.skipped_invalid} invalid; "
+        f"skill mega_meta blocks ({outcome.skipped_missing} missing, "
+        f"{outcome.skipped_invalid} invalid; "
         f"{len(skipped_no_verdict)} tagged without verdict attr)",
         file=sys.stderr,
     )

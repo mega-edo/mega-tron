@@ -41,10 +41,6 @@ import os
 import sys
 from pathlib import Path
 
-from mega_tron._sentinel import extract_json, make_sentinels
-
-EVAL_SENTINEL_START, EVAL_SENTINEL_END = make_sentinels("VERDICT")
-
 
 def _default_skills_dir() -> Path:
     """Claude Code hook entry: prefer ``~/.claude/skills`` since that's
@@ -65,36 +61,6 @@ def _emit_empty() -> int:
 def _emit_block(reason: str) -> int:
     json.dump({"decision": "block", "reason": reason}, sys.stdout)
     return 0
-
-
-def _build_eval_prompt(invoked: list[str]) -> str:
-    """Build the continuation prompt asking Claude to self-evaluate.
-
-    Delegates to the shared host-agnostic builder; the only host
-    quirk is Claude's ``/skill-name`` slash-command trigger token.
-    """
-    from mega_tron.hosts.eval_prompt import build_eval_prompt
-
-    return build_eval_prompt(
-        invoked=invoked,
-        trigger_token="/",
-        sentinel_start=EVAL_SENTINEL_START,
-        sentinel_end=EVAL_SENTINEL_END,
-    )
-
-
-def _parse_verdicts(last_message: str) -> list[dict]:
-    """Pull verdicts out of Claude's last message. Tolerant of stray prose."""
-    obj = extract_json(
-        last_message,
-        start=EVAL_SENTINEL_START,
-        end=EVAL_SENTINEL_END,
-        fallback_key="evaluations",
-    )
-    if not obj:
-        return []
-    ev = obj.get("evaluations")
-    return ev if isinstance(ev, list) else []
 
 
 def cmd_claude_stop_hook(args: argparse.Namespace) -> int:
@@ -166,8 +132,7 @@ def _capture_inline_verdicts(data: dict, skills_dir: Path) -> int:
     # Build verdict records from the inline tags, with two admission rules:
     #
     # 1. Skills tagged without a `verdict=` attribute are skipped
-    #    (treated as INCONCLUSIVE by omission — no signal to the
-    #    rank-blend, no SKILL.md write).
+    #    (no signal to the rank-blend, no SKILL.md write).
     #
     # 2. ``claimed_use`` invocations are rejected. ``claimed_use`` means
     #    the model emitted a `<skill-used .../>` tag in text but left no
@@ -243,8 +208,7 @@ def _capture_inline_verdicts(data: dict, skills_dir: Path) -> int:
     print(
         f"[mega-tron claude-stop-hook] updated {outcome.updated}/"
         f"{len(verdicts)} skill mega_meta blocks "
-        f"(skipped {outcome.skipped_inconclusive} INCONCLUSIVE, "
-        f"{outcome.skipped_missing} missing, "
+        f"({outcome.skipped_missing} missing, "
         f"{outcome.skipped_invalid} invalid; "
         f"{len(skipped_no_verdict)} tagged without verdict attr)",
         file=sys.stderr,
