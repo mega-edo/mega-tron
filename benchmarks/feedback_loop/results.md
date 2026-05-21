@@ -129,18 +129,7 @@ We average that across all 5 trap pairs to get one dot per round on the graph.
 
 **That moment when the solid line crosses zero is the moment mega-tron defused the traps.** All 5 of them. In one round.
 
-#### Why this is wild
-
-Think about what just happened:
-
-- Nobody told mega-tron which skills were traps
-- The trap descriptions are written to look identical to the real ones
-- mega-tron only saw 13 sessions of normal usage
-- After 1 round, it had already flipped the ranking on every single trap
-
-**Restaurant analogy**: imagine an app that recommends restaurants. One restaurant has gorgeous photos but the food is terrible. If the app only looks at photos, it'll keep ranking that restaurant #1 forever. mega-tron is the version that *also* watches reviews — and after one batch of reviews, the pretty-but-bad restaurant drops from the top.
-
-That's what Graph 2 is showing. Plain semantic search is the photos-only version. mega-tron is the reviews-aware version. And it only took one round of "reviews" to flip the verdict on every trap in the pool.
+Plain semantic search is the photos-only version. mega-tron is the reviews-aware version. And it only took one round of "reviews" to flip the verdict on every trap in the pool.
 
 ---
 
