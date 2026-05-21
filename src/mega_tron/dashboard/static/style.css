@@ -1953,6 +1953,21 @@ button.history-row-head:focus-visible {
   font-size: 12px;
   font-weight: 700;
   text-align: center;
+  /* `help` cursor signals to users that hovering reveals more
+     information. The flag also stops click propagation feel via
+     `display: inline-flex` so the icon glyph sits centered inside
+     its grid cell instead of baseline-aligned. */
+  cursor: help;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.12s, color 0.12s;
+  outline-offset: 2px;
+}
+.active-flag:hover,
+.active-flag:focus-visible {
+  transform: scale(1.15);
+  color: var(--negative);
 }
 
 /* ------- Health row card (lives in Review tab) ------- */

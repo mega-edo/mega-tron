@@ -410,8 +410,18 @@ function _renderSkillRow(r, { showTime } = {}) {
   const netCls = net > 0 ? "pos" : (net < 0 ? "neg" : "");
   const hostsSeen = (r.hosts_seen || []).filter((h) => h !== "other");
   const primaryHost = hostsSeen[0] || "—";
+  // Warning sign on net-harmful skills (harmful ≥ helpful with ≥1
+  // harmful verdict). The tooltip names the counts explicitly so the
+  // user doesn't have to know the term "net-harmful". `tabindex=0`
+  // makes the flag keyboard-reachable; `aria-label` carries the same
+  // message for screen readers.
+  const harmTip = harmful > 0 && harmful >= helpful
+    ? `${harmful} HARMFUL vs ${helpful} HELPFUL — this skill has earned more bad signal than good. Click to review.`
+    : "";
   const harmFlag = harmful > 0 && harmful >= helpful
-    ? `<span class="active-flag" title="net-harmful">⚠</span>`
+    ? `<span class="active-flag" tabindex="0" role="img"
+              aria-label="${escapeAttr(harmTip)}"
+              title="${escapeAttr(harmTip)}">⚠</span>`
     : "";
   const timeCol = showTime
     ? `<span class="active-time">${relTime(r.last_updated)}</span>`
