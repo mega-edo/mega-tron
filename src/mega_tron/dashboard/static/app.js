@@ -20,7 +20,7 @@
 // TEXTAREA/INPUT focus skips one tick to avoid stomping a user's
 // in-progress edit.
 const POLL_MS = 5000;
-const HOSTS = ["codex", "claude", "gemini", "hermes", "user"]; // "other" intentionally absent; "user" = manual verdicts
+const HOSTS = ["codex", "claude", "gemini", "hermes", "agents", "user"]; // "other" intentionally absent; "user" = manual verdicts
 
 function reportToServer(payload) {
   try {
@@ -49,6 +49,13 @@ window.addEventListener("unhandledrejection", (e) => {
 });
 
 const state = {
+  // Active top-level tab: "overview" = catalog observability landing
+  // (big numbers / host bars / active-skills list); "review" = HITL
+  // verdict cleanup (the original dashboard chrome — verdicts list,
+  // skill detail pane, orphan pane). Persisted to localStorage so a
+  // reload doesn't keep snapping the user back to overview.
+  activeTab: (typeof localStorage !== "undefined"
+    && localStorage.getItem("megaTronTab")) || "overview",
   // Time window applied to /api/overview, /api/skills{,-by-name},
   // /api/verdicts via qsParams(). Fixed at 30d because the
   // user-facing toggle that used to sit under Activity was removed
@@ -129,80 +136,256 @@ function setConnection(status) {
 // ---------- Rendering ---------- //
 
 function renderAll() {
-  renderOverview();
-  renderHostChips();
-  renderHealth();
-  renderMainList();
-}
-
-function renderOverview() {
-  const bar = document.getElementById("skill-bar");
-  const summary = document.getElementById("skill-summary");
-  if (!state.overview) return;
-  const { total, used, unused } = state.overview;
-  const denom = Math.max(total, 1);
-  const rawUsedPct = (used / denom) * 100;
-  const rawUnusedPct = 100 - rawUsedPct;
-  bar.innerHTML = "";
-  if (total === 0) {
-    bar.innerHTML = `<div class="seg unused" style="flex:1">no skills installed</div>`;
+  // Cross-tab chrome (badge on the Review tab) always renders so it
+  // updates while the user is on the overview tab too — that's the
+  // whole point of the badge.
+  renderReviewBadge();
+  if (state.activeTab === "overview") {
+    renderBigNumbers();
+    renderHostBars();
+    renderActiveSkillsList();
   } else {
-    let usedW = rawUsedPct;
-    let unusedW = rawUnusedPct;
-    if (used > 0 && unused > 0) {
-      usedW = Math.max(rawUsedPct, 14);
-      unusedW = 100 - usedW;
-    }
-    if (used > 0) {
-      const a = document.createElement("div");
-      a.className = "seg used";
-      a.style.width = `${usedW}%`;
-      a.textContent = `used ${used}`;
-      a.title = `${used} of ${total} skills (${rawUsedPct.toFixed(2)}%)`;
-      bar.appendChild(a);
-    }
-    if (unused > 0) {
-      const i = document.createElement("div");
-      i.className = "seg unused";
-      i.style.width = `${unusedW}%`;
-      i.textContent = `unused ${unused}`;
-      i.title = `${unused} unused (${rawUnusedPct.toFixed(2)}%)`;
-      bar.appendChild(i);
-    }
+    renderHealth();
+    renderMainList();
   }
-  const pct = rawUsedPct < 1 && rawUsedPct > 0
-    ? rawUsedPct.toFixed(2)
-    : Math.round(rawUsedPct);
-  const range = state.timeRange === 0 ? "all time" : `last ${state.timeRange} days`;
-  summary.textContent = `${total} total · ${pct}% used · ${range}`;
 }
 
-function renderHostChips() {
-  const wrap = document.getElementById("host-chips");
-  if (!state.overview) return;
+// ---------- Tab switching ---------- //
+
+function setActiveTab(name) {
+  if (name !== "overview" && name !== "review") return;
+  if (state.activeTab === name) return;
+  state.activeTab = name;
+  try {
+    localStorage.setItem("megaTronTab", name);
+  } catch (_e) {
+    // localStorage may be disabled in incognito; failure is harmless.
+  }
+  syncTabChrome();
+  renderAll();
+}
+
+function syncTabChrome() {
+  document.querySelectorAll("[data-tab]").forEach((b) => {
+    const on = b.dataset.tab === state.activeTab;
+    b.classList.toggle("active", on);
+    b.setAttribute("aria-selected", on ? "true" : "false");
+  });
+  document.querySelectorAll("[data-tab-panel]").forEach((p) => {
+    p.hidden = p.dataset.tabPanel !== state.activeTab;
+  });
+}
+
+// ---------- Tab 1 — Skills overview (observability) ---------- //
+
+function renderBigNumbers() {
+  const wrap = document.getElementById("big-numbers");
+  if (!wrap) return;
+  if (!state.overview) {
+    wrap.innerHTML = "";
+    return;
+  }
+  const ov = state.overview;
+  const total = ov.total || 0;
+  const used = ov.used || 0;
+
+  // Catalog empty — honest empty state instead of a row of zeros.
+  if (total === 0) {
+    wrap.innerHTML = `
+      <div class="big-card big-card-empty">
+        <div class="big-card-title">No skills detected</div>
+        <div class="big-card-sub">
+          Run <code>mega-tron setup</code> to wire up your hosts and
+          start collecting routing signal.
+        </div>
+      </div>`;
+    return;
+  }
+
+  const hostsActive = Object.values(ov.by_host || {})
+    .filter((v) => (typeof v === "number" ? v : (v?.used ?? v?.total ?? 0)) > 0)
+    .length;
+  const pctUsed = (used / total) * 100;
+  const pctLabel = pctUsed > 0 && pctUsed < 1
+    ? `${pctUsed.toFixed(2)}%`
+    : `${Math.round(pctUsed)}%`;
+
+  // Verdict count for the 30-day window — sum across skill rows the
+  // server already filtered with ?days=30. `state.skillsByName` may
+  // still be loading on the very first paint; fall back to em-dash.
+  const verdicts30d = Array.isArray(state.skillsByName)
+    ? state.skillsByName.reduce((acc, r) => {
+        return acc + (r.helpful_count || 0)
+          + (r.harmful_count || 0) + (r.neutral_count || 0);
+      }, 0)
+    : null;
+
+  const healthIssues = (ov.net_harmful_count || 0)
+    + (ov.noise_verdict_count || 0)
+    + (ov.orphan_count || 0)
+    + (ov.unknown_host_count || 0);
+
+  const healthBody = healthIssues === 0
+    ? `<div class="big-card-value health-ok">✓ all clear</div>
+       <div class="big-card-sub">no orphans, no noise, no net-harmful skills</div>`
+    : `<div class="big-card-value health-warn">⚠ ${healthIssues}
+         issue${healthIssues === 1 ? "" : "s"}</div>
+       <div class="big-card-sub">
+         <a href="#" class="big-card-link" data-act="go-review">
+           open Review →
+         </a>
+       </div>`;
+
+  wrap.innerHTML = `
+    <div class="big-card">
+      <div class="big-card-title">Total skills</div>
+      <div class="big-card-value">${total.toLocaleString()}</div>
+      <div class="big-card-sub">across ${hostsActive} host${hostsActive === 1 ? "" : "s"} with verdicts</div>
+    </div>
+    <div class="big-card">
+      <div class="big-card-title">Used in 30d</div>
+      <div class="big-card-value">${used.toLocaleString()}</div>
+      <div class="big-card-sub">${pctLabel} of catalog</div>
+    </div>
+    <div class="big-card">
+      <div class="big-card-title">Verdicts</div>
+      <div class="big-card-value">${verdicts30d === null
+        ? "—" : verdicts30d.toLocaleString()}</div>
+      <div class="big-card-sub">last 30 days</div>
+    </div>
+    <div class="big-card">
+      <div class="big-card-title">Health</div>
+      ${healthBody}
+    </div>`;
+
+  // Wire the cross-tab link.
+  const goReview = wrap.querySelector('[data-act="go-review"]');
+  if (goReview) {
+    goReview.addEventListener("click", (e) => {
+      e.preventDefault();
+      setActiveTab("review");
+    });
+  }
+}
+
+function renderHostBars() {
+  const wrap = document.getElementById("host-bars");
+  if (!wrap) return;
+  if (!state.overview) {
+    wrap.innerHTML = "";
+    return;
+  }
+  // Normalise by_host into {host: count}; tolerate legacy {used,total}
+  // shape the same way renderHostChips used to.
+  const counts = {};
+  for (const host of HOSTS) {
+    const raw = state.overview.by_host?.[host];
+    counts[host] = typeof raw === "number"
+      ? raw
+      : (raw && typeof raw === "object" ? (raw.used ?? raw.total ?? 0) : 0);
+  }
+  const max = Math.max(1, ...Object.values(counts));
   wrap.innerHTML = "";
   for (const host of HOSTS) {
-    // by_host[host] is the count of skills this host actually recorded
-    // a verdict on — identical to the predicate used by the click
-    // filter (hosts_seen.includes(host)). Keeping label and filter
-    // result aligned is the whole point: chip number = rows you'll see.
-    // Support legacy `{total, used}` shape so older cached responses
-    // don't break the UI during a rolling reload.
-    const raw = state.overview.by_host[host];
-    let count = 0;
-    if (typeof raw === "number") count = raw;
-    else if (raw && typeof raw === "object") count = raw.used ?? raw.total ?? 0;
-    const chip = document.createElement("button");
-    chip.className = `chip ${host}`;
-    if (count === 0) chip.classList.add("empty");
-    if (state.hostFilter === host) chip.classList.add("active");
-    chip.innerHTML = `
-      <span class="dot"></span>
-      <span class="name">${host}</span>
-      <span class="count">${count}</span>
+    const count = counts[host];
+    const row = document.createElement("button");
+    row.type = "button";
+    row.className = `host-bar-row ${host}`;
+    if (count === 0) row.classList.add("empty");
+    if (state.hostFilter === host) row.classList.add("active");
+    const widthPct = max > 0 ? (count / max) * 100 : 0;
+    row.innerHTML = `
+      <span class="host-bar-label">${host}</span>
+      <span class="host-bar-track">
+        <span class="host-bar-fill" style="width:${widthPct}%"></span>
+      </span>
+      <span class="host-bar-count">${count}</span>
     `;
-    chip.addEventListener("click", () => toggleHost(host));
-    wrap.appendChild(chip);
+    row.addEventListener("click", () => toggleHost(host));
+    wrap.appendChild(row);
+  }
+}
+
+function renderActiveSkillsList() {
+  const list = document.getElementById("active-skills-list");
+  const title = document.getElementById("active-skills-title");
+  if (!list) return;
+
+  // "Active" = recorded a verdict in the last 30 days. Filter the
+  // skills-by-name corpus client-side because the row already
+  // carries last_updated; no extra fetch.
+  const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  let rows = (state.skillsByName || []).filter((r) => {
+    if (!r.last_updated) return false;
+    const t = Date.parse(r.last_updated);
+    return Number.isFinite(t) && t >= cutoff;
+  });
+  if (state.hostFilter) {
+    rows = rows.filter((r) =>
+      (r.hosts_seen || []).includes(state.hostFilter)
+      || (r.installed_hosts || []).includes(state.hostFilter)
+    );
+  }
+  rows.sort((a, b) => Date.parse(b.last_updated) - Date.parse(a.last_updated));
+  rows = rows.slice(0, 20);
+
+  if (title) {
+    title.textContent = `Active skills (${rows.length})`;
+  }
+
+  list.innerHTML = "";
+  if (rows.length === 0) {
+    const empty = document.createElement("li");
+    empty.className = "active-empty";
+    empty.textContent = state.hostFilter
+      ? `No ${state.hostFilter} skills active in the last 30 days.`
+      : "No skills active in the last 30 days. Verdicts you see this week will show up here.";
+    list.appendChild(empty);
+    return;
+  }
+  for (const r of rows) {
+    list.appendChild(renderActiveSkillsRow(r));
+  }
+}
+
+function renderActiveSkillsRow(r) {
+  const li = document.createElement("li");
+  li.className = "active-row";
+  const helpful = r.helpful_count || 0;
+  const harmful = r.harmful_count || 0;
+  const net = (r.net == null) ? helpful - harmful : r.net;
+  const netCls = net > 0 ? "pos" : (net < 0 ? "neg" : "");
+  const hostsSeen = (r.hosts_seen || []).filter((h) => h !== "other");
+  const primaryHost = hostsSeen[0] || "—";
+  const harmFlag = harmful > 0 && harmful >= helpful
+    ? `<span class="active-flag" title="net-harmful">⚠</span>`
+    : "";
+  li.innerHTML = `
+    <span class="active-name">${escapeHtml(r.name)}</span>
+    <span class="active-host">${escapeHtml(primaryHost)}</span>
+    <span class="active-counts">
+      <span class="count-pill HELPFUL" title="helpful">${helpful}</span>
+      <span class="count-pill HARMFUL" title="harmful">${harmful}</span>
+    </span>
+    <span class="active-net ${netCls}" title="net = helpful − harmful">${net > 0 ? "+" : ""}${net}</span>
+    <span class="active-time">${relTime(r.last_updated)}</span>
+    ${harmFlag}
+  `;
+  li.addEventListener("click", () => openSkillPane(r.name));
+  return li;
+}
+
+function renderReviewBadge() {
+  const badge = document.getElementById("review-count-badge");
+  if (!badge || !state.overview) return;
+  const issues = (state.overview.net_harmful_count || 0)
+    + (state.overview.orphan_count || 0);
+  if (issues > 0) {
+    badge.hidden = false;
+    badge.textContent = String(issues);
+  } else {
+    badge.hidden = true;
+    badge.textContent = "";
   }
 }
 
@@ -245,19 +428,26 @@ function renderHealth() {
   el.innerHTML = parts.join(" &middot; ");
   el.querySelectorAll(".health-link").forEach((a) => {
     a.addEventListener("click", () => {
+      // Health-row links live inside the Review tab, so flipping the
+      // tab is a no-op when the link is clicked from there. Still
+      // safe to call — setActiveTab short-circuits when already on
+      // the target tab.
       if (a.dataset.act === "net-harmful") {
         state.netHarmfulFilter = true;
         state.orphanFilter = false;
         state.listMode = "skills";
+        setActiveTab("review");
         syncListModeButtons();
         renderMainList();
       } else if (a.dataset.act === "noise") {
         setSearch("");
         state.noiseFilter = true;
         state.listMode = "verdicts";
+        setActiveTab("review");
         syncListModeButtons();
         renderMainList();
       } else if (a.dataset.act === "orphan") {
+        setActiveTab("review");
         openOrphanPane();
       }
     });
@@ -1575,6 +1765,14 @@ function showPrompt({ title = "Input", body = "", sub = "",
 // ---------- Bootstrap ---------- //
 
 function bootstrap() {
+  // Tab strip — switching between the observability overview and the
+  // HITL review surface. Applied before the first paint so the
+  // restored localStorage tab is reflected from the very first frame.
+  document.querySelectorAll("[data-tab]").forEach((b) => {
+    b.addEventListener("click", () => setActiveTab(b.dataset.tab));
+  });
+  syncTabChrome();
+
   document.querySelectorAll("[data-list-mode]").forEach((b) => {
     b.addEventListener("click", () => setListMode(b.dataset.listMode));
   });
