@@ -49,6 +49,11 @@ window.addEventListener("unhandledrejection", (e) => {
 });
 
 const state = {
+  // Time window applied to /api/overview, /api/skills{,-by-name},
+  // /api/verdicts via qsParams(). Fixed at 30d because the
+  // user-facing toggle that used to sit under Activity was removed
+  // along with the Activity card; the constant kept its name so the
+  // rest of the code doesn't need to learn a new shape.
   timeRange: 30,
   hostFilter: null,
   listMode: "skills", // "skills" | "verdicts"
@@ -60,7 +65,6 @@ const state = {
   overview: null,
   skillsByName: [],
   skills: [],
-  activity: [],
   verdicts: [],
   searchQuery: "",
 };
@@ -92,17 +96,15 @@ async function loadAll() {
       ? `/api/verdicts/search?q=${encodeURIComponent(state.searchQuery)}&${params}`
       : `/api/verdicts?limit=100&${params}`;
   try {
-    const [overview, skillsByName, skills, activity, verdicts] = await Promise.all([
+    const [overview, skillsByName, skills, verdicts] = await Promise.all([
       fetchJSON(`/api/overview?${params}`),
       fetchJSON(`/api/skills-by-name?${params}`),
       fetchJSON(`/api/skills?${params}`),
-      fetchJSON(`/api/activity?${params}`),
       fetchJSON(verdictsPath),
     ]);
     state.overview = overview;
     state.skillsByName = skillsByName;
     state.skills = skills;
-    state.activity = activity;
     state.verdicts = verdicts;
     setConnection("live");
     renderAll();
@@ -129,8 +131,6 @@ function setConnection(status) {
 function renderAll() {
   renderOverview();
   renderHostChips();
-  renderActivity();
-  renderTimeToggle();
   renderHealth();
   renderMainList();
 }
@@ -203,57 +203,6 @@ function renderHostChips() {
     `;
     chip.addEventListener("click", () => toggleHost(host));
     wrap.appendChild(chip);
-  }
-}
-
-function renderActivity() {
-  const svg = document.getElementById("activity-sparkline");
-  if (!svg || !state.activity) return;
-  svg.innerHTML = "";
-  if (state.activity.length === 0) return;
-  const counts = state.activity.map(([, c]) => c);
-  const max = Math.max(...counts, 1);
-  const w = 300, h = 32, n = counts.length;
-  const dx = w / Math.max(n - 1, 1);
-  const points = counts.map((c, i) => {
-    const x = i * dx;
-    const y = h - (c / max) * (h - 2) - 1;
-    return `${x.toFixed(1)},${y.toFixed(1)}`;
-  });
-  const path = `M${points.join(" L")}`;
-  const fillPath = `${path} L${w},${h} L0,${h} Z`;
-  const ns = "http://www.w3.org/2000/svg";
-  const fill = document.createElementNS(ns, "path");
-  fill.setAttribute("d", fillPath);
-  fill.setAttribute("fill", "currentColor");
-  fill.setAttribute("opacity", "0.15");
-  svg.appendChild(fill);
-  const line = document.createElementNS(ns, "path");
-  line.setAttribute("d", path);
-  line.setAttribute("fill", "none");
-  line.setAttribute("stroke", "currentColor");
-  line.setAttribute("stroke-width", "1.5");
-  svg.appendChild(line);
-}
-
-function renderTimeToggle() {
-  const wrap = document.getElementById("time-toggle");
-  if (wrap.children.length > 0) return;
-  const ranges = [[7, "7d"], [30, "30d"], [90, "90d"], [0, "all"]];
-  for (const [val, label] of ranges) {
-    const b = document.createElement("button");
-    b.textContent = label;
-    b.dataset.range = String(val);
-    if (val === state.timeRange) b.classList.add("active");
-    b.addEventListener("click", () => setTimeRange(val));
-    wrap.appendChild(b);
-  }
-}
-
-function syncTimeToggle() {
-  const wrap = document.getElementById("time-toggle");
-  for (const b of wrap.children) {
-    b.classList.toggle("active", Number(b.dataset.range) === state.timeRange);
   }
 }
 
@@ -1463,7 +1412,6 @@ function toggleHost(host) {
   state.netHarmfulFilter = false;
   loadAll();
 }
-function setTimeRange(days) { state.timeRange = days; syncTimeToggle(); loadAll(); }
 function setSearch(q) { state.searchQuery = q; loadAll(); }
 function setListMode(m) {
   state.listMode = m;

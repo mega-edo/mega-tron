@@ -72,11 +72,6 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 payload = api.skills_by_name(days=days)
                 self._send_json(payload)
                 return
-            if path == "/api/activity":
-                skill = _qstr(query, "skill")
-                payload = api.activity(days=days, skill=skill, host=host)
-                self._send_json(payload)
-                return
             if path == "/api/verdicts":
                 payload = api.verdicts(
                     limit=_qint(query, "limit", 50),

@@ -617,41 +617,6 @@ def _per_skill_host_counts(store: Store) -> dict[str, dict[str, dict[str, int]]]
     return out
 
 
-def _dense_fill(
-    sparse: list[tuple[str, int]], *, days: int
-) -> list[list[str | int]]:
-    """Expand a sparse ``[(YYYY-MM-DD, count)]`` list into a dense
-    ``days``-element array ending today (UTC). Missing days get 0.
-    """
-    from datetime import date, timedelta, timezone, datetime as _dt
-
-    today = _dt.now(timezone.utc).date()
-    by_date = {d: c for d, c in sparse}
-    out: list[list[str | int]] = []
-    for i in range(days - 1, -1, -1):
-        d = (today - timedelta(days=i)).isoformat()
-        out.append([d, int(by_date.get(d, 0))])
-    return out
-
-
-def activity(
-    *,
-    days: int = 30,
-    skill: str | None = None,
-    host: str | None = None,
-) -> list[list[str | int]]:
-    """Dense-fill ``days``-element activity series for the sparkline.
-
-    ``host`` here is the *raw* host value (``"codex"``, ``"claude_code"``,
-    ``"gemini_cli"``, ``"hermes"``) since we query the DB column
-    directly. The dashboard frontend passes whatever the user clicked
-    after un-normalising via :func:`_denormalize_host` below.
-    """
-    store = _open_store()
-    sparse = store.activity_per_day(days=days, skill_name=skill, host=host)
-    return _dense_fill(sparse, days=days)
-
-
 def verdicts(
     *,
     limit: int = 50,
@@ -737,6 +702,34 @@ def verdict_search(
         r["host_raw"] = r["host"]
         r["host"] = normalize_host(r["host"])
     return rows
+
+
+def _per_skill_sparkline(name: str, *, days: int = 30) -> list[list[str | int]]:
+    """30-day dense activity series for one skill's detail pane.
+
+    Returned shape is ``[[YYYY-MM-DD, count], ...]``, exactly ``days``
+    entries long, ending today (UTC). Missing days get a 0.
+
+    This is the per-skill cousin of the global Activity card that
+    used to live above Health. The global card was removed because
+    "total verdicts across all skills over time" wasn't actionable
+    — but here, in a detail pane where the user already knows
+    which skill they're looking at, the sparkline answers a real
+    question ("when did this skill last spike?") and the surrounding
+    pane chrome (name, recent verdicts) supplies the missing
+    context.
+    """
+    from datetime import timedelta, timezone, datetime as _dt
+
+    store = _open_store()
+    sparse = store.activity_per_day(days=days, skill_name=name)
+    today = _dt.now(timezone.utc).date()
+    by_date = {d: c for d, c in sparse}
+    out: list[list[str | int]] = []
+    for i in range(days - 1, -1, -1):
+        d = (today - timedelta(days=i)).isoformat()
+        out.append([d, int(by_date.get(d, 0))])
+    return out
 
 
 def skill_detail(name: str) -> dict[str, Any] | None:
@@ -845,7 +838,7 @@ def skill_detail(name: str) -> dict[str, Any] | None:
     harmful_rows = _fetch("HARMFUL")
     neutral_rows = _fetch("NEUTRAL")
     recent = _fetch(None)[:10]
-    sparkline = activity(days=30, skill=name)
+    sparkline = _per_skill_sparkline(name)
 
     # Counts: prefer SQLite (verdict-by-verdict ground truth) over
     # frontmatter (lossy aggregate).

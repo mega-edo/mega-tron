@@ -253,46 +253,6 @@ html, body {
 .chip .count { color: var(--fg-muted); font-size: 11px; }
 .chip .name { font-weight: 600; }
 
-/* ------- Activity sparkline + time toggle ------- */
-#activity-row {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-}
-#activity-sparkline {
-  flex: 1;
-  height: 36px;
-  width: 100%;
-  display: block;
-  color: var(--accent);
-}
-.toggle {
-  display: inline-flex;
-  border: 1px solid var(--hairline);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-  background: var(--bg-elev-2);
-}
-.toggle button {
-  padding: 6px 11px;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  border: none;
-  background: transparent;
-  color: var(--fg-muted);
-  cursor: pointer;
-  border-right: 1px solid var(--hairline);
-  transition: color 0.15s, background 0.15s;
-}
-.toggle button:last-child { border-right: none; }
-.toggle button:hover { color: var(--fg); }
-.toggle button.active {
-  background: var(--accent);
-  color: #020307;
-}
-
 /* ------- Health row ------- */
 #health-row {
   font-size: 12px;

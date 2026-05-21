@@ -212,18 +212,25 @@ def test_skills_sort_by_net_desc(env):
 
 
 # --------------------------------------------------------------------------- #
-# GET /api/activity
+# Per-skill sparkline (used by skill_detail)
+#
+# The global Activity card and its `/api/activity` HTTP endpoint were
+# removed — total verdicts over time without per-skill context wasn't
+# actionable. The same dense-fill logic survives inside `skill_detail`
+# as `_per_skill_sparkline` because the detail pane gives the user
+# context for what they're looking at ("THIS skill's history"). These
+# tests pin the helper's shape and per-skill filtering.
 # --------------------------------------------------------------------------- #
 
 
-def test_activity_dense_fills_to_requested_days(env):
+def test_per_skill_sparkline_dense_fills_to_requested_days(env):
     _home, store = env
     store.record_verdict(
         skill_name="a", verdict="HELPFUL",
-        reason="real verdict reason for activity series test",
+        reason="real verdict reason for sparkline shape test",
         host="codex", session_id="s1",
     )
-    series = api.activity(days=7)
+    series = api._per_skill_sparkline("a", days=7)
     assert len(series) == 7
     # Today (last entry) carries the verdict count.
     assert series[-1][1] >= 1
@@ -233,7 +240,7 @@ def test_activity_dense_fills_to_requested_days(env):
         assert isinstance(c, int)
 
 
-def test_activity_filter_by_skill(env):
+def test_per_skill_sparkline_filters_to_named_skill(env):
     _home, store = env
     store.record_verdict(
         skill_name="a", verdict="HELPFUL",
@@ -245,7 +252,7 @@ def test_activity_filter_by_skill(env):
         reason="helpful verdict on skill b for filtering test",
         host="codex", session_id="s2",
     )
-    just_a = api.activity(days=7, skill="a")
+    just_a = api._per_skill_sparkline("a", days=7)
     assert sum(c for _, c in just_a) == 1
 
 

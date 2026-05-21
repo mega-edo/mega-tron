@@ -151,14 +151,6 @@ def test_api_skills_returns_list(server_env):
         assert isinstance(json.loads(body), list)
 
 
-def test_api_activity_returns_dense_array(server_env):
-    with _serving() as url:
-        status, body = _get(url + "/api/activity?days=7")
-        assert status == 200
-        data = json.loads(body)
-        assert len(data) == 7
-
-
 def test_api_verdicts_returns_list(server_env):
     with _serving() as url:
         status, body = _get(url + "/api/verdicts?limit=10")
