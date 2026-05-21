@@ -78,6 +78,72 @@ def persist_verdicts(
 
     items = list(verdicts)
 
+    # Catalog-membership filter. Hallucinated `<skill-used name="X"/>`
+    # tags would otherwise INSERT into the verdicts table with a
+    # ``skill_dir`` that doesn't exist on disk, manifesting as orphan
+    # rows the moment they're written. We drop them silently before
+    # any write happens: the SQLite path, the frontmatter path, and
+    # the embedding path all consume ``items``, so filtering here
+    # keeps the three writes consistent.
+    #
+    # Cross-root lookup: a name like ``gsd-debug`` lives in
+    # ``~/.claude/skills``, but the Stop hook for Codex would call
+    # with ``skills_dir=~/.codex/skills`` and ``(skills_dir / name)``
+    # would not exist. We accept the name as soon as ANY discovered
+    # root has a matching SKILL.md.
+    # The caller-supplied ``skills_dir`` is ALWAYS in the catalog: the
+    # host Stop hook only fires after that host's CLI surfaced skills
+    # from that root, so refusing names found there would amount to
+    # refusing the host's own verdicts. Tests also rely on this so
+    # they can stand up a fake skills_dir under tmp without monkey-
+    # patching $HOME. discover_skill_dirs() then adds every OTHER
+    # registered root (cross-host union, dirs-add, etc.) on top so
+    # legitimate cross-root names are still accepted.
+    try:
+        from mega_tron.config import discover_skill_dirs
+
+        known_roots = [skills_dir] + [
+            r for r in discover_skill_dirs() if r != skills_dir
+        ]
+    except Exception:  # noqa: BLE001
+        # Degenerate config — fall through to the legacy permissive
+        # path rather than block all verdict writes.
+        known_roots = [skills_dir]
+
+    def _is_known(name: str) -> bool:
+        for root in known_roots:
+            if (root / name / "SKILL.md").exists():
+                return True
+        return False
+
+    unknown_names: list[str] = []
+    accepted: list[dict] = []
+    for v in items:
+        n = v.get("skill")
+        if not n:
+            continue
+        if not _is_known(n):
+            unknown_names.append(n)
+            continue
+        accepted.append(v)
+    if unknown_names:
+        # One line, debug-grade. Frequent hallucinations from the
+        # same model + prompt template are a signal worth knowing
+        # about, but we don't want to make the user read a wall of
+        # text every Stop fire.
+        sample = ", ".join(sorted(set(unknown_names))[:5])
+        more = (
+            "" if len(set(unknown_names)) <= 5
+            else f", +{len(set(unknown_names)) - 5} more"
+        )
+        print(
+            f"{log_prefix} dropped {len(unknown_names)} verdict tag(s) "
+            f"naming skills not in the catalog ({sample}{more}); "
+            "likely model hallucination — not written to store.",
+            file=sys.stderr,
+        )
+    items = accepted
+
     # Guarantee a session_id. Without this, multiple Stop-hook fires
     # from the same host with no session in the payload would all
     # write rows with ``session_id IS NULL``; SQLite's UNIQUE
