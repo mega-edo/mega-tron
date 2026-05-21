@@ -1335,7 +1335,7 @@ function renderVerdictComposer(pane) {
     <textarea class="reason-textarea" rows="3" placeholder="Why does this skill deserve this label? (≥ 8 chars to be saved with a reason; leave blank for label-only)"></textarea>
     <div class="composer-footer">
       <button class="action ghost" data-act="cancel" type="button">Cancel</button>
-      <button class="action primary" data-act="submit" type="button">${verdictGlyph(pane.composerVerdict)} Add ${pane.composerVerdict.toLowerCase()} verdict for ${escapeHtml(skill)}</button>
+      <button class="action primary" data-act="submit" type="button">Save</button>
     </div>
   `;
   const ta = wrap.querySelector("textarea");

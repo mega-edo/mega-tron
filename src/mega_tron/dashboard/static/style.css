@@ -1607,10 +1607,10 @@ button.history-row-head:focus-visible {
   gap: 8px;
   align-items: stretch;
 }
-/* Submit gets the lion's share so the visual weight matches the
-   action's importance; Cancel sits compact on the left. */
-.composer-footer .action { flex: 0 0 auto; }
-.composer-footer .action.primary { flex: 1 1 auto; }
+/* Both buttons share width — labels are now both short ("Cancel" /
+   "Save") so equal weight reads more balanced than skewing one
+   way. */
+.composer-footer .action { flex: 1 1 0; }
 .composer-footer .action.ghost { background: transparent; }
 
 /* ---------- Orphan pane ---------- */
