@@ -513,6 +513,6 @@ Built on the shoulders of:
 
 ## 📄 License
 
-[Apache 2.0](./LICENSE) — see [LICENSE](LICENSE) and [NOTICE](NOTICE).
+[Apache 2.0](./LICENSE) — see [LICENSE](LICENSE).
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
