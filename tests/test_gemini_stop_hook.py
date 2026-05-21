@@ -1,11 +1,11 @@
-"""Gemini CLI ``AfterAgent`` hook — 2-phase ask-eval / persist.
+"""Gemini CLI ``AfterAgent`` hook — single-phase silent verdict capture.
 
-Phase 1: ``stop_hook_active=false`` → scan transcript → emit
-``decision:"deny"`` + eval prompt (sent back to Gemini as a new prompt).
-Phase 2: ``stop_hook_active=true`` → parse ``prompt_response`` → write
-``mega_meta``. Loop-guard: a per-session marker prevents Phase 2 from
-re-entering Phase 1 even if Gemini's ``stop_hook_active`` semantics shift
-across versions.
+Mirrors :mod:`tests.test_stop_hook` (the Codex Stop hook tests). The
+hook scans the transcript for inline ``<skill-used name=... verdict=...
+reason=.../>`` tags the model placed in its final reply, persists
+those verdicts via :func:`mega_tron.verdicts.writer.persist_verdicts`,
+and emits empty stdout. No `decision:"deny"` retry; no eval-prompt
+turn; no loop-guard markers.
 """
 from __future__ import annotations
 
@@ -16,23 +16,8 @@ from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 
-import pytest
-
-from mega_tron.hosts.gemini_cli.stop_hook import (
-    EVAL_SENTINEL_END,
-    EVAL_SENTINEL_START,
-    cmd_gemini_stop_hook,
-)
+from mega_tron.hosts.gemini_cli.stop_hook import cmd_gemini_stop_hook
 from mega_tron.verdicts.mega_meta import read_meta
-
-
-@pytest.fixture(autouse=True)
-def _isolate_loop_guard(tmp_path, monkeypatch):
-    """Per-test runtime dir so the eval-gemini-<id> marker can't leak."""
-    runtime = tmp_path / "xdg"
-    runtime.mkdir()
-    monkeypatch.setenv("XDG_RUNTIME_DIR", str(runtime))
-    yield
 
 
 def _args(**overrides) -> argparse.Namespace:
@@ -81,8 +66,7 @@ def _exec_command(skills_dir: Path, skill_name: str) -> dict:
 
     Pairs with :func:`_assistant_msg` so the resulting transcript carries
     *both* an inline ``<skill-used .../>`` tag and a real operational
-    trace — required for the stop-hook's Phase-1 admission rule that
-    rejects ``claimed_use`` (tag without invocation).
+    trace — required for the stop-hook's ``claimed_use`` admission rule.
     """
     cmd = f"bash {skills_dir}/{skill_name}/scripts/run.sh --check"
     return {
@@ -95,268 +79,13 @@ def _exec_command(skills_dir: Path, skill_name: str) -> dict:
     }
 
 
-# --- Phase 1 ----------------------------------------------------------------
-
-
-def test_phase1_emits_deny_with_eval_prompt(tmp_path):
-    """Phase 1 emits ``decision:"deny"`` (Gemini's retry trigger) plus the
-    sentinel-fenced eval prompt naming the invoked skill."""
-    skills = tmp_path / "skills"
-    skills.mkdir()
-    _write_skill(skills, "webhook-signer")
-    transcript = tmp_path / "rollout.jsonl"
-    _write_transcript(
-        transcript,
-        [
-            # Operational trace so the Phase-1 admission rule treats the
-            # inline tag as an actual invocation rather than a quoted
-            # mention.
-            _exec_command(skills, "webhook-signer"),
-            _assistant_msg('<skill-used name="webhook-signer" reason="HMAC"/>'),
-        ],
-    )
-    payload = {
-        "hook_event_name": "AfterAgent",
-        "stop_hook_active": False,
-        "transcript_path": str(transcript),
-        "session_id": "g-sess-1",
-        "cwd": "/tmp",
-        "prompt": "validate this webhook",
-        "prompt_response": "Done.",
-    }
-    rc, out, _ = _run(json.dumps(payload), _args(skills_dir=str(skills)))
-    assert rc == 0
-    data = json.loads(out)
-    # Gemini uses "deny" (Codex uses "block")
-    assert data["decision"] == "deny"
-    # Bare name in bullets (Codex uses $-prefix)
-    assert "webhook-signer" in data["reason"]
-    assert "$webhook-signer" not in data["reason"]
-    assert EVAL_SENTINEL_START in data["reason"]
-    assert EVAL_SENTINEL_END in data["reason"]
-
-
-def test_phase1_prompt_includes_evidence_preamble(tmp_path):
-    """The Phase-1 prompt must carry the evidence + INCONCLUSIVE rubric."""
-    skills = tmp_path / "skills"
-    skills.mkdir()
-    _write_skill(skills, "x")
-    transcript = tmp_path / "rollout.jsonl"
-    _write_transcript(
-        transcript,
-        [
-            _exec_command(skills, "x"),
-            _assistant_msg('<skill-used name="x"/>'),
-        ],
-    )
-    payload = {
-        "hook_event_name": "AfterAgent",
-        "stop_hook_active": False,
-        "transcript_path": str(transcript),
-        "session_id": "g-sess-evidence",
-    }
-    rc, out, _ = _run(json.dumps(payload), _args(skills_dir=str(skills)))
-    assert rc == 0
-    reason = json.loads(out)["reason"]
-    assert "git diff --stat" in reason
-    assert "INCONCLUSIVE" in reason
-    assert "evidence" in reason.lower()
-    # Critical Gemini-specific guidance: do not re-invoke skills on the eval turn.
-    assert "do NOT invoke" in reason or "evaluation turn" in reason
-
-
-def test_phase1_no_invocations_passes_through(tmp_path):
-    """No <skill-used/> tags in the transcript → quiet exit, no retry."""
-    skills = tmp_path / "skills"
-    skills.mkdir()
-    transcript = tmp_path / "rollout.jsonl"
-    _write_transcript(transcript, [_assistant_msg("Just did stuff. No skills.")])
-    payload = {
-        "hook_event_name": "AfterAgent",
-        "stop_hook_active": False,
-        "transcript_path": str(transcript),
-        "session_id": "g-sess-noinv",
-    }
-    rc, out, _ = _run(json.dumps(payload), _args(skills_dir=str(skills)))
-    assert rc == 0
-    assert out == ""  # no deny → Gemini exits cleanly
-
-
-# --- Phase 2 ----------------------------------------------------------------
-
-
-def test_phase2_parses_verdict_and_updates_skill(tmp_path):
-    """Phase 2 reads ``prompt_response`` (NOT last_assistant_message — that's
-    Codex) and updates the skill's mega_meta block."""
-    skills = tmp_path / "skills"
-    skills.mkdir()
-    skill_md = _write_skill(skills, "webhook-signer")
-    verdict_payload = json.dumps(
-        {
-            "evaluations": [
-                {
-                    "skill": "webhook-signer",
-                    "verdict": "HELPFUL",
-                    "reason": "Caught HMAC mismatch in fixture",
-                }
-            ]
-        }
-    )
-    prompt_response = (
-        "Sure thing.\n"
-        f"{EVAL_SENTINEL_START}\n{verdict_payload}\n{EVAL_SENTINEL_END}\n"
-    )
-    payload = {
-        "hook_event_name": "AfterAgent",
-        "stop_hook_active": True,
-        "session_id": "g-sess-42",
-        "prompt": "what did you do?",
-        "prompt_response": prompt_response,
-    }
-    rc, out, _ = _run(json.dumps(payload), _args(skills_dir=str(skills)))
-    assert rc == 0
-    assert out == ""  # empty stdout → Gemini exits without another retry
-
-    meta = read_meta(skill_md)
-    assert meta.helpful_count == 1
-    assert "Caught HMAC mismatch" in meta.helpful_contexts[0]
-    assert meta.last_session_id == "g-sess-42"
-
-
-def test_phase2_no_verdicts_does_not_retry(tmp_path):
-    """If the model didn't comply, Phase 2 must emit ``{}`` (never deny)."""
-    skills = tmp_path / "skills"
-    skills.mkdir()
-    payload = {
-        "hook_event_name": "AfterAgent",
-        "stop_hook_active": True,
-        "session_id": "g-sess-noncomply",
-        "prompt_response": "I forgot to format my answer correctly.",
-    }
-    rc, out, err = _run(json.dumps(payload), _args(skills_dir=str(skills)))
-    assert rc == 0
-    assert out == ""  # no decision:deny — structural retry-chain bound at depth 1
-    assert "no verdicts parsed" in err
-
-
-def test_phase2_inconclusive_verdict_does_not_touch_skill(tmp_path):
-    """INCONCLUSIVE means 'no signal' — counters and SKILL.md stay untouched."""
-    skills = tmp_path / "skills"
-    skills.mkdir()
-    skill_md = _write_skill(skills, "webhook-signer")
-    original = skill_md.read_text()
-
-    prompt_response = (
-        f"{EVAL_SENTINEL_START}\n"
-        '{"evaluations":[{"skill":"webhook-signer","verdict":"INCONCLUSIVE","reason":"no clear evidence"}]}\n'
-        f"{EVAL_SENTINEL_END}"
-    )
-    payload = {
-        "hook_event_name": "AfterAgent",
-        "stop_hook_active": True,
-        "session_id": "g-sess-inc",
-        "prompt_response": prompt_response,
-    }
-    rc, out, err = _run(json.dumps(payload), _args(skills_dir=str(skills)))
-    assert rc == 0
-    assert out == ""
-    assert skill_md.read_text() == original
-    meta = read_meta(skill_md)
-    assert meta.helpful_count == 0
-    assert meta.harmful_count == 0
-    assert "skipped 1 INCONCLUSIVE" in err
-
-
-# --- Loop-guard -------------------------------------------------------------
-
-
-def test_phase2_marker_blocks_subsequent_after_agent_fires(tmp_path):
-    """Once Phase 2 has run for a session, any later AfterAgent fire for
-    the SAME session emits ``{}`` regardless of ``stop_hook_active`` —
-    even if the next fire happens to look like a Phase-1 transcript with
-    fresh <skill-used/> tags. This is the Gemini loop-guard."""
-    skills = tmp_path / "skills"
-    skills.mkdir()
-    _write_skill(skills, "webhook-signer")
-
-    # First fire: Phase 2 with empty verdict body — marker is dropped.
-    payload_phase2 = {
-        "hook_event_name": "AfterAgent",
-        "stop_hook_active": True,
-        "session_id": "g-loop",
-        "prompt_response": "no verdicts here",
-    }
-    rc, out, _ = _run(json.dumps(payload_phase2), _args(skills_dir=str(skills)))
-    assert rc == 0
-    assert out == ""
-
-    # Second fire on SAME session: simulate Gemini somehow re-firing
-    # AfterAgent with stop_hook_active=False, with a transcript that has
-    # a <skill-used/> tag. Without the loop-guard we'd emit a fresh deny.
-    transcript = tmp_path / "rollout.jsonl"
-    _write_transcript(
-        transcript,
-        [_assistant_msg('<skill-used name="webhook-signer"/>')],
-    )
-    payload_refire = {
-        "hook_event_name": "AfterAgent",
-        "stop_hook_active": False,
-        "session_id": "g-loop",  # same session id!
-        "transcript_path": str(transcript),
-    }
-    rc, out, _ = _run(json.dumps(payload_refire), _args(skills_dir=str(skills)))
-    assert rc == 0
-    assert out == ""  # marker present → emit {} regardless
-
-
-def test_phase2_marker_does_not_block_different_session(tmp_path):
-    """The loop-guard is per-session — a different session id still routes."""
-    skills = tmp_path / "skills"
-    skills.mkdir()
-    _write_skill(skills, "webhook-signer")
-    transcript = tmp_path / "rollout.jsonl"
-    _write_transcript(
-        transcript,
-        [
-            _exec_command(skills, "webhook-signer"),
-            _assistant_msg('<skill-used name="webhook-signer"/>'),
-        ],
-    )
-
-    # Drop marker for session A.
-    _run(
-        json.dumps(
-            {
-                "hook_event_name": "AfterAgent",
-                "stop_hook_active": True,
-                "session_id": "g-sess-A",
-                "prompt_response": "no verdicts",
-            }
-        ),
-        _args(skills_dir=str(skills)),
-    )
-
-    # Session B Phase 1: should NOT be blocked by session A's marker.
-    payload = {
-        "hook_event_name": "AfterAgent",
-        "stop_hook_active": False,
-        "session_id": "g-sess-B",
-        "transcript_path": str(transcript),
-    }
-    rc, out, _ = _run(json.dumps(payload), _args(skills_dir=str(skills)))
-    assert rc == 0
-    data = json.loads(out)
-    assert data["decision"] == "deny"
-
-
-# --- Guards / passthroughs --------------------------------------------------
+# --- Passthrough -----------------------------------------------------------
 
 
 def test_wrong_event_name_passes_through(tmp_path):
-    """SessionStart, BeforeTool, etc. must pass through silently."""
     skills = tmp_path / "skills"
     skills.mkdir()
-    payload = {"hook_event_name": "SessionStart", "stop_hook_active": False}
+    payload = {"hook_event_name": "BeforeAgent", "stop_hook_active": False}
     rc, out, _ = _run(json.dumps(payload), _args(skills_dir=str(skills)))
     assert rc == 0
     assert out == ""
@@ -372,13 +101,237 @@ def test_malformed_input_json_does_not_crash(tmp_path):
 
 
 def test_missing_skills_dir_is_noop(tmp_path):
+    """If MEGA_SKILLS_DIR doesn't exist, bail out silently."""
     payload = {
         "hook_event_name": "AfterAgent",
         "stop_hook_active": False,
-        "transcript_path": str(tmp_path / "anything.jsonl"),
-        "session_id": "x",
+        "transcript_path": str(tmp_path / "nonexistent.jsonl"),
     }
-    args = _args(skills_dir=str(tmp_path / "nope"))
-    rc, out, _ = _run(json.dumps(payload), args)
+    rc, out, _ = _run(
+        json.dumps(payload), _args(skills_dir=str(tmp_path / "no-skills"))
+    )
+    assert rc == 0
+    assert out == ""
+
+
+def test_no_invocations_emits_empty_stdout(tmp_path):
+    """No `<skill-used>` tag in the transcript → empty stdout. Gemini
+    stops without surfacing anything to the user."""
+    skills = tmp_path / "skills"
+    skills.mkdir()
+    transcript = tmp_path / "rollout.jsonl"
+    _write_transcript(transcript, [_assistant_msg("Just did stuff. No tags.")])
+    payload = {
+        "hook_event_name": "AfterAgent",
+        "stop_hook_active": False,
+        "transcript_path": str(transcript),
+    }
+    rc, out, _ = _run(json.dumps(payload), _args(skills_dir=str(skills)))
+    assert rc == 0
+    assert out == ""
+
+
+# --- Single-phase silent capture -------------------------------------------
+
+
+def test_inline_verdict_tag_updates_skill_md_silently(tmp_path):
+    """Canonical happy path: the model emits a single inline tag
+    carrying name + verdict + reason. The hook persists the verdict and
+    emits empty stdout — no user-visible ``decision:deny`` envelope."""
+    skills = tmp_path / "skills"
+    skills.mkdir()
+    skill_md = _write_skill(skills, "webhook-signer")
+    transcript = tmp_path / "rollout.jsonl"
+    _write_transcript(
+        transcript,
+        [
+            # Operational trace required by the ``claimed_use`` rule.
+            _exec_command(skills, "webhook-signer"),
+            _assistant_msg(
+                'Done. <skill-used name="webhook-signer" verdict="HELPFUL" '
+                'reason="Verified HMAC-SHA256 header via webhook-signer/'
+                'scripts/verify.py; tests/webhooks.py::test_constant_time'
+                '_compare now passes."/>'
+            ),
+        ],
+    )
+    payload = {
+        "hook_event_name": "AfterAgent",
+        "stop_hook_active": False,
+        "transcript_path": str(transcript),
+        "session_id": "silent-gemini-1",
+    }
+    rc, out, err = _run(json.dumps(payload), _args(skills_dir=str(skills)))
+    assert rc == 0
+    assert out == ""  # critical: nothing leaks to the user
+    assert "updated 1/1" in err
+
+    meta = read_meta(skill_md)
+    assert meta.helpful_count == 1
+    assert meta.last_session_id == "silent-gemini-1"
+    assert any("HMAC-SHA256" in c for c in meta.helpful_contexts)
+
+
+def test_tag_without_verdict_attribute_is_skipped(tmp_path):
+    """A `<skill-used>` tag with no `verdict=` attribute carries no
+    signal — same as omitting the tag. No SKILL.md write."""
+    skills = tmp_path / "skills"
+    skills.mkdir()
+    skill_md = _write_skill(skills, "webhook-signer")
+    transcript = tmp_path / "rollout.jsonl"
+    _write_transcript(
+        transcript,
+        [
+            _assistant_msg(
+                'Done. <skill-used name="webhook-signer" reason="ran it"/>'
+            )
+        ],
+    )
+    payload = {
+        "hook_event_name": "AfterAgent",
+        "stop_hook_active": False,
+        "transcript_path": str(transcript),
+    }
+    rc, out, err = _run(json.dumps(payload), _args(skills_dir=str(skills)))
+    assert rc == 0
+    assert out == ""
+    assert "without an inline verdict attribute" in err
+    meta = read_meta(skill_md)
+    assert meta.helpful_count == 0
+    assert meta.harmful_count == 0
+
+
+def test_mixed_helpful_and_harmful_both_apply(tmp_path):
+    """Two skills tagged in one final reply — each lands in its own
+    SKILL.md mega_meta block."""
+    skills = tmp_path / "skills"
+    skills.mkdir()
+    skill_a = _write_skill(skills, "webhook-signer")
+    skill_b = _write_skill(skills, "jwt-verifier")
+    transcript = tmp_path / "rollout.jsonl"
+    _write_transcript(
+        transcript,
+        [
+            _exec_command(skills, "webhook-signer"),
+            _exec_command(skills, "jwt-verifier"),
+            _assistant_msg(
+                '<skill-used name="webhook-signer" verdict="HELPFUL" '
+                'reason="HMAC matched; tests/webhooks.py passes."/> '
+                '<skill-used name="jwt-verifier" verdict="HARMFUL" '
+                'reason="Skipped the aud claim — src/auth/middleware.py '
+                'accepted a token minted for another service."/>'
+            ),
+        ],
+    )
+    payload = {
+        "hook_event_name": "AfterAgent",
+        "stop_hook_active": False,
+        "transcript_path": str(transcript),
+    }
+    rc, out, err = _run(json.dumps(payload), _args(skills_dir=str(skills)))
+    assert rc == 0
+    assert out == ""
+    assert "updated 2/2" in err
+    assert read_meta(skill_a).helpful_count == 1
+    assert read_meta(skill_b).harmful_count == 1
+
+
+def test_claimed_use_without_operational_trace_is_rejected(tmp_path):
+    """A tag emitted in prose without any `exec_command` against the
+    skill's scripts/ dir is treated as discussion-only and dropped."""
+    skills = tmp_path / "skills"
+    skills.mkdir()
+    skill_md = _write_skill(skills, "webhook-signer")
+    transcript = tmp_path / "rollout.jsonl"
+    _write_transcript(
+        transcript,
+        [
+            _assistant_msg(
+                'I was going to use <skill-used name="webhook-signer" '
+                'verdict="HELPFUL" reason="..."/> but in fact I didn\'t.'
+            )
+        ],
+    )
+    payload = {
+        "hook_event_name": "AfterAgent",
+        "stop_hook_active": False,
+        "transcript_path": str(transcript),
+    }
+    rc, out, err = _run(json.dumps(payload), _args(skills_dir=str(skills)))
+    assert rc == 0
+    assert out == ""
+    assert "without an operational trace" in err
+    assert read_meta(skill_md).helpful_count == 0
+
+
+def test_unknown_skill_name_skipped(tmp_path):
+    """A verdict naming a skill that doesn't exist in skills_dir is
+    counted as skipped_missing — no crash, no false write."""
+    skills = tmp_path / "skills"
+    skills.mkdir()
+    _write_skill(skills, "real-skill")
+    transcript = tmp_path / "rollout.jsonl"
+    _write_transcript(
+        transcript,
+        [
+            _exec_command(skills, "ghost-skill"),
+            _assistant_msg(
+                '<skill-used name="ghost-skill" verdict="HELPFUL" '
+                'reason="claimed it ran but the skill dir does not exist"/>'
+            ),
+        ],
+    )
+    payload = {
+        "hook_event_name": "AfterAgent",
+        "stop_hook_active": False,
+        "transcript_path": str(transcript),
+    }
+    rc, out, err = _run(json.dumps(payload), _args(skills_dir=str(skills)))
+    assert rc == 0
+    assert out == ""
+    assert "updated 0/1" in err
+
+
+def test_stop_hook_active_is_belt_and_suspenders_noop(tmp_path):
+    """If Gemini ever re-fires AfterAgent with stop_hook_active=true
+    (shouldn't happen since we never emit `decision:"deny"`, but cheap to
+    guard), we short-circuit to avoid double-counting."""
+    skills = tmp_path / "skills"
+    skills.mkdir()
+    skill_md = _write_skill(skills, "webhook-signer")
+    transcript = tmp_path / "rollout.jsonl"
+    _write_transcript(
+        transcript,
+        [
+            _exec_command(skills, "webhook-signer"),
+            _assistant_msg(
+                '<skill-used name="webhook-signer" verdict="HELPFUL" '
+                'reason="x"/>'
+            ),
+        ],
+    )
+    payload = {
+        "hook_event_name": "AfterAgent",
+        "stop_hook_active": True,
+        "transcript_path": str(transcript),
+    }
+    rc, out, _ = _run(json.dumps(payload), _args(skills_dir=str(skills)))
+    assert rc == 0
+    assert out == ""
+    # No write because stop_hook_active=true short-circuits.
+    assert read_meta(skill_md).helpful_count == 0
+
+
+def test_malformed_transcript_no_crash(tmp_path):
+    skills = tmp_path / "skills"
+    skills.mkdir()
+    transcript = tmp_path / "rollout.jsonl"
+    transcript.write_text("{ not valid jsonl\nneither is this\n")
+    payload = {
+        "hook_event_name": "AfterAgent",
+        "stop_hook_active": False,
+        "transcript_path": str(transcript),
+    }
+    rc, out, _ = _run(json.dumps(payload), _args(skills_dir=str(skills)))
     assert rc == 0
     assert out == ""
