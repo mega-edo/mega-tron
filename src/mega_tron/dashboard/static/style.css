@@ -1678,7 +1678,9 @@ button.history-row-head:focus-visible {
 .tab-strip {
   display: flex;
   gap: 4px;
-  margin: 12px 0 16px;
+  /* Indent matches the .card horizontal margin so the tabs line up
+     with the cards underneath them. */
+  margin: 12px 28px 16px;
   border-bottom: 1px solid var(--hairline);
   padding-bottom: 0;
 }
@@ -1726,7 +1728,12 @@ button.history-row-head:focus-visible {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 12px;
-  margin-bottom: 16px;
+  /* Match the .card horizontal margins so the row's left/right edges
+     line up with every card below it in the same panel. The card
+     declares `margin: 18px 28px`; we use the same horizontal value
+     and an equivalent top margin so the panel breathes the same way
+     above the first card. */
+  margin: 18px 28px 16px;
 }
 .big-card {
   background: var(--bg-elev);
@@ -1937,6 +1944,8 @@ button.history-row-head:focus-visible {
   padding: 10px 14px;
   font-size: 12px;
   color: var(--fg-muted);
-  margin-bottom: 16px;
+  /* Match .card horizontal margins so this strip aligns with the
+     verdicts card just below it. */
+  margin: 18px 28px 16px;
   box-shadow: var(--shadow);
 }

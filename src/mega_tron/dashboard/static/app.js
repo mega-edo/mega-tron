@@ -20,7 +20,11 @@
 // TEXTAREA/INPUT focus skips one tick to avoid stomping a user's
 // in-progress edit.
 const POLL_MS = 5000;
-const HOSTS = ["codex", "claude", "gemini", "hermes", "agents", "user"]; // "other" intentionally absent; "user" = manual verdicts
+// Frontend host display list. "hermes" was dropped from the dashboard
+// surface (backend still classifies hermes-rooted skills correctly via
+// hosts/__init__.py; we just don't render a row/chip for it here).
+// "other" intentionally absent; "user" = manual verdicts.
+const HOSTS = ["codex", "claude", "gemini", "agents", "user"];
 
 function reportToServer(payload) {
   try {
@@ -202,9 +206,15 @@ function renderBigNumbers() {
     return;
   }
 
-  const hostsActive = Object.values(ov.by_host || {})
-    .filter((v) => (typeof v === "number" ? v : (v?.used ?? v?.total ?? 0)) > 0)
-    .length;
+  // Count only hosts the frontend actually surfaces, so the
+  // "across N hosts" line stays consistent with the host-bar chart
+  // below (hermes is intentionally hidden in the UI).
+  const hostsActive = HOSTS.filter((h) => {
+    const raw = ov.by_host?.[h];
+    const c = typeof raw === "number"
+      ? raw : (raw?.used ?? raw?.total ?? 0);
+    return c > 0;
+  }).length;
   const pctUsed = (used / total) * 100;
   const pctLabel = pctUsed > 0 && pctUsed < 1
     ? `${pctUsed.toFixed(2)}%`
