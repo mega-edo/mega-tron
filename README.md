@@ -18,7 +18,7 @@
 
   <p>
     <a href="#-install">Install</a> ·
-    <a href="#-the-three-problems">Why</a> ·
+    <a href="#-three-problems-that-compound-with-more-skills">Why</a> ·
     <a href="#-does-it-actually-work--measured">Benchmark</a> ·
     <a href="#-the-architecture-unify--optimize--evolve">Architecture</a> ·
     <a href="#-cli">CLI</a> ·
