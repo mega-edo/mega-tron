@@ -1708,19 +1708,6 @@ button.history-row-head:focus-visible {
   color: var(--fg);
   border-bottom-color: var(--accent);
 }
-.tab-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 18px;
-  padding: 0 6px;
-  height: 18px;
-  border-radius: 9px;
-  background: var(--accent-warm);
-  color: #020307;
-  font-size: 10px;
-  font-weight: 700;
-}
 .tab-panel[hidden] { display: none; }
 
 /* ------- Big Numbers row ------- */
@@ -1856,6 +1843,33 @@ button.history-row-head:focus-visible {
 }
 .host-bar-row.empty .host-bar-count { color: var(--hairline); }
 
+/* ------- Skill-list cards (Active + Most helpful, side by side) ------- */
+.skill-cards-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  /* Match .card horizontal margins so the row aligns with the
+     Verdict Hosts card above it. The two child .card elements
+     reset their own margin so the gap controls spacing instead. */
+  margin: 18px 28px;
+}
+.skill-cards-row .skill-list-card {
+  /* Children of the grid handle their own gap; let .card keep its
+     padding but drop the body margin that would fight the grid. */
+  margin: 0;
+}
+@media (max-width: 900px) {
+  .skill-cards-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.card-sub {
+  font-size: 11px;
+  color: var(--fg-muted);
+  margin: -6px 0 10px;
+}
+
 /* ------- Active skills list ------- */
 .active-skills-list {
   list-style: none;
@@ -1883,6 +1897,11 @@ button.history-row-head:focus-visible {
   cursor: pointer;
   transition: background 0.12s, border-color 0.12s;
   font-size: 12px;
+}
+/* Most-helpful list shows no `last_updated` column, so the grid
+   collapses one slot. Keeps the flag (⚠) column at the end. */
+.active-row.no-time {
+  grid-template-columns: 1fr 80px 90px 50px 20px;
 }
 .active-row:hover {
   background: var(--bg-elev-2);

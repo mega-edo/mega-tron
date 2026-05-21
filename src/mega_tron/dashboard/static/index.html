@@ -27,7 +27,6 @@
       <button class="tab-btn" data-tab="review" type="button" role="tab"
               aria-controls="tab-panel-review" aria-selected="false">
         Review
-        <span id="review-count-badge" class="tab-badge" hidden></span>
       </button>
     </nav>
 
@@ -37,15 +36,23 @@
       <div id="big-numbers" class="big-numbers"></div>
 
       <section class="card">
-        <div class="card-title">Hosts</div>
+        <div class="card-title">Verdict Hosts</div>
         <div id="host-bars" class="host-bars" role="img"
-             aria-label="Skill counts per host"></div>
+             aria-label="Skill counts per host that recorded a verdict"></div>
       </section>
 
-      <section class="card">
-        <div class="card-title" id="active-skills-title">Active skills</div>
-        <ul id="active-skills-list" class="active-skills-list"></ul>
-      </section>
+      <div class="skill-cards-row">
+        <section class="card skill-list-card">
+          <div class="card-title" id="active-skills-title">Active skills</div>
+          <div class="card-sub">Sorted by most recent verdict.</div>
+          <ul id="active-skills-list" class="active-skills-list"></ul>
+        </section>
+        <section class="card skill-list-card">
+          <div class="card-title" id="helpful-skills-title">Most helpful skills</div>
+          <div class="card-sub">Sorted by net helpful − harmful.</div>
+          <ul id="helpful-skills-list" class="active-skills-list"></ul>
+        </section>
+      </div>
     </section>
 
     <!-- Tab 2 — Review (HITL verdict cleanup) -->

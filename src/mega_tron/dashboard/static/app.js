@@ -20,11 +20,13 @@
 // TEXTAREA/INPUT focus skips one tick to avoid stomping a user's
 // in-progress edit.
 const POLL_MS = 5000;
-// Frontend host display list. "hermes" was dropped from the dashboard
-// surface (backend still classifies hermes-rooted skills correctly via
-// hosts/__init__.py; we just don't render a row/chip for it here).
+// Frontend host display list. "hermes" and "agents" are intentionally
+// hidden from the UI — the backend still classifies hermes-rooted /
+// ~/.agents-rooted skills correctly (hosts/__init__.py
+// infer_host_from_skill_dir), but the dashboard surface only shows
+// the three first-class CLIs plus user-recorded verdicts.
 // "other" intentionally absent; "user" = manual verdicts.
-const HOSTS = ["codex", "claude", "gemini", "agents", "user"];
+const HOSTS = ["codex", "claude", "gemini", "user"];
 
 function reportToServer(payload) {
   try {
@@ -140,10 +142,6 @@ function setConnection(status) {
 // ---------- Rendering ---------- //
 
 function renderAll() {
-  // Cross-tab chrome (badge on the Review tab) always renders so it
-  // updates while the user is on the overview tab too — that's the
-  // whole point of the badge.
-  renderReviewBadge();
   if (state.activeTab === "overview") {
     renderBigNumbers();
     renderHostBars();
@@ -317,50 +315,95 @@ function renderHostBars() {
 }
 
 function renderActiveSkillsList() {
-  const list = document.getElementById("active-skills-list");
-  const title = document.getElementById("active-skills-title");
-  if (!list) return;
+  // Two side-by-side lists in tab 1:
+  //   - "Active skills" — used in last 30d, sorted by recency
+  //   - "Most helpful skills" — used at all, sorted by net desc
+  // Both feed off the same skillsByName corpus loadAll() already
+  // fetched, so this is two client-side sorts and slices.
+  const skillsByName = state.skillsByName || [];
 
-  // "Active" = recorded a verdict in the last 30 days. Filter the
-  // skills-by-name corpus client-side because the row already
-  // carries last_updated; no extra fetch.
   const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
-  let rows = (state.skillsByName || []).filter((r) => {
+  let active = skillsByName.filter((r) => {
     if (!r.last_updated) return false;
     const t = Date.parse(r.last_updated);
     return Number.isFinite(t) && t >= cutoff;
   });
   if (state.hostFilter) {
-    rows = rows.filter((r) =>
+    active = active.filter((r) =>
       (r.hosts_seen || []).includes(state.hostFilter)
       || (r.installed_hosts || []).includes(state.hostFilter)
     );
   }
-  rows.sort((a, b) => Date.parse(b.last_updated) - Date.parse(a.last_updated));
-  rows = rows.slice(0, 20);
+  active.sort((a, b) => Date.parse(b.last_updated) - Date.parse(a.last_updated));
+  active = active.slice(0, 20);
 
-  if (title) {
-    title.textContent = `Active skills (${rows.length})`;
+  let helpful = skillsByName.filter((r) => {
+    const h = r.helpful_count || 0;
+    const x = r.harmful_count || 0;
+    return h > 0 || x > 0; // any verdict at all
+  });
+  if (state.hostFilter) {
+    helpful = helpful.filter((r) =>
+      (r.hosts_seen || []).includes(state.hostFilter)
+      || (r.installed_hosts || []).includes(state.hostFilter)
+    );
   }
+  helpful.sort((a, b) => {
+    const netA = (a.net == null) ? (a.helpful_count || 0) - (a.harmful_count || 0) : a.net;
+    const netB = (b.net == null) ? (b.helpful_count || 0) - (b.harmful_count || 0) : b.net;
+    if (netA !== netB) return netB - netA;
+    // tiebreaker: most helpful count first, then alphabetical.
+    if ((b.helpful_count || 0) !== (a.helpful_count || 0)) {
+      return (b.helpful_count || 0) - (a.helpful_count || 0);
+    }
+    return a.name.localeCompare(b.name);
+  });
+  helpful = helpful.slice(0, 20);
 
+  _renderSkillsList({
+    listId: "active-skills-list",
+    titleId: "active-skills-title",
+    titleLabel: "Active skills",
+    rows: active,
+    showTime: true,
+    emptyText: state.hostFilter
+      ? `No ${state.hostFilter} skills active in the last 30 days.`
+      : "No skills active in the last 30 days. Verdicts you see this week will show up here.",
+  });
+  _renderSkillsList({
+    listId: "helpful-skills-list",
+    titleId: "helpful-skills-title",
+    titleLabel: "Most helpful skills",
+    rows: helpful,
+    showTime: false,
+    emptyText: state.hostFilter
+      ? `No ${state.hostFilter} skills with verdicts yet.`
+      : "No verdicts yet. Once mega-tron records HELPFUL / HARMFUL signal you'll see the top performers here.",
+  });
+}
+
+// Internal: shared renderer for the two tab-1 skill lists.
+function _renderSkillsList({ listId, titleId, titleLabel, rows, showTime, emptyText }) {
+  const list = document.getElementById(listId);
+  const title = document.getElementById(titleId);
+  if (!list) return;
+  if (title) title.textContent = `${titleLabel} (${rows.length})`;
   list.innerHTML = "";
   if (rows.length === 0) {
     const empty = document.createElement("li");
     empty.className = "active-empty";
-    empty.textContent = state.hostFilter
-      ? `No ${state.hostFilter} skills active in the last 30 days.`
-      : "No skills active in the last 30 days. Verdicts you see this week will show up here.";
+    empty.textContent = emptyText;
     list.appendChild(empty);
     return;
   }
   for (const r of rows) {
-    list.appendChild(renderActiveSkillsRow(r));
+    list.appendChild(_renderSkillRow(r, { showTime }));
   }
 }
 
-function renderActiveSkillsRow(r) {
+function _renderSkillRow(r, { showTime } = {}) {
   const li = document.createElement("li");
-  li.className = "active-row";
+  li.className = showTime ? "active-row" : "active-row no-time";
   const helpful = r.helpful_count || 0;
   const harmful = r.harmful_count || 0;
   const net = (r.net == null) ? helpful - harmful : r.net;
@@ -370,6 +413,9 @@ function renderActiveSkillsRow(r) {
   const harmFlag = harmful > 0 && harmful >= helpful
     ? `<span class="active-flag" title="net-harmful">⚠</span>`
     : "";
+  const timeCol = showTime
+    ? `<span class="active-time">${relTime(r.last_updated)}</span>`
+    : "";
   li.innerHTML = `
     <span class="active-name">${escapeHtml(r.name)}</span>
     <span class="active-host">${escapeHtml(primaryHost)}</span>
@@ -378,25 +424,21 @@ function renderActiveSkillsRow(r) {
       <span class="count-pill HARMFUL" title="harmful">${harmful}</span>
     </span>
     <span class="active-net ${netCls}" title="net = helpful − harmful">${net > 0 ? "+" : ""}${net}</span>
-    <span class="active-time">${relTime(r.last_updated)}</span>
+    ${timeCol}
     ${harmFlag}
   `;
-  li.addEventListener("click", () => openSkillPane(r.name));
+  // Click → jump to Review tab and open this skill's detail pane.
+  // The detail pane shows every verdict (helpful / harmful / neutral)
+  // for the skill, which is the "go review this skill's verdicts"
+  // intent. Opening it directly is cleaner than wiring a separate
+  // verdicts-list filter that the user would then have to clear.
+  li.addEventListener("click", () => jumpToSkillReview(r.name));
   return li;
 }
 
-function renderReviewBadge() {
-  const badge = document.getElementById("review-count-badge");
-  if (!badge || !state.overview) return;
-  const issues = (state.overview.net_harmful_count || 0)
-    + (state.overview.orphan_count || 0);
-  if (issues > 0) {
-    badge.hidden = false;
-    badge.textContent = String(issues);
-  } else {
-    badge.hidden = true;
-    badge.textContent = "";
-  }
+function jumpToSkillReview(name) {
+  setActiveTab("review");
+  openSkillPane(name);
 }
 
 function renderHealth() {
