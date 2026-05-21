@@ -301,11 +301,7 @@ function renderHealth() {
         syncListModeButtons();
         renderMainList();
       } else if (a.dataset.act === "orphan") {
-        state.orphanFilter = true;
-        state.netHarmfulFilter = false;
-        state.listMode = "skills";
-        syncListModeButtons();
-        renderMainList();
+        openOrphanPane();
       }
     });
   });
@@ -511,6 +507,182 @@ async function loadSkillPane(pane) {
   }
 }
 
+// ---------- Orphan pane (list + checkbox + bulk delete) ---------- //
+//
+// An orphan is a skill_name with verdict history in store.db but no
+// SKILL.md on disk under any registered root. The pane lets the user
+// see which directory it was last in (so they can recognise it as a
+// benchmark / fixture leftover) and wipe its history in one shot.
+
+function openOrphanPane() {
+  const existing = state.panes.find((p) => p.kind === "orphan");
+  if (existing) return;
+  state.panes = [{
+    id: nextPaneId(),
+    kind: "orphan",
+    payload: null,        // [{name, total, hosts, last_seen_dir, ...}]
+    selected: new Set(),  // names checked for bulk delete
+    submitting: false,
+  }];
+  renderPanes();
+  loadOrphanPane(state.panes[0]);
+}
+
+async function loadOrphanPane(pane) {
+  try {
+    pane.payload = await fetchJSON("/api/orphans");
+    renderPanes();
+  } catch (err) {
+    console.error(err);
+    toast("Failed to load orphans");
+    closePane(pane.id);
+  }
+}
+
+function renderOrphanPaneBody(pane) {
+  const wrap = document.createElement("div");
+  wrap.className = "orphan-pane-content";
+  if (!pane.payload) {
+    wrap.innerHTML = `<div class="meta-line">loading…</div>`;
+    return wrap;
+  }
+  const rows = pane.payload;
+  if (rows.length === 0) {
+    wrap.innerHTML = `<div class="meta-line">No orphan skills. 🎉</div>`;
+    return wrap;
+  }
+
+  const allChecked = rows.length > 0 && rows.every((r) => pane.selected.has(r.name));
+  const someChecked = pane.selected.size > 0;
+  const intro = document.createElement("div");
+  intro.className = "meta-line";
+  intro.innerHTML =
+    `<strong>${rows.length} orphan skill${rows.length === 1 ? "" : "s"}</strong> — ` +
+    `verdicts exist in <code>store.db</code> but no <code>SKILL.md</code> ` +
+    `is on disk. Usually benchmark / fixture leftovers; safe to clean up.`;
+  wrap.appendChild(intro);
+
+  // Toolbar: select-all + delete-selected
+  const toolbar = document.createElement("div");
+  toolbar.className = "actions orphan-toolbar";
+  toolbar.innerHTML = `
+    <label class="orphan-select-all">
+      <input type="checkbox" data-act="toggle-all" ${allChecked ? "checked" : ""}>
+      <span>Select all</span>
+    </label>
+    <button class="action danger" data-act="delete-selected"
+            ${someChecked && !pane.submitting ? "" : "disabled"}>
+      ${pane.submitting
+        ? "Deleting…"
+        : `Delete selected (${pane.selected.size})`}
+    </button>
+  `;
+  wrap.appendChild(toolbar);
+
+  // Rows
+  const list = document.createElement("ul");
+  list.className = "orphan-list";
+  for (const row of rows) {
+    const li = document.createElement("li");
+    li.className = "orphan-row";
+    const checked = pane.selected.has(row.name);
+    const lastDir = row.last_seen_dir
+      ? `<div class="orphan-meta" title="${escapeAttr(row.last_seen_dir)}">📁 ${escapeHtml(row.last_seen_dir)}</div>`
+      : `<div class="orphan-meta orphan-meta-empty">📁 <em>no directory recorded</em> (migration-era row)</div>`;
+    const hostsStr = row.hosts.length ? row.hosts.join(", ") : "—";
+    const countsStr =
+      `${row.helpful}H · ${row.harmful}X · ${row.neutral}N`;
+    li.innerHTML = `
+      <label class="orphan-check">
+        <input type="checkbox" data-name="${escapeAttr(row.name)}" ${checked ? "checked" : ""}>
+      </label>
+      <div class="orphan-body">
+        <div class="orphan-name"><code>${escapeHtml(row.name)}</code></div>
+        ${lastDir}
+        <div class="orphan-meta orphan-meta-stats">
+          <span title="HELPFUL / HARMFUL / NEUTRAL">${countsStr}</span>
+          <span>·</span>
+          <span title="hosts that recorded a verdict">hosts: ${escapeHtml(hostsStr)}</span>
+          ${row.last_updated
+            ? `<span>·</span><span title="most recent verdict">last: ${escapeHtml(String(row.last_updated).slice(0, 10))}</span>`
+            : ""}
+        </div>
+      </div>
+    `;
+    list.appendChild(li);
+  }
+  wrap.appendChild(list);
+
+  // Wire toolbar
+  toolbar.querySelector('[data-act="toggle-all"]').addEventListener("change", (ev) => {
+    if (ev.target.checked) {
+      for (const r of rows) pane.selected.add(r.name);
+    } else {
+      pane.selected.clear();
+    }
+    renderPanes();
+  });
+  toolbar.querySelector('[data-act="delete-selected"]').addEventListener("click", () => {
+    deleteSelectedOrphans(pane);
+  });
+
+  // Wire row checkboxes
+  list.querySelectorAll('input[type="checkbox"][data-name]').forEach((cb) => {
+    cb.addEventListener("change", () => {
+      const name = cb.dataset.name;
+      if (cb.checked) pane.selected.add(name);
+      else pane.selected.delete(name);
+      // Re-render so the toolbar button label/disabled state updates.
+      renderPanes();
+    });
+  });
+
+  return wrap;
+}
+
+async function deleteSelectedOrphans(pane) {
+  const names = Array.from(pane.selected);
+  if (names.length === 0) return;
+  if (!confirm(
+    `Delete all verdict history for ${names.length} orphan skill` +
+    `${names.length === 1 ? "" : "s"}? This cannot be undone.`,
+  )) {
+    return;
+  }
+  pane.submitting = true;
+  renderPanes();
+  try {
+    const resp = await fetch("/api/orphans/delete-bulk", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ names }),
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err.error || `HTTP ${resp.status}`);
+    }
+    const result = await resp.json();
+    const deletedCount = result.deleted.length;
+    const skippedCount = result.skipped.length;
+    let msg = `Removed ${deletedCount} orphan${deletedCount === 1 ? "" : "s"}`;
+    if (skippedCount > 0) {
+      msg += ` (${skippedCount} skipped — see console)`;
+      console.warn("Skipped orphans:", result.skipped);
+    }
+    toast(msg);
+    pane.selected.clear();
+    // Refresh both the orphan list and the overview health row.
+    await loadOrphanPane(pane);
+    loadAll();
+  } catch (err) {
+    console.error(err);
+    toast(`Delete failed: ${err.message || err}`);
+  } finally {
+    pane.submitting = false;
+    renderPanes();
+  }
+}
+
 function renderPanes() {
   const rail = document.getElementById("pane-rail");
 
@@ -586,7 +758,11 @@ function renderOnePane(pane) {
   const body = document.createElement("div");
   body.className = "pane-body";
   aside.appendChild(body);
-  body.appendChild(renderSkillPaneBody(pane));
+  if (pane.kind === "orphan") {
+    body.appendChild(renderOrphanPaneBody(pane));
+  } else {
+    body.appendChild(renderSkillPaneBody(pane));
+  }
   return aside;
 }
 

@@ -1642,3 +1642,71 @@ button.history-row-head:focus-visible {
 }
 .composer-footer { margin-top: 4px; }
 .composer-footer .action { width: 100%; }
+
+/* ---------- Orphan pane ---------- */
+
+.orphan-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--hairline);
+  margin-bottom: 8px;
+}
+
+.orphan-select-all {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--fg-muted);
+  cursor: pointer;
+}
+
+.orphan-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.orphan-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 8px 10px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+}
+
+.orphan-check {
+  padding-top: 2px;
+  cursor: pointer;
+}
+
+.orphan-body { flex: 1; min-width: 0; }
+
+.orphan-name {
+  font-size: 12px;
+  margin-bottom: 4px;
+  word-break: break-all;
+}
+.orphan-name code {
+  background: var(--bg-elev-2);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+}
+
+.orphan-meta {
+  font-size: 10.5px;
+  color: var(--fg-muted);
+  word-break: break-all;
+  margin-top: 2px;
+}
+.orphan-meta-empty { font-style: italic; }
+.orphan-meta-stats { display: flex; gap: 6px; flex-wrap: wrap; }

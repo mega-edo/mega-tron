@@ -851,3 +851,155 @@ def test_skills_by_name_sorts_used_first_then_net(env):
     names = [r["name"] for r in api.skills_by_name()]
     # winner (used, +1) before loser (used, -1) before idle (unused)
     assert names.index("winner") < names.index("loser") < names.index("idle")
+
+
+# --------------------------------------------------------------------------- #
+# GET /api/orphans + POST /api/orphans/delete-bulk
+#
+# An orphan is a skill_name that has verdict history in store.db but
+# no SKILL.md on disk under any registered root. The dashboard surfaces
+# them as a clean-up worklist; these tests pin the contract the UI
+# depends on.
+# --------------------------------------------------------------------------- #
+
+
+def test_orphans_lists_only_skills_missing_from_disk(env):
+    home, store = env
+    # On-disk skill — must NOT appear in orphan list.
+    _write_skill(home / ".codex" / "skills" / "alive" / "SKILL.md", name="alive")
+    _seed_verdict(store, skill="alive", verdict="HELPFUL", session_id="a1")
+    # SQLite-only skill — IS an orphan.
+    _seed_verdict(store, skill="ghost-1", verdict="HARMFUL", session_id="g1")
+
+    rows = api.orphans()
+    names = [r["name"] for r in rows]
+    assert "ghost-1" in names
+    assert "alive" not in names
+
+
+def test_orphans_carries_verdict_counts_and_hosts(env):
+    _home, store = env
+    # Two verdicts, different verdict labels, two raw host strings.
+    # Reasons must clear the quality gate in record_verdict
+    # (>= ~8 chars + non-placeholder); short tokens like "r1" are
+    # silently dropped.
+    store.record_verdict(
+        skill_name="ghost", verdict="HELPFUL",
+        reason="confirmed signature verification worked",
+        host="codex", session_id="g1",
+    )
+    store.record_verdict(
+        skill_name="ghost", verdict="HARMFUL",
+        reason="picked the wrong skill, no help",
+        host="claude_code", session_id="g2",
+    )
+
+    rows = api.orphans()
+    ghost = next(r for r in rows if r["name"] == "ghost")
+    assert ghost["helpful"] == 1
+    assert ghost["harmful"] == 1
+    assert ghost["total"] == 2
+    # Hosts are normalised — "claude_code" → "claude".
+    assert set(ghost["hosts"]) == {"codex", "claude"}
+
+
+def test_orphans_sorted_by_total_desc_then_name(env):
+    _home, store = env
+    # 1 verdict — should land below the 3-verdict orphan.
+    _seed_verdict(store, skill="small-orphan", verdict="HELPFUL", session_id="s1")
+    # 3 verdicts — should be first.
+    for sid in ("b1", "b2", "b3"):
+        _seed_verdict(store, skill="big-orphan", verdict="HELPFUL", session_id=sid)
+    # Same count as small-orphan — tiebreak by name.
+    _seed_verdict(store, skill="another-orphan", verdict="HELPFUL", session_id="a1")
+
+    rows = api.orphans()
+    names = [r["name"] for r in rows]
+    assert names == ["big-orphan", "another-orphan", "small-orphan"]
+
+
+def test_orphans_surfaces_last_seen_dir_when_skills_row_present(env):
+    """When a verdict is recorded with ``skill_dir`` set,
+    Store.record_verdict's transactional upsert_skill stamps that
+    path into the skills table. The orphan endpoint surfaces it so
+    the user can recognise which directory was removed."""
+    _home, store = env
+    store.record_verdict(
+        skill_name="ex-skill", verdict="HELPFUL",
+        reason="recorded with a real directory snapshot",
+        host="codex", session_id="x1",
+        skill_dir="/tmp/old/skills/ex-skill",
+    )
+
+    rows = api.orphans()
+    ex = next(r for r in rows if r["name"] == "ex-skill")
+    assert ex["last_seen_dir"] == "/tmp/old/skills/ex-skill"
+    assert ex["last_seen_host"] == "codex"
+
+
+def test_orphans_last_seen_dir_blank_when_verdict_lacks_skill_dir(env):
+    """``record_verdict`` without an explicit ``skill_dir`` writes an
+    empty path into the skills table (the codepath migration replays
+    + Stop-hook NEUTRAL emits hit). The orphan endpoint must still
+    list the skill, but with ``last_seen_dir == ""`` so the UI can
+    show a "no directory recorded" hint."""
+    _home, store = env
+    _seed_verdict(store, skill="migration-row", verdict="HELPFUL", session_id="m1")
+
+    rows = api.orphans()
+    mig = next(r for r in rows if r["name"] == "migration-row")
+    assert mig["last_seen_dir"] == ""
+    # _seed_verdict uses host="codex", so the skills-row's
+    # last_seen_host will reflect that — orphan rendering of "no
+    # directory" is only based on the empty skill_dir, not host.
+    assert mig["last_seen_host"] == "codex"
+
+
+def test_bulk_delete_orphans_removes_verdicts_and_skills_row(env):
+    _home, store = env
+    _seed_verdict(store, skill="dead", verdict="HELPFUL", session_id="d1")
+    _seed_verdict(store, skill="dead", verdict="HARMFUL", session_id="d2")
+    # Confirm pre-state: orphan present, skills row exists (record_verdict
+    # auto-upserts the skills row via Store.upsert_skill).
+    assert store.skill_last_seen("dead") is not None
+
+    out = api.bulk_delete_orphans({"names": ["dead"]})
+    assert out["deleted"] == [{"name": "dead", "verdicts_removed": 2}]
+    assert out["skipped"] == []
+
+    # Verdicts gone.
+    assert store.verdict_counts_by_skill().get("dead") is None
+    # skills row gone (so orphan list no longer flags it).
+    assert store.skill_last_seen("dead") is None
+
+
+def test_bulk_delete_orphans_refuses_skills_still_on_disk(env):
+    """Safety guard: if the user crafts a request with a name that
+    still has SKILL.md on disk, the API must refuse — bulk delete is
+    only for genuine orphans."""
+    home, store = env
+    _write_skill(home / ".codex" / "skills" / "live" / "SKILL.md", name="live")
+    _seed_verdict(store, skill="live", verdict="HELPFUL", session_id="l1")
+
+    out = api.bulk_delete_orphans({"names": ["live"]})
+    assert out["deleted"] == []
+    assert len(out["skipped"]) == 1
+    assert out["skipped"][0]["name"] == "live"
+    assert "on disk" in out["skipped"][0]["reason"].lower()
+    # Verdict still intact.
+    counts = store.verdict_counts_by_skill()
+    assert counts["live"]["helpful"] == 1
+
+
+def test_bulk_delete_orphans_rejects_non_list_body(env):
+    _home, _store = env
+    with pytest.raises(ValueError):
+        api.bulk_delete_orphans({"names": "not-a-list"})
+    with pytest.raises(ValueError):
+        api.bulk_delete_orphans({"names": [1, 2]})
+
+
+def test_bulk_delete_orphans_empty_list_is_noop(env):
+    _home, _store = env
+    out = api.bulk_delete_orphans({"names": []})
+    assert out == {"deleted": [], "skipped": []}

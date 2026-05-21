@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import threading
 import time
+import urllib.error
 import urllib.request
 from contextlib import contextmanager
 from pathlib import Path
@@ -169,3 +170,67 @@ def test_api_skill_unknown_returns_404(server_env):
     with _serving() as url:
         status, _body = _get_404_tolerant(url + "/api/skill/does-not-exist")
         assert status == 404
+
+
+# --------------------------------------------------------------------------- #
+# Orphans (GET list + POST bulk delete)
+# --------------------------------------------------------------------------- #
+
+
+def test_api_orphans_returns_list(server_env):
+    _home, store = server_env
+    store.record_verdict(
+        skill_name="ghost", verdict="HELPFUL",
+        reason="synthetic verdict for unit test",
+        host="codex", session_id="g1",
+    )
+    with _serving() as url:
+        status, body = _get(url + "/api/orphans")
+        assert status == 200
+        rows = json.loads(body)
+        assert isinstance(rows, list)
+        assert any(r["name"] == "ghost" for r in rows)
+
+
+def test_api_orphans_bulk_delete_round_trip(server_env):
+    _home, store = server_env
+    store.record_verdict(
+        skill_name="dead", verdict="HARMFUL",
+        reason="synthetic verdict for unit test",
+        host="codex", session_id="d1",
+    )
+    with _serving() as url:
+        # Confirm visible first
+        _status, body = _get(url + "/api/orphans")
+        assert any(r["name"] == "dead" for r in json.loads(body))
+
+        # POST the bulk delete
+        req = urllib.request.Request(
+            url + "/api/orphans/delete-bulk",
+            data=json.dumps({"names": ["dead"]}).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            assert resp.status == 200
+            result = json.loads(resp.read())
+        assert result["deleted"] == [{"name": "dead", "verdicts_removed": 1}]
+
+        # Now invisible
+        _status, body = _get(url + "/api/orphans")
+        assert all(r["name"] != "dead" for r in json.loads(body))
+
+
+def test_api_orphans_bulk_delete_rejects_malformed_body(server_env):
+    with _serving() as url:
+        req = urllib.request.Request(
+            url + "/api/orphans/delete-bulk",
+            data=json.dumps({"names": "not-a-list"}).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        try:
+            urllib.request.urlopen(req, timeout=5)
+            assert False, "expected HTTPError"
+        except urllib.error.HTTPError as exc:
+            assert exc.code == 400

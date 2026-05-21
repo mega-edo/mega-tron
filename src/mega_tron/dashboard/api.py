@@ -308,6 +308,108 @@ def overview(*, days: int = 30) -> dict[str, Any]:
     }
 
 
+def orphans() -> list[dict[str, Any]]:
+    """List every orphan skill (SQLite history exists, no SKILL.md on
+    disk under any registered skills root). Returned rows carry
+    enough metadata for the user to recognise which skill it was and
+    decide whether to wipe its verdict history:
+
+      - ``name``              — the skill_name as stored in verdicts
+      - ``helpful``/``harmful``/``neutral``/``total`` — verdict counts
+      - ``hosts``             — short host names that recorded verdicts
+                                (normalised via :func:`normalize_host`)
+      - ``last_updated``      — most recent verdict timestamp
+      - ``last_seen_dir``     — skills-table snapshot of the last
+                                directory the skill lived in
+                                (empty string if no row, e.g. migration
+                                rows that never went through the
+                                ``skills`` upsert)
+      - ``last_seen_host``    — host that last touched the skill
+      - ``first_seen_at``     — when the skill first appeared
+
+    Ordered by ``total`` desc then ``name`` so the highest-history
+    orphans (most worth cleaning up) float to the top.
+    """
+    roots = discover_skill_dirs()
+    on_disk: set[str] = {
+        name for name, _dir, _md, _meta, _host in _iter_skills(roots)
+    }
+    store = _open_store()
+    try:
+        counts = store.verdict_counts_by_skill()
+    except Exception as exc:  # noqa: BLE001
+        _LOG.warning("verdict_counts_by_skill failed: %s", exc)
+        counts = {}
+
+    rows: list[dict[str, Any]] = []
+    for name, c in counts.items():
+        if name in on_disk:
+            continue
+        try:
+            last_seen = store.skill_last_seen(name) or {}
+        except Exception as exc:  # noqa: BLE001
+            _LOG.warning("skill_last_seen(%s) failed: %s", name, exc)
+            last_seen = {}
+        rows.append({
+            "name": name,
+            "helpful": c.get("helpful", 0),
+            "harmful": c.get("harmful", 0),
+            "neutral": c.get("neutral", 0),
+            "total": c.get("total", 0),
+            "hosts": sorted({
+                normalize_host(h) for h in (c.get("hosts") or [])
+            }),
+            "last_updated": c.get("last_updated"),
+            "last_seen_dir": last_seen.get("skill_dir", ""),
+            "last_seen_host": normalize_host(
+                last_seen.get("last_seen_host", "")
+            ) if last_seen.get("last_seen_host") else "",
+            "first_seen_at": last_seen.get("first_seen_at", ""),
+        })
+    rows.sort(key=lambda r: (-r["total"], r["name"]))
+    return rows
+
+
+def bulk_delete_orphans(body: dict[str, Any]) -> dict[str, Any]:
+    """Delete every verdict + skills-table row for each name in
+    ``body["names"]``. Names that aren't actually orphan (i.e. a
+    SKILL.md still exists on disk) are refused so the dashboard
+    can't accidentally wipe live history.
+
+    Returns ``{"deleted": [{name, verdicts_removed}], "skipped":
+    [{name, reason}]}`` so the UI can show per-row outcomes.
+    """
+    names = body.get("names")
+    if not isinstance(names, list) or not all(isinstance(n, str) for n in names):
+        raise ValueError("body.names must be a list of strings")
+    if not names:
+        return {"deleted": [], "skipped": []}
+
+    roots = discover_skill_dirs()
+    on_disk: set[str] = {
+        name for name, _dir, _md, _meta, _host in _iter_skills(roots)
+    }
+    store = _open_store()
+
+    deleted: list[dict[str, Any]] = []
+    skipped: list[dict[str, Any]] = []
+    for name in names:
+        if name in on_disk:
+            skipped.append({
+                "name": name,
+                "reason": "SKILL.md still on disk — not an orphan",
+            })
+            continue
+        try:
+            removed = store.delete_all_verdicts_for_skill(name)
+        except Exception as exc:  # noqa: BLE001
+            _LOG.exception("delete_all_verdicts_for_skill(%s) failed", name)
+            skipped.append({"name": name, "reason": str(exc)})
+            continue
+        deleted.append({"name": name, "verdicts_removed": removed})
+    return {"deleted": deleted, "skipped": skipped}
+
+
 def skills(*, host: str | None = None, days: int = 30) -> list[dict[str, Any]]:
     """Per-skill rows for the treemap. ``host`` filters by short name
     (``"codex"`` / ``"claude"`` / ``"gemini"`` / ``"hermes"`` / ``"other"``).

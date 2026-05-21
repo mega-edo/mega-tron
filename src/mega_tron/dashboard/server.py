@@ -96,6 +96,10 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 )
                 self._send_json(payload)
                 return
+            if path == "/api/orphans":
+                payload = api.orphans()
+                self._send_json(payload)
+                return
             if path.startswith("/api/skill/"):
                 name = path[len("/api/skill/"):]
                 if not name:
@@ -165,6 +169,30 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 return
             except Exception as exc:  # noqa: BLE001
                 _LOG.exception("POST /api/verdicts/bulk-delete failed")
+                self._send_status(
+                    HTTPStatus.INTERNAL_SERVER_ERROR,
+                    body=json.dumps({"error": str(exc)}).encode("utf-8"),
+                    content_type="application/json",
+                )
+                return
+            self._send_json(payload)
+            return
+
+        if path == "/api/orphans/delete-bulk":
+            body = self._read_json_body()
+            if body is None:
+                return
+            try:
+                payload = api.bulk_delete_orphans(body)
+            except ValueError as exc:
+                self._send_status(
+                    HTTPStatus.BAD_REQUEST,
+                    body=json.dumps({"error": str(exc)}).encode("utf-8"),
+                    content_type="application/json",
+                )
+                return
+            except Exception as exc:  # noqa: BLE001
+                _LOG.exception("POST /api/orphans/delete-bulk failed")
                 self._send_status(
                     HTTPStatus.INTERNAL_SERVER_ERROR,
                     body=json.dumps({"error": str(exc)}).encode("utf-8"),

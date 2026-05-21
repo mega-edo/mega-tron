@@ -742,6 +742,57 @@ class Store:
                 }
         return out
 
+    def skill_last_seen(self, skill_name: str) -> dict[str, Any] | None:
+        """Return the most recent ``skills`` row for ``skill_name`` or
+        ``None``. Used by the dashboard orphan pane to surface the
+        directory the skill last lived in before its SKILL.md was
+        deleted — without this the user has no way to recall which
+        path they removed.
+        """
+        self.initialize()
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT skill_dir, last_seen_host, last_seen_at, "
+                "first_seen_at FROM skills WHERE skill_name = ?",
+                (skill_name,),
+            ).fetchone()
+        if row is None:
+            return None
+        return {
+            "skill_dir": row[0] or "",
+            "last_seen_host": row[1] or "",
+            "last_seen_at": row[2] or "",
+            "first_seen_at": row[3] or "",
+        }
+
+    def delete_all_verdicts_for_skill(self, skill_name: str) -> int:
+        """Delete every verdict row for ``skill_name``. Returns the
+        number of rows removed. Used by the dashboard's orphan-pane
+        "delete selected" action to clean up history for skills whose
+        SKILL.md is no longer on disk. Different from
+        :meth:`delete_verdicts_matching` because it does not require
+        a host / reason filter — for an orphan the whole history is
+        what the user wants gone.
+        """
+        self.initialize()
+
+        def _txn(conn: sqlite3.Connection) -> int:
+            cur = conn.execute(
+                "DELETE FROM verdicts WHERE skill_name = ?",
+                (skill_name,),
+            )
+            removed = cur.rowcount or 0
+            # Also drop the skills-table row so a future re-install
+            # of the same skill starts fresh, and the orphan list
+            # doesn't keep showing a name with 0 verdicts.
+            conn.execute(
+                "DELETE FROM skills WHERE skill_name = ?",
+                (skill_name,),
+            )
+            return removed
+
+        return self._run_with_retry(_txn)
+
     def delete_verdicts_matching(
         self, *, skill_name: str, host: str, reason: str | None
     ) -> int:
