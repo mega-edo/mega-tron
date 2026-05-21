@@ -241,11 +241,12 @@ supply this. Example (mega-tron):
 - **`BeforeAgent`** hook embeds the prompt, ranks all skills by
   cosine similarity against pre-cached embeddings, and writes the
   top-K full descriptions into the turn's `additionalContext`.
-- **`AfterAgent`** hook runs a two-phase grading loop: Phase 1 emits
-  `{"decision":"deny","reason":<eval prompt>}` to force the model
-  into one extra turn; Phase 2 reads `prompt_response`, parses a
-  sentinel-fenced verdict JSON, and writes the result into each used
-  skill's `mega_meta:` frontmatter block. Subsequent ranking rounds
+- **`AfterAgent`** hook captures the model's inline
+  `<skill-used name="…" verdict="…" reason="…"/>` tags from the same
+  final reply (the verdict contract is prepended via
+  `build_gemini_hook_context`), persists them via
+  `verdicts.writer.persist_verdicts`, and emits empty stdout — no
+  retry turn, identical to Codex/Claude. Subsequent ranking rounds
   factor that ROI into the rank.
 
 The CLI doesn't know any of this happened. It re-reads frontmatter

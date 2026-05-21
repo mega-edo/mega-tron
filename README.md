@@ -352,7 +352,7 @@ verdict ──┬─► SQLite        (verdicts table, FTS5, time-series spine)
 
 Each store is independently restorable from the others (`resync_from_store`, SHA-keyed cache invalidation, schema-mismatch silent rebuild). A stale install, a fresh laptop, a missing embedding store — system degrades gracefully.
 
-Anti-noise guards: `INCONCLUSIVE` writes nothing; reasons like `"ok"`, `"test"`, `"r1"` are blocked from the embedding corpus; `UNIQUE(session_id, skill_name, host)` dedups retries.
+Anti-noise guards: omitted tags carry no signal (silence is the "no evidence" escape hatch); reasons like `"ok"`, `"test"`, `"r1"` are blocked from the embedding corpus; `UNIQUE(session_id, skill_name, host)` dedups retries.
 
 </details>
 

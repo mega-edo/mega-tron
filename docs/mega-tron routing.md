@@ -548,13 +548,13 @@ seam each host exposes).
   `~/.gemini/GEMINI.md` tells the model to prefer `activate_skill` on
   the surfaced names and to emit a `<skill-used …/>` tag per skill
   used.
-- **Self-evaluation loop.** Gemini has no native verdict surface, so
-  mega-tron reuses the Codex-style two-phase trick on `AfterAgent`:
-  Phase 1 emits `{"decision":"deny","reason":<eval prompt>}` to force
-  the model into one extra turn → Phase 2 sees `stop_hook_active=true`,
-  parses the model's verdict from `prompt_response`, writes
-  `mega_meta:` updates. A `eval-gemini-<session_id>` loop-guard
-  marker prevents infinite eval-of-eval retries.
+- **Self-evaluation loop.** Single-phase silent capture, identical to
+  Codex/Claude. The model emits `<skill-used name="..." verdict="..."
+  reason="..."/>` inline in its final reply (the contract is
+  prepended via `build_gemini_hook_context`). On `AfterAgent` the
+  hook scans `transcript_path`, pulls those tags, persists verdicts
+  via `verdicts.writer.persist_verdicts`, and emits empty stdout —
+  no `decision:"deny"`, no retry turn, no loop-guard markers.
 
 ### End-to-end flow
 
@@ -650,7 +650,9 @@ seam each host exposes).
 │                                                                      │
 │   Model writes the answer.                                           │
 │   Per GEMINI.md contract, appends to the final response:             │
-│      <skill-used name="webhook-signer" reason="HMAC validation"/>    │
+│      <skill-used name="webhook-signer" verdict="HELPFUL"             │
+│       reason="used hmac.compare_digest as the skill described;       │
+│               tests/webhooks.py passes"/>                            │
 └─────────────────────────────┬────────────────────────────────────────┘
                               │
                               ▼
@@ -659,47 +661,32 @@ seam each host exposes).
 │  Gemini executes:                                                    │
 │      mega-tron gemini-stop-hook                                      │
 │  Hook receives on stdin:                                             │
-│      {"session_id":"…", "prompt_response":"<model answer>",          │
-│       "stop_hook_active": false}                                     │
+│      {"session_id":"…", "transcript_path":"…",                       │
+│       "hook_event_name":"AfterAgent", "stop_hook_active": false}     │
 └─────────────────────────────┬────────────────────────────────────────┘
                               │
                               ▼
 ┌──────────────────────────────────────────────────────────────────────┐
-│  Phase 1 (stop_hook_active=false)                                    │
+│  Inline verdict capture (single-phase, silent)                       │
 │                                                                      │
-│   • Scan transcript for `<skill-used name="…"/>` tags                │
-│   • If none → emit `{}` (clean exit)                                 │
-│   • If any → emit                                                    │
-│       {"decision": "deny",                                           │
-│        "reason": "For each skill listed below, answer in             │
-│                  sentinel-fenced JSON whether it was HELPFUL,        │
-│                  HARMFUL, NEUTRAL, or INCONCLUSIVE: …"}              │
-│   • Gemini interprets `decision: "deny"` → forces ONE retry turn     │
-└─────────────────────────────┬────────────────────────────────────────┘
-                              │
-                              ▼
-┌──────────────────────────────────────────────────────────────────────┐
-│  Model executes the eval prompt → returns sentinel-fenced JSON       │
-│      <<<MEGA-TRON-VERDICTS>>>                                        │
-│      [{"name":"webhook-signer","verdict":"HELPFUL",                  │
-│        "evidence":"used the HMAC compare helper"}]                   │
-│      <<<END-MEGA-TRON-VERDICTS>>>                                    │
-└─────────────────────────────┬────────────────────────────────────────┘
-                              │
-                              ▼
-┌──────────────────────────────────────────────────────────────────────┐
-│  AfterAgent hook fires AGAIN (stop_hook_active=true this time)       │
-│                                                                      │
-│  Phase 2                                                             │
-│   • Loop-guard: drop                                                 │
-│       $XDG_RUNTIME_DIR/mega-tron/eval-gemini-<sid>                   │
-│     marker so any third AfterAgent on this session is a no-op        │
-│   • Parse sentinel block from data["prompt_response"]                │
-│   • For each verdict, update the skill's SKILL.md frontmatter:       │
+│   • tracker.scan_transcript() walks transcript_path.jsonl:           │
+│       - <skill-used name="…" verdict="…" reason="…"/> tags in        │
+│         the final assistant message                                  │
+│       - exec_command tool calls touching                             │
+│         <skills_root>/<name>/scripts/                                │
+│   • Tags without a `verdict=` attribute are skipped (no signal)      │
+│   • ``claimed_use`` invocations (tag without operational trace) are  │
+│     rejected to keep discussion-only mentions from inflating         │
+│     counters                                                         │
+│   • For each surviving verdict, verdicts.writer.persist_verdicts:    │
 │       mega_meta:                                                     │
-│         helpful_count: +1   (or harmful_count: +1, …)                │
-│         last_used_at: <iso>                                          │
-│   • Emit `{}` (Phase 2 NEVER returns decision:"deny" → no loop)      │
+│         helpful_count: +1   (or harmful_count: +1; NEUTRAL touches   │
+│                              last_used_at only)                      │
+│         helpful_contexts: append reason                              │
+│         status: active ↔ suspect ↔ archived per ratio + window       │
+│         last_session_id, last_updated                                │
+│   • Emit empty stdout — Gemini stops cleanly, no retry turn,         │
+│     nothing surfaces in the user's terminal                          │
 └─────────────────────────────┬────────────────────────────────────────┘
                               │
                               ▼
@@ -717,4 +704,4 @@ seam each host exposes).
 | `mega-tron: command not found` in Gemini logs             | `mega-tron` not on the system PATH (only in a project venv)            | `install` resolves the binary via `shutil.which` + interpreter-sibling fallback and stores the **absolute path** in `settings.json`. |
 | Mode-A's `skills.disabled` doesn't take effect within session | Gemini docs mark `skills.disabled` as **"Requires restart: Yes"** | Mode-P (`additionalContext` overlay) is the always-correct path; Mode-A is best-effort. Disable with `MEGA_GEMINI_MODE=passive`.    |
 | Hook never fires                                          | Workspace trust gate                                                   | Hooks are registered at **user scope** (`~/.gemini/settings.json`), not workspace scope, so they fire regardless of `--skip-trust`. |
-| Eval retry runs forever                                   | Phase 2 returning `decision:"deny"`                                    | Loop-guard marker `eval-gemini-<sid>`; Phase 2 is structurally forbidden from returning `deny`.                                       |
+| Stop hook surfaces an eval prompt in the user's terminal  | Stop handler emitting `{"decision":"deny","reason":...}`               | Structurally forbidden: the handler always writes empty stdout. Verdicts come from inline `<skill-used …/>` tags in the same final reply. |

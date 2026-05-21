@@ -168,7 +168,7 @@ mega_meta:
 ```
 
 The Stop-hook scans the transcript at session end and emits one
-verdict per skill: `HELPFUL` / `HARMFUL` / `NEUTRAL` / `INCONCLUSIVE`.
+verdict per skill: `HELPFUL` / `HARMFUL` / `NEUTRAL`.
 Each verdict mutates the block via `apply_verdict` and then
 `_refresh_status` re-classifies the skill.
 
@@ -179,11 +179,10 @@ Each verdict mutates the block via `apply_verdict` and then
 | `HELPFUL`     | +1 | — | **reset to 0** | helpful_contexts |
 | `HARMFUL`     | — | +1 | **+1** (accumulate) | harmful_contexts |
 | `NEUTRAL`     | — | — | unchanged (streak preserved, not extended) | — |
-| `INCONCLUSIVE`| — | — | — (full no-op, doesn't even bump `last_updated`) | — |
 
-`INCONCLUSIVE` is the cold-start escape hatch: when the evaluator
-can't ground a verdict in concrete evidence, it emits nothing rather
-than guess. Likewise `NEUTRAL` is "skill ran but didn't move the
+When the model has no evidence to ground a verdict, it omits the
+`<skill-used .../>` tag for that skill entirely — silence is the
+"no signal" escape hatch. `NEUTRAL` is "skill ran but didn't move the
 needle" — neither counter changes, but a HARMFUL streak in progress
 is not broken.
 
