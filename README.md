@@ -6,8 +6,7 @@
   <h1>MEGA Tron</h1>
 
   <p><strong>The skill OS for Codex, Claude Code, and Gemini CLI.</strong><br>
-  One pool, one router, one feedback loop — across all three hosts.<br>
-  Per-turn semantic top-K with dynamic context sizing, session-end self-evaluation, and evidence-blended re-ranking that gets better the more you use it.</p>
+  One pool, one router, one feedback loop — across all three hosts.<br></p>
 
   <p>
     <a href="./LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="License"></a>
@@ -29,32 +28,33 @@
 
 ---
 
-## ✨ The three problems
-
-> [!WARNING]
-> Open your host CLI right now and count what's loaded. Most users believe they have "maybe 20 skills." Once you count the host's bundles + everything you installed, it's typically **2–5× that**. All of it ships, regardless of relevance.
-
-> [!IMPORTANT]
-> Each host's skill catalog is a **one-shot system-prompt injection** decided *before* the host has seen your prompt. So even a one-word greeting drags the entire catalog along — and the host you used yesterday doesn't talk to the one you use today.
-
-The three pain points that compound the more you invest in skills:
-
+## ✨ Three problems that compound with more skills
 - **🧨 Token leak.** Type `hi` into Gemini CLI with 150 skills enabled and **~8,400 tokens** of skill metadata ship along with it. Codex and Claude cap their catalogs (8K chars / ~2K tokens), but they still inject the cap-full *every turn* (Codex) or *every session* (Claude), filled by alphabet or by past-usage frequency. **Never by what you actually typed.**
+
+> 💡 **The waste is structural.** The hosts have never seen your current prompt when they decide what to inject — so even a one-word greeting drags the entire catalog along.
+
+> **Quick check** — open your host CLI and count what's loaded. Most users believe they have "maybe 20 skills." Once you count the host's bundles + everything you installed, it's typically **2–5× that**. All of it ships, regardless of relevance.
+
 - **🏝 Host isolation.** You spent a week tuning `webhook-signer` in Codex. Tomorrow you open Claude Code on the same project — `webhook-signer` isn't there, or it's an older copy you forgot to update. **Editing a skill is a per-host chore**, and forgetting one host means that host quietly runs a stale version for weeks.
-- **🙈 Evidence blind.** Which 5 of your skills actually shifted an answer for the better last month? Which 3 are silently broken against a library update from last week? You don't know. **None of the three hosts records whether a skill *actually helped*** when it was loaded. Claude tracks invocation *frequency*, but frequency isn't quality — "least-invoked-first" eviction protects exactly the *harmful but frequent* skills you'd want to drop.
+
+> 💡 **The three CLIs are three islands — same skills in name, drifting in content.** Editing a skill is a per-host chore, and forgetting one host means that host quietly runs a stale version for weeks.
 
 > [!NOTE]
 > Gemini CLI is [merging into Antigravity CLI](https://developers.googleblog.com/an-important-update-transitioning-gemini-cli-to-antigravity-cli/) — same architecture, same island problem. The host count keeps going up, not down.
 
-### Same root cause behind all three
+- **🙈 Evidence blind.** Which 5 of your skills actually shifted an answer for the better last month? Which 3 are silently broken against a library update from last week? You don't know. **None of the three hosts records whether a skill *actually helped*** when it was loaded. Claude tracks invocation *frequency*, but frequency isn't quality — "least-invoked-first" eviction protects exactly the *harmful but frequent* skills you'd want to drop.
 
-Each host's skill catalog is a one-shot system-prompt injection that:
+> 💡 **The model picks a broken skill, the skill fails silently, next turn it tries the same broken skill again.** You see "the answer is weird" without knowing a stale skill is behind it.
+
+## Same root cause behind all three problems
+
+Each host's skill catalog is a **one-shot system-prompt injection** that:
 
 1. **Ignores your current prompt** when deciding what to ship → token leak
 2. **Lives inside one host** with no cross-host channel → island problem
 3. **Records nothing about outcomes** → evidence blind
 
-MEGA Tron rebuilds the catalog layer above each host so all three properties flip. The architecture maps one-for-one:
+mega-tron rebuilds the catalog layer above each host so all three properties flip. The architecture maps one-for-one:
 
 | Problem | Fix | Component |
 |---|---|---|
@@ -62,18 +62,20 @@ MEGA Tron rebuilds the catalog layer above each host so all three properties fli
 | Host isolation | **Unify** — one master pool, symlinks to every host, cross-host verdict economy | `pool.py` |
 | Evidence blind | **Evolve** — session-end self-evaluation, evidence-blended ranking, auto-retirement of broken skills | `verdicts/` |
 
+## Try it
+
+```bash
+uv tool install mega-tron && ~/.local/bin/mega-tron setup
+```
+Then open a new terminal. The next turn in any host ships with the right skills in context — and never with skills that have silently broken on you. (Why two commands? See [Install](#-install) below.)
+Two commands, three hosts. Token usage drops 18–30× on the very next turn without changing how you use any CLI. Full benchmark table and installation details below.
+
 ## 🎯 After MEGA Tron
 
 - **The right skills for *this* prompt**, ranked semantically against what you actually typed — not by alphabet, not by past usage frequency.
 - **~600 tokens per turn** for skill context, no matter how the pool grows. `hi` ships `hi`-sized context.
 - **One edit, three hosts.** Fix a bug in `webhook-signer` and Codex, Claude, and Gemini (and Antigravity, when it lands) all see it on the next turn.
 - **Skills that broke last week stop showing up this week** — MEGA Tron is the only layer that records *whether a skill actually helped*. Three consecutive failures auto-retires it; a `HELPFUL` in any host lifts the same skill's rank in every host on the next turn.
-
-```bash
-uv tool install mega-tron && ~/.local/bin/mega-tron setup
-```
-
-Then open a new terminal. The next turn in any host ships with the right skills in context — and never with skills that have silently broken on you. (Why two commands? See [Install](#-install) below.)
 
 ## 📊 Does it actually work? — measured
 
@@ -96,12 +98,12 @@ A 200-query benchmark on a pool of third-party skills sampled deterministically 
 | | vanilla Gemini | 0.750 | 29,295 | 186.6× |
 | | **MEGA Tron (`SKILLRET-Embedding-0.6B`)** | **0.892** | **157** | **1.0×** (baseline) |
 
-The last column reads as *"that row uses this many times more tokens than MEGA Tron"* — and MEGA Tron still scores higher on coverage at every row.
-
-> [!TIP]
-> You don't need 500 skills for this to matter. At **59 skills** — the size most users actually run — MEGA Tron already lifts coverage from 0.71–0.75 to **0.955** while using **~11× fewer tokens** than Codex and **~34× fewer** than Gemini.
+The last column reads as *"that row uses this many times more tokens than MEGA Tron,"* and mega-tron still scores higher on coverage at every row.
 
 As the pool grows, the gap widens on both axes: vanilla Codex's alphabetical char-budget drops 96% of its coverage by 500 skills (0.708 → 0.029), vanilla Gemini's catalog grows 8× in tokens, and MEGA Tron stays flat near 0.9 coverage at ~150 tokens.
+
+> [!TIP]
+> You don't need 500 skills for this to matter. At **59 skills**, the size most users actually run, MEGA Tron already lifts coverage from 0.71–0.75 to **0.955** while using **~11× fewer tokens** than Codex and **~34× fewer** than Gemini.
 
 **Cap ≠ fix.** When the host caps its catalog (Codex's `min(2% × ctx, 8,000 chars)` or Claude's `skillListingBudgetFraction`), the *content* of what survives is decided by alphabet or by invocation frequency — never by what you actually typed.
 
@@ -137,16 +139,10 @@ sh install.sh
 ### Then use any host normally
 
 ```bash
-codex
-```
-```bash
-codex exec "Implement HMAC-SHA256 webhook signature verification"
-```
-```bash
-claude
-```
-```bash
-gemini
+codex                                    # interactive REPL — routed via UserPromptSubmit hook
+codex exec "Implement HMAC-SHA256 webhook signature verification"   # one-shot — routed via shell wrapper
+claude                                   # same router, same skill pool
+gemini                                   # same router, same skill pool
 ```
 
 Both `codex` (interactive REPL) and `codex exec` (one-shot non-interactive) are routed — they take different paths (`UserPromptSubmit` hook for the REPL, shell `codex()` wrapper for `exec`) but reach the same top-K injection. Claude Code and Gemini CLI each use a single hook that covers both their interactive and non-interactive modes.
@@ -181,7 +177,7 @@ uv add 'mega-tron[openai]'
 
 ## 🔒 Routing runs on your machine
 
-MEGA Tron's routing runs **entirely on your machine**. No API keys to manage, no per-call cost, and the skill-ranking path never leaves the box.
+mega-tron's routing runs **entirely on your machine**. No API keys to manage, no per-call cost, and the skill-ranking path never leaves the box.
 
 - **🔐 Privacy.** Your prompts and skill bodies stay local during routing. The embedder runs on CPU/MPS/CUDA depending on what you have; the routing path never crosses the network.
 - **💸 Cost.** Zero marginal cost per turn. The only one-time expense is the embedder download (130 MB – 570 MB depending on the profile).
@@ -221,12 +217,13 @@ Three composable layers. Each works on its own; together they form a self-improv
 A skill is the same `SKILL.md` regardless of which CLI invokes it. MEGA Tron treats the three native locations as a single logical pool, with **one master copy** under `$XDG_DATA_HOME/mega-tron/pool/skills/` and symlinks fanning out to each host.
 
 ```bash
+# Promote a skill into the master pool — original location becomes a symlink
 mega-tron skills promote webhook-signer
-```
-```bash
+
+# Mirror the entire pool into the hosts you have installed
 mega-tron skills sync
-```
-```bash
+
+# Show every skill across every host with its canonical location
 mega-tron skills list
 ```
 
@@ -377,55 +374,27 @@ final = (semantic
 ## 🔧 CLI
 
 ```bash
-mega-tron search "validate webhook HMAC signature"
-```
-```bash
-mega-tron search "..." --output bodies
-```
-```bash
-mega-tron search "..." --mode agentic
-```
-```bash
-mega-tron why "validate HMAC webhook" webhook-signer
-```
+# Routing
+mega-tron search "validate webhook HMAC signature"            # top-K, one card per pick
+mega-tron search "..." --output bodies                        # full SKILL.md, what an agent reads
+mega-tron search "..." --mode agentic                         # add LLM re-rank
+mega-tron why "validate HMAC webhook" webhook-signer          # score decomposition
 
-Cross-host pool management:
+# Cross-host pool
+mega-tron skills list                                         # every skill, every host
+mega-tron skills promote <name>                               # move into master pool
+mega-tron skills mirror   <name> --host claude                # symlink into one host
+mega-tron skills sync                                         # mirror master pool into every detected host
 
-```bash
-mega-tron skills list
-```
-```bash
-mega-tron skills promote <name>
-```
-```bash
-mega-tron skills mirror <name> --host claude
-```
-```bash
-mega-tron skills sync
-```
+# Verdict analytics
+mega-tron stats --by-host                                     # helpful/harmful per (skill, host)
+mega-tron regressions                                         # broken / regressed in last 30 days
+mega-tron search-verdicts "rate limit"                        # FTS5 full-text over reasons
+mega-tron compact-embeddings                                  # cluster near-duplicate verdicts
 
-Verdict analytics:
-
-```bash
-mega-tron stats --by-host
-```
-```bash
-mega-tron regressions
-```
-```bash
-mega-tron search-verdicts "rate limit"
-```
-```bash
-mega-tron compact-embeddings
-```
-
-Config:
-
-```bash
-mega-tron dirs list
-```
-```bash
-mega-tron embedder set <huggingface-id>
+# Config
+mega-tron dirs list / add / remove
+mega-tron embedder show / set <huggingface-id>
 ```
 
 Full `--output` reference (`meta` / `names` / `bodies` / `table` / `stage`) and per-knob pipeline diagram in [`docs/mega-tron routing.md`](docs/mega-tron%20routing.md). `MEGA_SKILL_DIRS=path1:path2` works as an ephemeral override for CI.
@@ -434,15 +403,9 @@ Full `--output` reference (`meta` / `names` / `bodies` / `table` / `stage`) and 
 
 ```bash
 mega-tron daemon status
-```
-```bash
-mega-tron daemon serve
-```
-```bash
+mega-tron daemon serve          # foreground (debug)
 mega-tron daemon stop
-```
-```bash
-MEGA_DAEMON=0 codex
+MEGA_DAEMON=0 codex             # disable the daemon path
 ```
 
 `mega-trond` keeps Router + Embedder + Cache memory-resident on a per-UID AF_UNIX socket — interactive hook returns in **~50 ms** instead of ~2–3 s. The hook auto-spawns the daemon detached on its first miss. Idle timeout caps memory residency at 30 min of no requests.
@@ -456,21 +419,23 @@ MEGA_DAEMON=0 codex
 from pathlib import Path
 from mega_tron import MegaCore, Verdict
 
-core = MegaCore()
+core = MegaCore()                                          # auto-discovers skill dirs
 
 ranked = core.route(
     "Implement HMAC-SHA256 webhook signature verification",
     top_k=5,
 )
 
+# Record a verdict from any host
 core.record_verdict(Verdict(
     skill_name="webhook-signer",
     verdict="HELPFUL",
     host="gemini",
     reason="diff +12 -3 in src/auth/, test passed",
-    session_id="0193-abcd-ef01",
+    session_id="0193-...",
 ))
 
+# Analytics
 for r in core.regressions(window_days=30):
     print(r.skill_name, r.classification, r.detail)
 ```
@@ -483,7 +448,7 @@ for r in core.regressions(window_days=30):
 
 ```toml
 [embedder]
-model = "BAAI/bge-m3"
+model = "BAAI/bge-m3"             # default; SkillRet-Embedding-0.6B, Qwen3, etc. all work
 
 [skills]
 extra_dirs = [
@@ -516,46 +481,15 @@ Pipeline knobs have env-var defaults; CLI flags always win.
 API keys follow each provider's convention (litellm and codex read them directly):
 
 ```bash
-MEGA_BACKEND=codex MEGA_MODEL=gpt-5.4-mini mega-tron search "..." --mode agentic
+# Codex subscription — free for ChatGPT subscribers
+MEGA_BACKEND=codex   MEGA_MODEL=gpt-5.4-mini                    mega-tron search "..." --mode agentic
+
+# BYOK: OpenAI
+MEGA_BACKEND=litellm MEGA_MODEL=gpt-4o-mini    OPENAI_API_KEY=…  mega-tron search "..." --mode agentic
+
+# BYOK: Anthropic
+MEGA_BACKEND=litellm MEGA_MODEL=claude-haiku-4-5 ANTHROPIC_API_KEY=… mega-tron search "..." --mode agentic
 ```
-```bash
-MEGA_BACKEND=litellm MEGA_MODEL=gpt-4o-mini OPENAI_API_KEY=sk-... mega-tron search "..." --mode agentic
-```
-```bash
-MEGA_BACKEND=litellm MEGA_MODEL=claude-haiku-4-5 ANTHROPIC_API_KEY=sk-ant-... mega-tron search "..." --mode agentic
-```
-
-## 📦 What's in the box
-
-```
-mega-tron/
-├─ src/mega_tron/
-│  ├─ router.py            # top-K ranking facade
-│  ├─ dynamic_k.py         # K from score-distribution shape
-│  ├─ embedder.py          # asymmetric query / doc embedding
-│  ├─ pool.py              # cross-host master pool + symlink fan-out
-│  ├─ verdicts/            # SQLite + npz + frontmatter triple-store
-│  ├─ daemon.py            # warm-resident router socket
-│  ├─ stager.py            # per-host injection rendering
-│  ├─ hosts/               # Codex / Claude / Gemini adapters + hooks
-│  ├─ embedders/           # bge-m3, skillret, qwen3, voyage, openai backends
-│  ├─ llm_backends/        # codex / litellm wrappers for agentic mode
-│  └─ cli/                 # `mega-tron` entry point
-├─ benchmarks/routing/     # 200-query reproducible coverage benchmark
-├─ docs/                   # routing algorithm, per-host notes
-├─ tests/                  # hook trust, daemon concurrency, host adapters
-└─ install.sh              # uv + binary + `mega-tron setup` one-shot
-```
-
-`mega-tron search` is **read-only** — it ranks and prints without touching your host config. `mega-tron setup` writes hook entries and PATH blocks (sentinel-bracketed, fully reversible with `--uninstall`). The session-end `Stop` hooks only *read* the transcript; they never edit skill files (frontmatter writes happen in the central verdict store, not in the source-of-truth SKILL.md).
-
-## 📚 Documentation
-
-- [`docs/mega-tron routing.md`](docs/mega-tron%20routing.md) — per-knob pipeline diagram, `--output` reference
-- [`docs/routing-algorithm.md`](docs/routing-algorithm.md) — full ranking formula + weight tuning
-- [`docs/Skill Routing Codex.md`](docs/Skill%20Routing%20Codex.md) · [`Skill Routing Claude.md`](docs/Skill%20Routing%20Claude.md) · [`Skill Routing Gemini.md`](docs/Skill%20Routing%20Gemini.md) — per-host adapter specs (hook entry points, native-catalog handling, kill-switch matrix)
-- [`benchmarks/routing/results.md`](benchmarks/routing/results.md) — full 200-query benchmark report
-
 ## 🌐 Built by MEGA Code
 
 <div align="center">
@@ -566,31 +500,15 @@ mega-tron/
   </p>
 </div>
 
-## 🤝 Contributing
-
-Issues and PRs welcome at [github.com/mega-edo/mega-tron](https://github.com/mega-edo/mega-tron). Before submitting, please run the existing test suites:
-
-```bash
-uv run pytest tests/
-```
-```bash
-uv run python benchmarks/routing/run.py --pool 59
-```
-
-The benchmark is deterministic — same pool seed reproduces the published numbers cell-for-cell, so any routing-logic change is visible as a coverage / token-cost delta in `benchmarks/routing/results.md`.
-
-## 📄 License
-
-[Apache 2.0](./LICENSE) — see [LICENSE](LICENSE) and [NOTICE](NOTICE).
-
 ## 🙏 Acknowledgments
 
 Built on the shoulders of:
 
 - **[BGE-M3](https://github.com/FlagOpen/FlagEmbedding)** — default embedder. Chen, J. et al. (2024). *BGE M3-Embedding: Multi-Lingual, Multi-Functionality, Multi-Granularity Text Embeddings.* arXiv:[2402.03216](https://arxiv.org/abs/2402.03216).
 - **[SkillRet](https://huggingface.co/ThakiCloud/SKILLRET-Embedding-0.6B)** — alternate embedder, Qwen3-0.6B fine-tune purpose-built for skill retrieval (Apache-2.0). Cho, H., Kang, R., & Kim, Y. (2026). *SkillRet: A Large-Scale Benchmark for Skill Retrieval in LLM Agents.* arXiv:[2605.05726](https://arxiv.org/abs/2605.05726). Published NDCG@10 = 0.7803 on SkillRet test (vs BGE-large 0.5582, Qwen3-Embedding-8B 0.5998).
-- **[sentence-transformers](https://www.sbert.net/)** — the local-only encoding backbone every embedder option rides on.
-- **[LiteLLM](https://github.com/BerriAI/litellm)** — unified multi-vendor LLM interface for the optional agentic re-rank path.
-- **Codex / Claude Code / Gemini CLI host teams** — for the hook surfaces (`UserPromptSubmit`, `Stop`, `AfterAgent`) that make external skill routing possible without forking the hosts.
+
+## 📄 License
+
+[Apache 2.0](./LICENSE) — see [LICENSE](LICENSE) and [NOTICE](NOTICE).
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
