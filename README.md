@@ -108,7 +108,7 @@ The last column reads as *"that row uses this many times more tokens than MEGA T
 As the pool grows, the gap widens on both axes: vanilla Codex's alphabetical char-budget drops 96% of its coverage by 500 skills (0.708 → 0.029), vanilla Gemini's catalog grows 8× in tokens, and MEGA Tron stays flat near 0.9 coverage at ~150 tokens.
 
 > [!TIP]
-> You don't need 500 skills for this to matter. At **59 skills**, the size most users actually run, MEGA Tron already lifts coverage from 0.71–0.75 to **0.955** while using **~11× fewer tokens** than Codex and **~34× fewer** than Gemini.
+> You don't need 500 skills for this to matter. **59** is the smallest pool the benchmark uses — every "gold" skill the 200 prompts can ask for, with no padding ([details](benchmarks/routing/results.md#gold-skills--59-of-the-500)). Even at that floor, MEGA Tron already lifts coverage from 0.71–0.75 to **0.955** while shipping **~11× fewer tokens than Codex, ~19× than Claude, ~34× than Gemini**. The gap widens as the pool grows — at 500 skills the token savings climb to **8× / 22× / 187×** and Codex's coverage collapses to 0.029. More skills = bigger win.
 
 **Cap ≠ fix.** When the host caps its catalog (Codex's `min(2% × ctx, 8,000 chars)` or Claude's `skillListingBudgetFraction`), the *content* of what survives is decided by alphabet or by invocation frequency — never by what you actually typed.
 
@@ -119,6 +119,9 @@ The numbers above are MEGA Tron's *day-1* routing quality. The feedback loop mea
 ![feedback loop hit rate](benchmarks/feedback_loop/results/20260521T023532Z_bge-small/graphs/1_hit_rate.png)
 
 Solid lines = MEGA Tron. Dashed = semantic search only. Same router, same questions, same model — the only thing that changes is whether yesterday's outcomes inform today's ranking.
+
+> [!TIP]
+> **+20 percentage points in 6 rounds.** Pure semantic search plateaus at 50% because the booby-trapped twins beat the real skills on cosine alone — without an outcome signal there's no way to break the tie. Each verdict ages the bad twins out and pulls the real skills up; by round 6 hit rate is 70% and still climbing. **Your router doesn't just stay the same — it learns from how you actually work.**
 
 ## 🚀 Install
 
@@ -175,6 +178,16 @@ Both `codex` (interactive REPL) and `codex exec` (one-shot non-interactive) are 
 Target options: `mega-tron setup --target codex | claude | gemini | auto | all`. `--uninstall` reverses each cleanly — sentinel-bracketed install blocks, managed hook entries, the PATH block, and any `skillOverrides` we own are stripped; user-owned settings preserved.
 
 </details>
+
+### Updating
+
+```bash
+uv tool upgrade mega-tron     # PyPI install
+# or, from a git clone:
+git pull && uv tool install --force --reinstall --from . mega-tron
+```
+
+Both replace the underlying venv, so the warm router daemon dies with it — your next host session pays one cold embedder load (~5–30s) and respawns the daemon in the background. Re-run `mega-tron setup` only if you want to re-warm the cache upfront or refresh hook wiring after a major version.
 
 ### Optional dependencies
 
@@ -245,7 +258,12 @@ Two consequences:
 - **Edit once, applies everywhere.** Fix a bug in `webhook-signer` and Codex, Claude, and Gemini all see the fix on the next turn.
 - **Cross-host verdict economy.** Because MEGA Tron is the layer that *records* the verdicts in the first place (the hosts themselves don't), every `HELPFUL` / `HARMFUL` is tagged with its source host and pooled into a single store. A win in Claude Code lifts the same skill's rank when Codex hits a similar prompt next week.
 
-The router's discovery pass unions `~/.claude/skills`, `~/.codex/skills`, `~/.gemini/skills`, `~/.hermes/skills`, `~/.agents/skills` (host-neutral shared convention used by several agent tools), `$CODEX_HOME/skills`, the codex bundled `.system` cache, any `extra_dirs` from your config, and `MEGA_SKILL_DIRS=…` — deduped, first-dir-wins on name collision. The MEGA-Code wisdom-gateway directory (`~/.local/share/mega-code/skills`) is opt-in behind `MEGA_WITH_WISDOM=1`.
+The router's discovery pass unions `~/.claude/skills`, `~/.codex/skills`, `~/.gemini/skills`, `~/.hermes/skills`, `~/.agents/skills` (host-neutral shared convention used by several agent tools), `$CODEX_HOME/skills`, the codex bundled `.system` cache, any `extra_dirs` from your config, and `MEGA_SKILL_DIRS=…`. The MEGA-Code wisdom-gateway directory (`~/.local/share/mega-code/skills`) is opt-in behind `MEGA_WITH_WISDOM=1`.
+
+Two dedup passes, both using the same winner-priority rule (status `active` > `suspect` > `archived` → net verdict score `helpful − harmful` → SKILL.md mtime):
+
+- **Exact `name:` collisions** — runs every warmup. If `tdd` exists under `~/.claude/skills/` *and* `~/.codex/skills/`, the one with the better verdict history wins. The verdict-feedback loop's whole point is that this signal reflects real-world evidence; resolving collisions by discovery order alone would waste it.
+- **Semantic near-duplicates** — different filenames, same job (`tdd` / `tdd-guide` / `Test-Driven Development (TDD)` all sit in the catalog at once). Run on demand: `mega-tron compact-skills` clusters each skill's cached `name + description` embedding at cosine ≥ 0.95 and suppresses the losers. (Same vector the router already uses to rank against your prompt — so two SKILL.md files that route identically also dedup together.) Dry-run by default; `--apply` writes a sidecar next to the cache so suppression survives restarts, `--reset` lifts it.
 
 ### ② Optimize — per-turn context engineering
 
@@ -406,6 +424,8 @@ mega-tron stats --by-host                                     # helpful/harmful 
 mega-tron regressions                                         # broken / regressed in last 30 days
 mega-tron search-verdicts "rate limit"                        # FTS5 full-text over reasons
 mega-tron compact-embeddings                                  # cluster near-duplicate verdicts
+mega-tron compact-skills                                      # dry-run: cluster near-duplicate SKILL.md files
+mega-tron compact-skills --apply                              # persist suppressions; --reset to lift
 
 # Config
 mega-tron dirs list / add / remove

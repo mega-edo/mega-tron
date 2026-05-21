@@ -65,6 +65,7 @@ from mega_tron.cli.install import (
 )
 from mega_tron.cli.maintenance import (
     cmd_compact_embeddings,
+    cmd_compact_skills,
     cmd_export_frontmatter,
     cmd_migrate_to_sqlite,
 )
@@ -803,6 +804,54 @@ def main(argv: list[str] | None = None) -> int:
     )
     p_ce.add_argument("--json", action="store_true")
     p_ce.set_defaults(func=cmd_compact_embeddings)
+
+    # --- compact-skills -----------------------------------------------------
+    p_cs = sub.add_parser(
+        "compact-skills",
+        help=(
+            "Cluster SKILL.md embeddings and suppress near-duplicate "
+            "losers from the routing matrix. Winner per cluster is "
+            "picked by status > verdict score > mtime. Defaults to dry-run."
+        ),
+    )
+    p_cs.add_argument(
+        "--threshold",
+        type=float,
+        default=0.95,
+        help=(
+            "Cosine cutoff. Default 0.95 (true paraphrases). Lower = "
+            "more aggressive clustering."
+        ),
+    )
+    p_cs.add_argument(
+        "--apply",
+        action="store_true",
+        help=(
+            "Persist suppressions to disk. Without this flag, runs as "
+            "a dry-run preview — safer default because suppression "
+            "directly changes routing top-K."
+        ),
+    )
+    p_cs.add_argument(
+        "--reset",
+        action="store_true",
+        help=(
+            "Lift every previously-recorded suppression. The cache will "
+            "repopulate the cleared skills on next warmup. Ignores "
+            "--apply / --threshold."
+        ),
+    )
+    p_cs.add_argument(
+        "--skills-dir",
+        default=None,
+        help=(
+            "Comma-separated skill roots; overrides auto-discovery. "
+            "Use for CI / one-shot scripts."
+        ),
+    )
+    p_cs.add_argument("--json", action="store_true")
+    _add_cache_path(p_cs)
+    p_cs.set_defaults(func=cmd_compact_skills)
 
     # --- regressions ---------------------------------------------------------
     p_reg = sub.add_parser(

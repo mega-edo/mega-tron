@@ -17,7 +17,13 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from mega_tron.cache import Cache, CacheEntry, file_sha16, make_sync_row
+from mega_tron.cache import (
+    Cache,
+    CacheEntry,
+    file_sha16,
+    make_sync_row,
+    skill_priority_key,
+)
 from mega_tron.dynamic_k import DynamicKConfig, dynamic_k, profile_for
 from mega_tron.verdicts.mega_meta import MegaMeta
 from mega_tron.pre_flight import (
@@ -80,25 +86,39 @@ def load_skills(
 
     Accepts either a single Path or a list — multi-dir lets the router
     cover ``~/.claude/skills``, ``~/.codex/skills``, and any
-    user-registered roots in one warmup. When two SKILL.md files share
-    a ``name:`` field, the *first* directory in the list wins and the
-    later one is appended to ``invalid`` so the user can see the
-    collision.
+    user-registered roots in one warmup.
+
+    When two or more SKILL.md files share a ``name:`` field, winner
+    selection uses :func:`mega_tron.cache.skill_priority_key` — the same
+    key :meth:`Cache.compact_skills` uses for semantic-near-duplicate
+    clusters. Order: status (active > suspect > archived) → net verdict
+    score (helpful − harmful) → SKILL.md mtime. Losers are appended to
+    ``invalid`` with a one-line reason that names the winner so the user
+    can see why the collision was resolved that way.
 
     Args:
         skills_dir: directory (or list of directories) whose immediate
             children are skill folders, each containing a SKILL.md.
         invalid: optional list — appended with ValidationError for any
-            skill that fails pre-flight checks or that duplicates an
-            earlier skill's ``name:`` field (across all input dirs).
+            skill that fails pre-flight checks or that loses a name-
+            collision tiebreak against a same-named sibling.
     """
     if isinstance(skills_dir, (list, tuple)):
         dirs = list(skills_dir)
     else:
         dirs = [skills_dir]
 
-    out: list[Skill] = []
-    seen: dict[str, Path] = {}
+    # Two-pass: gather every valid candidate first, then resolve
+    # name-collisions by priority. One-pass first-dir-wins discarded the
+    # verdict signal — a 100-HELPFUL skill in ~/.codex/skills used to
+    # lose to a stale duplicate in ~/.claude/skills just because the
+    # claude dir was discovered first.
+    @dataclass
+    class _Candidate:
+        skill: Skill
+        skill_md: Path
+
+    by_name: dict[str, list[_Candidate]] = {}
     for root in dirs:
         if not root.exists():
             continue
@@ -113,36 +133,56 @@ def load_skills(
                 continue
             fm, _ = parse_frontmatter(skill_md)
             name = str(fm.get("name") or entry.name).strip()
-            if name in seen:
-                if invalid is not None:
-                    invalid.append(
-                        ValidationError(
-                            skill_md=skill_md,
-                            reason=(
-                                f"duplicate skill name {name!r} "
-                                f"(previous: {seen[name]})"
-                            ),
-                        )
-                    )
-                continue
-            seen[name] = entry
             desc = normalize_desc(fm.get("description"))
             meta = MegaMeta.from_dict(fm.get("mega_meta") or {})
-            out.append(
-                Skill(
-                    name=name,
-                    skill_dir=entry.resolve(),
-                    description=desc,
-                    desc_tok=count_skill_tokens(name, desc),
-                    sha=file_sha16(skill_md),
-                    helpful_contexts=tuple(meta.helpful_contexts),
-                    harmful_contexts=tuple(meta.harmful_contexts),
-                    helpful_count=meta.helpful_count,
-                    harmful_count=meta.harmful_count,
-                    status=meta.status,
-                    consecutive_harmful=meta.consecutive_harmful,
-                )
+            skill = Skill(
+                name=name,
+                skill_dir=entry.resolve(),
+                description=desc,
+                desc_tok=count_skill_tokens(name, desc),
+                sha=file_sha16(skill_md),
+                helpful_contexts=tuple(meta.helpful_contexts),
+                harmful_contexts=tuple(meta.harmful_contexts),
+                helpful_count=meta.helpful_count,
+                harmful_count=meta.harmful_count,
+                status=meta.status,
+                consecutive_harmful=meta.consecutive_harmful,
             )
+            by_name.setdefault(name, []).append(
+                _Candidate(skill=skill, skill_md=skill_md)
+            )
+
+    out: list[Skill] = []
+    for name, cands in by_name.items():
+        if len(cands) == 1:
+            out.append(cands[0].skill)
+            continue
+        ranked = sorted(
+            cands,
+            key=lambda c: skill_priority_key(
+                status=c.skill.status,
+                helpful_count=c.skill.helpful_count,
+                harmful_count=c.skill.harmful_count,
+                skill_md_path=c.skill_md,
+            ),
+            reverse=True,
+        )
+        winner = ranked[0]
+        out.append(winner.skill)
+        if invalid is not None:
+            for loser in ranked[1:]:
+                invalid.append(
+                    ValidationError(
+                        skill_md=loser.skill_md,
+                        reason=(
+                            f"duplicate skill name {name!r} "
+                            f"(kept: {winner.skill_md}, "
+                            f"reason: status={winner.skill.status} "
+                            f"verdict_score="
+                            f"{winner.skill.helpful_count - winner.skill.harmful_count})"
+                        ),
+                    )
+                )
     return out
 
 

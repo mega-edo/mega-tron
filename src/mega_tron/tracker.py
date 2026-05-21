@@ -40,13 +40,17 @@ SELF_REPORT_RE = re.compile(
     r"""
     (?:
       # Canonical: <skill-used name="X" reason="..." verdict="..."/>
-      # (also accepts skill_used and any attribute ordering)
+      # (also accepts skill_used and any attribute ordering). An attribute
+      # value is delimited by *matching* quotes, so a single quote inside
+      # a double-quoted value (or vice versa) is part of the value, not
+      # a terminator. This matters for reasons that quote shell output,
+      # e.g. reason="stdout was 'OK'".
       <skill[-_]used\b
-        (?P<attrs1>(?:\s+[a-z_]+=["'][^"']*["'])+)
+        (?P<attrs1>(?:\s+[a-z_]+=(?:"[^"]*"|'[^']*'))+)
         \s*/?>
     |
       # Compact: <skill name="X"/>
-      <skill\s+name=["'](?P<n2>[^"']+)["']\s*/?>
+      <skill\s+name=(?:"(?P<n2d>[^"]+)"|'(?P<n2s>[^']+)')\s*/?>
     |
       # Bracketed: [skill: X] or [skill: X — reason]
       \[skill:\s*(?P<n3>[A-Za-z0-9_\-.]+)
@@ -56,15 +60,19 @@ SELF_REPORT_RE = re.compile(
     re.IGNORECASE | re.VERBOSE,
 )
 
-# Per-attribute extractor for the canonical form's attribute soup. We
-# parse attrs1 with a separate, simpler regex so the addition of a new
-# attribute (e.g. `verdict`) doesn't require yet another optional clause
-# in the main pattern.
-_ATTR_RE = re.compile(r"""([a-z_]+)\s*=\s*["']([^"']*)["']""", re.IGNORECASE)
+# Per-attribute extractor for the canonical form's attribute soup. Mirrors
+# the quote-symmetry rule from SELF_REPORT_RE: each value is bounded by
+# the *same* quote it opened with.
+_ATTR_RE = re.compile(
+    r"""([a-z_]+)\s*=\s*(?:"([^"]*)"|'([^']*)')""", re.IGNORECASE
+)
 
 
 def _parse_attrs(blob: str) -> dict[str, str]:
-    return {k.lower(): v for k, v in _ATTR_RE.findall(blob or "")}
+    out: dict[str, str] = {}
+    for k, v_dq, v_sq in _ATTR_RE.findall(blob or ""):
+        out[k.lower()] = v_dq if v_dq else v_sq
+    return out
 
 
 @dataclass
@@ -166,6 +174,25 @@ def _process_event(event: dict, skills_root_str: str, result: TranscriptScan) ->
         msg = event.get("message")
         if isinstance(msg, dict):
             _process_claude_assistant_message(msg, skills_root_str, result)
+        return
+
+    # Gemini CLI shape: {"type": "gemini", "content": "...assistant text..."}
+    # plus matched "user" / "tool" events. Unlike Codex (function_call
+    # payloads) and Claude (tool_use blocks), the Gemini CLI does NOT log
+    # tool invocations as discrete events in this transcript stream — the
+    # only place we see a skill's scripts/ path is in the assistant text
+    # itself (typically the executed command echoed back). So we treat a
+    # ``<skills_root>/<name>/scripts/`` substring in an assistant message
+    # as the operational trace, matching the gating that Codex/Claude get
+    # for free from their structured tool-use logs.
+    if event_type == "gemini":
+        text = event.get("content")
+        if isinstance(text, str) and text:
+            result.n_assistant_messages += 1
+            _scan_text_for_self_reports(text, result)
+            for matched in _match_skills_in_text(text, skills_root_str):
+                result.add_script_invocation(matched)
+                result.n_exec_commands += 1
 
 
 def _process_claude_assistant_message(
@@ -223,7 +250,9 @@ def _scan_text_for_self_reports(full: str, result: TranscriptScan) -> None:
             reason = (attrs.get("reason") or "").strip() or None
             verdict = (attrs.get("verdict") or "").strip() or None
         else:
-            name = (m.group("n2") or m.group("n3") or "").strip()
+            name = (
+                m.group("n2d") or m.group("n2s") or m.group("n3") or ""
+            ).strip()
             reason_raw = m.group("r3")
             reason = reason_raw.strip() if isinstance(reason_raw, str) else None
             if reason == "":
@@ -322,6 +351,13 @@ def extract_last_assistant_text(transcript_path: Path) -> str:
                     txt = _extract_message_text(msg.get("content"))
                     if txt:
                         last_text = txt
+                continue
+
+            # Gemini CLI shape: {"type": "gemini", "content": "..."}
+            if event.get("type") == "gemini":
+                txt = event.get("content")
+                if isinstance(txt, str) and txt:
+                    last_text = txt
     return last_text
 
 
@@ -365,3 +401,30 @@ def _match_skill_path(haystacks: list[str], skills_root_str: str) -> str | None:
         if rest.startswith("/scripts/") or rest == "/scripts":
             return name
     return None
+
+
+def _match_skills_in_text(text: str, skills_root_str: str) -> list[str]:
+    """Return every distinct ``<skills_root>/<name>/scripts/`` skill mentioned.
+
+    Used by hosts that don't log tool calls as discrete transcript events
+    (Gemini CLI today). A single assistant message may echo the script
+    path multiple times — we de-dupe per call.
+    """
+    needle = skills_root_str.rstrip("/") + "/"
+    out: list[str] = []
+    seen: set[str] = set()
+    i = 0
+    while True:
+        idx = text.find(needle, i)
+        if idx < 0:
+            break
+        tail = text[idx + len(needle):]
+        m = _SKILL_NAME_RE.match(tail)
+        if m:
+            name = m.group(0)
+            rest = tail[len(name):]
+            if (rest.startswith("/scripts/") or rest == "/scripts") and name not in seen:
+                seen.add(name)
+                out.append(name)
+        i = idx + len(needle)
+    return out

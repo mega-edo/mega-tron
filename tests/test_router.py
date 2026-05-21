@@ -185,6 +185,78 @@ def test_router_load_skills_dedup_on_duplicate_name(tmp_path):
     assert "duplicate skill name" in invalid[0].reason
 
 
+def test_router_load_skills_name_collision_winner_by_verdict_score(tmp_path):
+    """Two same-named skills, different verdict history → the one with
+    the higher net score (helpful − harmful) wins, regardless of
+    directory iteration order. This is the load_skills counterpart to
+    Cache.compact_skills — both must agree on the winner-priority key.
+    """
+    # dir_a has the loser (cold start). dir_b has the winner (10 HELPFUL).
+    # Alphabetic iteration would pick dir_a → assert that verdict signal
+    # overrides that default.
+    da = tmp_path / "dir_a"
+    db = tmp_path / "dir_b"
+    da.mkdir()
+    db.mkdir()
+    (da / "SKILL.md").write_text(
+        '---\nname: tdd\ndescription: "USE WHEN: x"\n---\n'
+    )
+    (db / "SKILL.md").write_text(
+        "---\n"
+        "name: tdd\n"
+        'description: "USE WHEN: x"\n'
+        "mega_meta:\n"
+        "  helpful_count: 10\n"
+        "  harmful_count: 0\n"
+        "---\n"
+    )
+    invalid: list = []
+    skills = load_skills(tmp_path, invalid=invalid)
+    assert [s.name for s in skills] == ["tdd"]
+    # Winner is the dir_b copy.
+    assert skills[0].helpful_count == 10
+    # Loser is reported with the winner's path cited in the reason.
+    assert len(invalid) == 1
+    assert "duplicate skill name" in invalid[0].reason
+    assert str(db / "SKILL.md") in invalid[0].reason
+
+
+def test_router_load_skills_name_collision_winner_by_status(tmp_path):
+    """Status (active > suspect > archived) outranks verdict score in
+    the priority key — an archived sibling must never displace an
+    active one even with a higher raw count.
+    """
+    da = tmp_path / "dir_a"
+    db = tmp_path / "dir_b"
+    da.mkdir()
+    db.mkdir()
+    # dir_a: active, modest verdict score.
+    (da / "SKILL.md").write_text(
+        "---\n"
+        "name: tdd\n"
+        'description: "USE WHEN: x"\n'
+        "mega_meta:\n"
+        "  helpful_count: 1\n"
+        "  harmful_count: 0\n"
+        "  status: active\n"
+        "---\n"
+    )
+    # dir_b: archived, but huge raw score.
+    (db / "SKILL.md").write_text(
+        "---\n"
+        "name: tdd\n"
+        'description: "USE WHEN: x"\n'
+        "mega_meta:\n"
+        "  helpful_count: 100\n"
+        "  harmful_count: 0\n"
+        "  status: archived\n"
+        "---\n"
+    )
+    skills = load_skills(tmp_path)
+    assert skills[0].status == "active"
+    assert skills[0].helpful_count == 1
+
+
 def test_router_rank_evaluation_blend_reorders_same_cosine_skills(
     fake_embedder, tmp_path, tmp_cache_path
 ):

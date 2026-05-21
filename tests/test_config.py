@@ -65,9 +65,12 @@ def test_standard_skill_dirs_includes_host_neutral_agents_dir(fake_home):
 
 
 def test_standard_skill_dirs_orders_system_cache_after_user_skills(fake_home):
-    """`Router.load_skills` is first-dir-wins on name collisions — so
-    user-authored skills must outrank the bundled samples that share
-    the same name."""
+    """Discovery order still matters as a stable mtime tiebreak input —
+    ``Router.load_skills`` resolves name collisions by status > verdict
+    score > mtime, but for cold-start skills (no verdicts, equal mtime)
+    the iteration order is the deterministic backstop. User-authored
+    skills must come before the bundled system cache so the backstop
+    favors them."""
     dirs = _standard_skill_dirs()
     user_codex = dirs.index(fake_home / ".codex" / "skills")
     system_codex = dirs.index(fake_home / ".codex" / "skills" / ".system")
@@ -147,7 +150,9 @@ def test_discover_wisdom_dir_included_when_enabled(wisdom_dir, monkeypatch):
 
 def test_discover_wisdom_dir_placed_last(fake_home, wisdom_dir, monkeypatch):
     """Wisdom dir must be lowest priority so local skills shadow it on
-    ``name:`` collision (Router.load_skills is first-dir-wins).
+    ``name:`` collision. ``Router.load_skills`` resolves collisions by
+    status > verdict score > mtime, and order is the deterministic
+    backstop for cold-start ties.
     """
     monkeypatch.setenv("MEGA_WITH_WISDOM", "1")
     (fake_home / ".claude" / "skills").mkdir(parents=True)

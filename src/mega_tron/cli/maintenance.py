@@ -1,6 +1,6 @@
 """`mega-tron` cache lifecycle commands.
 
-Three subcommands that maintain the verdict / cache stores:
+Subcommands that maintain the verdict / cache stores:
 
 - ``migrate-to-sqlite`` — one-shot frontmatter → SQLite migration with
   rollback support.
@@ -8,6 +8,9 @@ Three subcommands that maintain the verdict / cache stores:
   the single source of truth; no SQLite cache to re-emit from).
 - ``compact-embeddings`` — collapse near-duplicate verdict embeddings
   within each (skill, label) group to bound store growth.
+- ``compact-skills`` — cluster cached SKILL.md embeddings and suppress
+  semantic near-duplicates from the routing matrix (the analog of
+  ``compact-embeddings`` for the skill catalog itself).
 """
 from __future__ import annotations
 
@@ -175,5 +178,92 @@ def cmd_compact_embeddings(args: argparse.Namespace) -> int:
 
     if not args.dry_run and report["removed"] > 0:
         ves.save()
+
+    return 0
+
+
+def cmd_compact_skills(args: argparse.Namespace) -> int:
+    """Cluster cached SKILL.md embeddings and suppress near-duplicate
+    losers from the routing matrix.
+
+    The routing catalog typically grows from multiple sources (host-
+    bundled, plugin-bundled, user-authored, MEGA-Code wisdom cache).
+    Many slots end up holding semantically-equivalent skills — ``tdd``
+    vs ``tdd-guide`` vs ``tdd-workflow`` — that all match the same
+    queries and dilute the top-K. This command finds them via cosine
+    clustering on the FULL embedding (``name\\n\\ndescription``) and
+    keeps one winner per cluster.
+
+    Winner-priority order: status (active > suspect > archived) → net
+    verdict score (helpful − harmful) → SKILL.md mtime.
+
+    Defaults to ``--dry-run``: this mutates what mega-tron surfaces every
+    turn, so explicit ``--apply`` is required to write the side-file.
+
+    Use ``--reset`` to lift all previously-recorded suppressions. The
+    cache will repopulate the cleared skills on the next warmup.
+    """
+    from mega_tron.cli._common import _make_router
+
+    router = _make_router(args)
+    cache = router.cache
+
+    if args.reset:
+        # Lift everything regardless of --dry-run; --reset is the
+        # explicit "undo" path and must always do what it says.
+        n = cache.unsuppress_all()
+        cache.save()
+        print(
+            f"[compact-skills] cleared {n} suppressed skills. "
+            "Next warmup will repopulate them.",
+            file=sys.stderr,
+        )
+        return 0
+
+    # Warmup is needed so the cache reflects the current skill catalog
+    # before clustering. Without this, --dry-run on a fresh shell would
+    # cluster a stale or empty cache.
+    router.warmup()
+    cache = router.cache
+
+    if not cache.entries():
+        print(
+            "[compact-skills] no skills in cache — run `mega-tron build-cache` "
+            "or any routed command first.",
+            file=sys.stderr,
+        )
+        return 0
+
+    dry_run = not args.apply
+    report = cache.compact_skills(threshold=args.threshold, dry_run=dry_run)
+
+    if args.json:
+        json.dump(report, sys.stdout, indent=2)
+        sys.stdout.write("\n")
+    else:
+        action = "would suppress" if dry_run else "suppressed"
+        print(
+            f"[compact-skills] {action} {report['removed']} of "
+            f"{report['before']} skills "
+            f"(collapsed {report['clusters_collapsed']} near-duplicate "
+            f"clusters, threshold=cos>{args.threshold}).",
+            file=sys.stderr,
+        )
+        for cluster in report["clusters"]:
+            losers = ", ".join(cluster["losers"])
+            print(
+                f"  {cluster['winner']}  ← [{losers}]  "
+                f"(max_sim={cluster['max_sim']:.3f})",
+                file=sys.stderr,
+            )
+        if dry_run and report["removed"] > 0:
+            print(
+                "[compact-skills] dry-run; re-run with --apply to "
+                "persist suppressions.",
+                file=sys.stderr,
+            )
+
+    if not dry_run and report["removed"] > 0:
+        cache.save()
 
     return 0
