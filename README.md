@@ -47,6 +47,8 @@
 
 > 💡 **The model picks a broken skill, the skill fails silently, next turn it tries the same broken skill again.** You see "the answer is weird" without knowing a stale skill is behind it.
 
+> 📐 **The measurements behind these problems** are documented per-host: [Claude Code](docs/Native%20Skill%20Catalog%20in%20Claude%20Code.md) · [Codex CLI](docs/Native%20Skill%20Catalog%20in%20Codex%20CLI.md) · [Gemini CLI](docs/Native%20Skill%20Catalog%20in%20Gemini%20CLI.md). Each one walks through storage layout, the catalog-injection pipeline, the structural limits that fall out of the design, and the 500-skill benchmark numbers behind the table below.
+
 ## 🧩 Same root cause behind all three problems
 
 Each host's skill catalog is a **one-shot system-prompt injection** that:
@@ -381,6 +383,8 @@ final = (semantic
 - After ≥ 5 total verdicts, `harmful_count > 3` **or** `harmful_ratio > 0.3` → `suspect` (rank halved). Auto-restores to `active` once `harmful_ratio ≤ 0.15` **and** `harmful_count ≤ 1`. Under 5 verdicts the skill stays `active` regardless — cold-start protection.
 
 </details>
+
+> 📚 **Want the algorithmic details?** See [`docs/routing-algorithm.md`](docs/routing-algorithm.md) for the full ranking formula (semantic + verdict blend), the active/suspect/archived status lifecycle, and dynamic K selection. For how MEGA Tron wires into each host (hook surfaces, catalog suppression mechanisms, wire formats), see [`docs/mega-tron routing.md`](docs/mega-tron%20routing.md). Per-host *native* catalog behaviour is documented above under [Three problems](#-three-problems-that-compound-with-more-skills).
 
 ## 🔧 CLI
 

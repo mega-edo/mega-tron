@@ -1,11 +1,11 @@
-# Skill Routing in OpenAI Codex CLI
+# Native Skill Catalog in Codex CLI
 
 How OpenAI Codex CLI (`codex`) surfaces skills to the model — storage
 layout, the catalog-injection pipeline that runs at every turn, the
 structural limits the design imposes, and the measured impact on a
 500-skill pool against a frozen 25-prompt fixture.
 
-The peer document [Skill Routing Claude](./Skill%20Routing%20Claude.md)
+The peer document [Native Skill Catalog in Claude Code](./Native%20Skill%20Catalog%20in%20Claude%20Code.md)
 covers the structurally similar Claude Code system; the two differ in
 their token budget, ordering policy, mention-detection layer, and
 configurability.
@@ -308,7 +308,7 @@ These fall out of the design above:
    the answer skill's description survives truncation, it sits at
    whatever rank discovery happened to place it at. This is
    structurally the same flat-catalog problem Claude Code has — see
-   [Skill Routing Claude § 2.3](./Skill%20Routing%20Claude.md).
+   [Native Skill Catalog in Claude Code § 2.3](./Native%20Skill%20Catalog%20in%20Claude%20Code.md).
 
 4. **No learning loop.** Codex itself has no per-skill ROI
    bookkeeping. Whether a skill helped or hurt yesterday does not

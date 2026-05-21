@@ -5,7 +5,7 @@ hosts. The router itself is the same code path everywhere — BGE
 embeddings + cosine similarity against the prompt + `mega_meta` ROI
 reranking — but each host exposes a different integration seam, so the
 **wire format** and **catalog suppression mechanism** differ. This
-document is a one-page map; see the per-host `Skill Routing <Host>.md`
+document is a one-page map; see the per-host `Native Skill Catalog in <Host>.md`
 files for storage layout, native limits, and benchmark results.
 
 ---

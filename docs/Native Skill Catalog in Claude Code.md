@@ -1,4 +1,4 @@
-# Skill Routing in Claude Code
+# Native Skill Catalog in Claude Code
 
 How Claude Code's CLI surfaces skills to the model — storage layout, the
 routing pipeline that runs before every turn, the structural limits that

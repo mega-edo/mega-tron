@@ -1,11 +1,11 @@
-# Skill Routing in Google Gemini CLI
+# Native Skill Catalog in Gemini CLI
 
 How Google Gemini CLI surfaces skills to the model — storage layout, the
 routing pipeline that runs at session start, the structural limits that
 fall out of the design, and the measured impact on a 500-skill pool.
 
-The peer documents [Skill Routing Claude](./Skill%20Routing%20Claude.md)
-and [Skill Routing Codex](./Skill%20Routing%20Codex.md) cover hosts
+The peer documents [Native Skill Catalog in Claude Code](./Native%20Skill%20Catalog%20in%20Claude%20Code.md)
+and [Native Skill Catalog in Codex CLI](./Native%20Skill%20Catalog%20in%20Codex%20CLI.md) cover hosts
 that flatten their discovered skill pool into the prompt and cap it
 (Claude at 1% × context, Codex at 2% / 8K chars). **Gemini does not
 cap at all** — every discovered skill's metadata is loaded into the
