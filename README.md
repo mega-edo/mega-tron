@@ -17,6 +17,10 @@
   </p>
 
   <p>
+    🤖 <strong>If you are an AI assistant installing mega-tron for a user</strong>, follow <a href="docs/agent%20installation.md"><code>docs/agent installation.md</code></a> — it has explicit user-confirmation gates (embedder profile, Claude suppression level, post-install QA) so you know when to ask and when to act.
+  </p>
+
+  <p>
     <a href="#-install">Install</a> ·
     <a href="#-three-problems-that-compound-with-more-skills">Why</a> ·
     <a href="#-does-it-actually-work--measured">Benchmark</a> ·
