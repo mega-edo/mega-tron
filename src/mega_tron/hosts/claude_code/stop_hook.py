@@ -129,52 +129,34 @@ def _capture_inline_verdicts(data: dict, skills_dir: Path) -> int:
     if not scan.invocations:
         return _emit_empty()
 
-    # Build verdict records from the inline tags, with two admission rules:
-    #
-    # 1. Skills tagged without a `verdict=` attribute are skipped
-    #    (no signal to the rank-blend, no SKILL.md write).
-    #
-    # 2. ``claimed_use`` invocations are rejected. ``claimed_use`` means
-    #    the model emitted a `<skill-used .../>` tag in text but left no
-    #    operational trace — no script run, no SKILL.md read. In
-    #    practice this matches three cases:
-    #      (a) Genuine "I'd recommend skill X" answers without using
-    #          the skill — evidence value is low either way.
-    #      (b) Conversation that quotes the tag format itself (docs,
-    #          status reports, this kind of debugging session) — pure
-    #          noise; counting it would silently inflate counters.
-    #      (c) Stale tags carried over from earlier turns in the same
-    #          long-lived transcript.
-    #    Admitting only ``informed_use`` (tag + invocation) and
-    #    ``silent_use`` (invocation but no tag, no verdict to extract
-    #    anyway) keeps the store honest. The cost — losing the (a)
-    #    cases — is acceptable because the rank-blend already prefers
-    #    skills with proven *usage* history over recommendation-only
-    #    mentions.
-    verdicts: list[dict] = []
-    skipped_no_verdict: list[str] = []
-    skipped_claimed_only: list[str] = []
-    for name, inv in scan.invocations.items():
-        if not inv.verdicts:
-            skipped_no_verdict.append(name)
-            continue
-        if inv.label == "claimed_use":
-            skipped_claimed_only.append(name)
-            continue
-        # Use the model's most recent verdict + matching reason. The tag
-        # parser appends in document order, so the last entry is the
-        # final-reply verdict.
-        verdict_label = inv.verdicts[-1]
-        reason = inv.reasons[-1] if inv.reasons else ""
-        verdicts.append({"skill": name, "verdict": verdict_label, "reason": reason})
+    # Admission gate: see mega_tron.hosts._verdict_gate. The model's
+    # tag is admitted when its skill name appears in this session's
+    # routes-table catalog. The previous gate required a `scripts/`
+    # path echo in the transcript — but most skills don't ship a
+    # scripts/ directory, so it silently dropped almost every
+    # legitimate verdict (Claude transcripts logged ~5k assistant
+    # messages with 0 admitted verdicts in practice).
+    from mega_tron.hosts._verdict_gate import filter_invocations
+
+    session_id = data.get("session_id")
+    session_id_str = session_id if isinstance(session_id, str) else None
+    gate = filter_invocations(
+        invocations=scan.invocations,
+        session_id=session_id_str,
+        host="claude_code",
+    )
+    verdicts = gate.admitted
+    skipped_no_verdict = gate.skipped_no_verdict
+    skipped_claimed_only = gate.skipped_not_in_catalog
 
     if skipped_claimed_only:
         print(
             f"[mega-tron claude-stop-hook] {len(skipped_claimed_only)} "
-            f"skill(s) tagged without an operational trace "
+            f"skill(s) tagged but not in this session's routed catalog "
+            f"(via={gate.via}) "
             f"({', '.join(skipped_claimed_only[:3])}"
             f"{'...' if len(skipped_claimed_only) > 3 else ''}); "
-            "discussion-only mentions are not treated as verdicts.",
+            "likely hallucinated names — not treated as verdicts.",
             file=sys.stderr,
         )
 
@@ -192,12 +174,11 @@ def _capture_inline_verdicts(data: dict, skills_dir: Path) -> int:
 
     from mega_tron.verdicts.writer import persist_verdicts
 
-    session_id = data.get("session_id")
     outcome = persist_verdicts(
         skills_dir=skills_dir,
         verdicts=verdicts,
         host="claude_code",
-        session_id=session_id if isinstance(session_id, str) else None,
+        session_id=session_id_str,
         log_prefix="[mega-tron claude-stop-hook]",
     )
     for skill_name, err in outcome.errors:

@@ -271,8 +271,11 @@ def test_discussion_only_tag_quote_is_not_treated_as_verdict(
     )
     assert rc == 0
     assert out == ""
-    # Operator-visible log line confirms the gate fired.
-    assert "without an operational trace" in err
+    # Operator-visible log line confirms the gate fired. The legacy
+    # fallback path is taken because this test's session_id was never
+    # routed, and ``claimed_use`` invocations are still rejected there.
+    assert "not in this session's routed catalog" in err
+    assert "via=legacy" in err
     # And critically: the SKILL.md was NOT touched.
     skill_md = (fixture_skills / "webhook-signer" / "SKILL.md").read_text()
     assert "helpful_count" not in skill_md

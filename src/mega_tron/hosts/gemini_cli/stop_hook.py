@@ -98,38 +98,33 @@ def _capture_inline_verdicts(data: dict, skills_dir: Path) -> int:
     if not scan.invocations:
         return _emit_empty()
 
-    # Build verdict records from inline tags, with two admission rules:
-    #
-    # 1. Skills tagged without a `verdict=` attribute are skipped
-    #    (treated as no signal — no SKILL.md write, no SQLite row).
-    #
-    # 2. ``claimed_use`` invocations are rejected (tag emitted in text
-    #    but no operational trace — no scripts/* run, no SKILL.md read).
-    #    Otherwise documentation / status-report / debugging-session
-    #    transcripts that quote the ``<skill-used .../>`` form silently
-    #    inflate the counters. See the matching block in codex/
-    #    stop_hook.py for the full rationale.
-    verdicts: list[dict] = []
-    skipped_no_verdict: list[str] = []
-    skipped_claimed_only: list[str] = []
-    for name, inv in scan.invocations.items():
-        if not inv.verdicts:
-            skipped_no_verdict.append(name)
-            continue
-        if inv.label == "claimed_use":
-            skipped_claimed_only.append(name)
-            continue
-        verdict_label = inv.verdicts[-1]
-        reason = inv.reasons[-1] if inv.reasons else ""
-        verdicts.append({"skill": name, "verdict": verdict_label, "reason": reason})
+    # Admission gate: see mega_tron.hosts._verdict_gate. Gemini was
+    # the worst-affected host — 15 routes / 0 verdicts ever — because
+    # Gemini's transcript records assistant text but does NOT log tool
+    # invocations as discrete events. The old `scripts/` echo gate had
+    # no operational trace to find unless the model coincidentally
+    # pasted the path into its reply. Routes-membership lookup fixes
+    # this.
+    from mega_tron.hosts._verdict_gate import filter_invocations
+
+    session_id = data.get("session_id") or data.get("sessionId")
+    session_id_str = session_id if isinstance(session_id, str) else None
+    gate = filter_invocations(
+        invocations=scan.invocations,
+        session_id=session_id_str,
+        host="gemini_cli",
+    )
+    verdicts = gate.admitted
+    skipped_no_verdict = gate.skipped_no_verdict
+    skipped_claimed_only = gate.skipped_not_in_catalog
 
     if skipped_claimed_only:
         print(
             f"[mega-tron gemini-stop] {len(skipped_claimed_only)} skill(s) tagged "
-            f"without an operational trace "
+            f"but not in this session's routed catalog (via={gate.via}) "
             f"({', '.join(skipped_claimed_only[:3])}"
             f"{'...' if len(skipped_claimed_only) > 3 else ''}); "
-            "discussion-only mentions are not treated as verdicts.",
+            "likely hallucinated names — not treated as verdicts.",
             file=sys.stderr,
         )
 
@@ -147,12 +142,11 @@ def _capture_inline_verdicts(data: dict, skills_dir: Path) -> int:
 
     from mega_tron.verdicts.writer import persist_verdicts
 
-    session_id = data.get("session_id") or data.get("sessionId")
     outcome = persist_verdicts(
         skills_dir=skills_dir,
         verdicts=verdicts,
         host="gemini_cli",
-        session_id=session_id if isinstance(session_id, str) else None,
+        session_id=session_id_str,
         log_prefix="[mega-tron gemini-stop]",
     )
     for skill_name, err in outcome.errors:

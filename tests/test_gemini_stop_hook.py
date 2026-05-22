@@ -260,7 +260,11 @@ def test_claimed_use_without_operational_trace_is_rejected(tmp_path):
     rc, out, err = _run(json.dumps(payload), _args(skills_dir=str(skills)))
     assert rc == 0
     assert out == ""
-    assert "without an operational trace" in err
+    # Legacy fallback path (no session_id / no routes) — still rejects
+    # ``claimed_use`` tags. Log message reflects the new routes-aware
+    # gate but lands in the same rejection branch.
+    assert "not in this session's routed catalog" in err
+    assert "via=legacy" in err
     assert read_meta(skill_md).helpful_count == 0
 
 

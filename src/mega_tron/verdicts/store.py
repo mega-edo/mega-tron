@@ -686,6 +686,64 @@ class Store:
             "p90_tok": int(p90),
         }
 
+    def session_picked_names(
+        self, *, session_id: str, host: str | None = None
+    ) -> set[str]:
+        """Return the union of skill names this session's router actually
+        surfaced. Used by the Stop hook to admit verdict tags against the
+        same catalog the model saw — the previous gate (`scripts/` echo
+        in the transcript) silently dropped tags for the majority of
+        skills that ship without a `scripts/` directory.
+
+        ``session_id`` is required because the routes table is the
+        authoritative per-turn record of what router picked. ``host`` is
+        optional — when given, narrows the lookup to a single host's
+        routes (useful if a session somehow spans hosts).
+
+        Empty set on missing session, missing column, or any SQLite
+        failure: this is a soft gate, never a fatal one. The caller's
+        catalog-membership filter (in ``verdicts.writer.persist_verdicts``)
+        still drops names whose ``SKILL.md`` doesn't exist on disk, so a
+        permissive return here can't write garbage downstream — it just
+        means the Stop hook may admit a verdict for a stale-but-valid
+        catalog entry.
+        """
+        if not session_id:
+            return set()
+        self.initialize()
+
+        def _txn(conn: sqlite3.Connection) -> list[str]:
+            if host:
+                cur = conn.execute(
+                    "SELECT picked_names_json FROM routes "
+                    "WHERE session_id = ? AND host = ?",
+                    (session_id, host),
+                )
+            else:
+                cur = conn.execute(
+                    "SELECT picked_names_json FROM routes "
+                    "WHERE session_id = ?",
+                    (session_id,),
+                )
+            return [row[0] for row in cur.fetchall() if row[0]]
+
+        try:
+            blobs = self._run_with_retry(_txn)
+        except Exception:
+            return set()
+
+        names: set[str] = set()
+        for blob in blobs:
+            try:
+                arr = json.loads(blob)
+            except Exception:
+                continue
+            if isinstance(arr, list):
+                for n in arr:
+                    if isinstance(n, str):
+                        names.add(n)
+        return names
+
     def record_verdicts(self, items: Iterable[dict[str, Any]]) -> int:
         """Bulk-write convenience wrapper. Returns the number of rows
         that were actually inserted (UNIQUE-constraint drops and

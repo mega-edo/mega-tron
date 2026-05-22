@@ -140,3 +140,84 @@ def test_record_route_extras_carry_k_and_reason(store, tmp_path):
     conn.close()
     payload = json.loads(row[0])
     assert payload == {"total_tok": 147, "k": 5, "k_reason": "entropy-wide"}
+
+
+def test_session_picked_names_empty_for_missing_session(store):
+    assert store.session_picked_names(session_id="nope") == set()
+
+
+def test_session_picked_names_union_across_turns(store):
+    """The same session can route multiple turns. session_picked_names
+    must return the union so a Stop hook firing at end-of-session sees
+    every skill that was surfaced anywhere in the conversation."""
+    store.record_route(
+        session_id="sess-X",
+        host="codex",
+        query_hash="q1",
+        picked_names=["alpha", "beta"],
+        total_tok=100,
+        k=2,
+        k_reason="gap-cut@2",
+    )
+    store.record_route(
+        session_id="sess-X",
+        host="codex",
+        query_hash="q2",
+        picked_names=["beta", "gamma"],
+        total_tok=200,
+        k=2,
+        k_reason="gap-cut@2",
+    )
+    names = store.session_picked_names(session_id="sess-X")
+    assert names == {"alpha", "beta", "gamma"}
+
+
+def test_session_picked_names_filters_by_host(store):
+    """A session_id that somehow appears under two hosts should still
+    be filterable. We don't expect this in practice, but the column
+    exists so we honor it."""
+    store.record_route(
+        session_id="sess-Y",
+        host="codex",
+        query_hash="q",
+        picked_names=["only-codex"],
+        total_tok=50,
+        k=1,
+        k_reason="gap-cut@1",
+    )
+    store.record_route(
+        session_id="sess-Y",
+        host="gemini_cli",
+        query_hash="q",
+        picked_names=["only-gemini"],
+        total_tok=50,
+        k=1,
+        k_reason="gap-cut@1",
+    )
+    assert store.session_picked_names(
+        session_id="sess-Y", host="codex"
+    ) == {"only-codex"}
+    assert store.session_picked_names(
+        session_id="sess-Y", host="gemini_cli"
+    ) == {"only-gemini"}
+    assert store.session_picked_names(session_id="sess-Y") == {
+        "only-codex",
+        "only-gemini",
+    }
+
+
+def test_session_picked_names_empty_session_id_returns_empty(store):
+    """Defensive: empty string session_id must not match every row in
+    the table just because SQL would happily accept it. The Stop hook
+    falls back to legacy gating in this case."""
+    store.record_route(
+        session_id="real-session",
+        host="codex",
+        query_hash="q",
+        picked_names=["x"],
+        total_tok=10,
+        k=1,
+        k_reason="gap-cut@1",
+    )
+    assert store.session_picked_names(session_id="") == set()
+
