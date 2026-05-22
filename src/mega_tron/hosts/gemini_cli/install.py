@@ -58,6 +58,14 @@ LEGACY_MANAGED_KEYS = ("_megaOptimusManaged",)
 
 SETTINGS_PATH = Path.home() / ".gemini" / "settings.json"
 GEMINI_MD_PATH = Path.home() / ".gemini" / "GEMINI.md"
+# Per-workspace trust enforcement was added by Gemini CLI sometime after
+# the original "Gemini doesn't need a trust handshake" module docstring
+# was written. Without an entry for the active workspace in this file,
+# Gemini refuses to run the hook commands and the user sees a confusing
+# "trusted_hooks" error from the BeforeAgent slot. mega-tron setup writes
+# trust entries for both $HOME and the user's CWD at install time so the
+# common workspaces are covered out of the box.
+TRUSTED_HOOKS_PATH = Path.home() / ".gemini" / "trusted_hooks.json"
 
 GEMINI_SENTINEL_START = (
     "<!-- >>> mega-tron (managed; edit between sentinels at your own "
@@ -181,6 +189,59 @@ def _merge_hook_entry(existing: dict, entry: dict, *, event: str) -> dict:
     hooks[event] = entries
     out["hooks"] = hooks
     return out
+
+
+def _read_trusted_hooks(path: Path) -> dict:
+    """Read trusted_hooks.json — empty/missing/malformed → empty dict.
+
+    Gemini's per-workspace trust file maps absolute workspace paths to
+    the exact hook command strings that are pre-approved for that
+    workspace. Each entry is the literal command line gemini will
+    invoke (matched byte-for-byte against the configured hook command,
+    plus an optional ``":"`` SHA-pin prefix gemini adds on its own).
+    """
+    if not path.exists():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {}
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def _write_trusted_hooks(path: Path, data: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+
+
+def _register_workspace_trust(
+    path: Path,
+    workspaces: list[Path],
+    commands: list[str],
+) -> bool:
+    """Add ``commands`` to ``trusted_hooks.json`` for each workspace.
+
+    Returns ``True`` when the file changed (so the caller can log it).
+    Existing entries for other workspaces / commands are preserved —
+    this is purely additive. Uninstall handles the symmetric removal.
+    """
+    current = _read_trusted_hooks(path)
+    changed = False
+    for ws in workspaces:
+        key = str(ws.resolve())
+        existing_cmds = current.get(key, [])
+        if not isinstance(existing_cmds, list):
+            existing_cmds = []
+        new_cmds = list(existing_cmds)
+        for cmd in commands:
+            if cmd not in new_cmds:
+                new_cmds.append(cmd)
+        if new_cmds != existing_cmds:
+            current[key] = new_cmds
+            changed = True
+    if changed:
+        _write_trusted_hooks(path, current)
+    return changed
 
 
 def _strip_managed_hooks(existing: dict) -> dict:
@@ -379,16 +440,45 @@ def run_install_gemini(args: argparse.Namespace) -> int:
             file=sys.stderr,
         )
 
-    # 3. GEMINI.md — guidance block.
+    # 3. trusted_hooks.json — pre-authorize the mega-tron hook commands
+    #    for the workspaces the user is most likely to launch gemini
+    #    from. Without these, Gemini's per-workspace trust enforcement
+    #    refuses to run the BeforeAgent / AfterAgent hooks and mega-tron
+    #    silently does nothing for that workspace. We register both
+    #    $HOME and the install-time CWD; the user can add more later by
+    #    re-running `mega-tron setup` from inside the new workspace, or
+    #    by passing `--skip-trust` to a one-off gemini invocation.
+    trust_commands = [
+        ba_entry["hooks"][0]["command"],
+        aa_entry["hooks"][0]["command"],
+    ]
+    trust_workspaces = [Path.home()]
+    try:
+        cwd = Path.cwd()
+        if cwd.resolve() != Path.home().resolve():
+            trust_workspaces.append(cwd)
+    except OSError:
+        pass
+    if _register_workspace_trust(
+        TRUSTED_HOOKS_PATH, trust_workspaces, trust_commands
+    ):
+        print(
+            f"[install --target gemini] registered hook trust for "
+            f"{', '.join(str(w) for w in trust_workspaces)} in "
+            f"{TRUSTED_HOOKS_PATH}.",
+            file=sys.stderr,
+        )
+
+    # 4. GEMINI.md — guidance block.
     _install_gemini_md(gemini_md_path)
 
-    # 4. Warmup — reuse the Codex installer's warmup, it's CLI-agnostic.
+    # 5. Warmup — reuse the Codex installer's warmup, it's CLI-agnostic.
     if not getattr(args, "no_warmup", False):
         from mega_tron.hosts.codex.install import _run_warmup
 
         _run_warmup(getattr(args, "skills_dir", None))
 
-    # 5. Mode-A advisory: `skills.disabled` may require a Gemini restart
+    # 6. Mode-A advisory: `skills.disabled` may require a Gemini restart
     #    to take effect per the configuration reference. Surface this so
     #    the user doesn't think the catalog compression is broken.
     print(
@@ -430,6 +520,39 @@ def _uninstall(settings_path: Path, gemini_md_path: Path) -> int:
         )
 
     _uninstall_gemini_md(gemini_md_path)
+
+    # Symmetric trust cleanup — remove the two mega-tron hook commands
+    # from every workspace in trusted_hooks.json. We don't know which
+    # workspaces install registered (could be more than $HOME + CWD if
+    # the user re-ran setup from other dirs), so we scan all entries.
+    try:
+        ba_cmd = _hook_entry(_resolve_hook_command(None, "gemini-hook"))["hooks"][0]["command"]
+        aa_cmd = _hook_entry(_resolve_hook_command(None, "gemini-stop-hook"))["hooks"][0]["command"]
+        trust = _read_trusted_hooks(TRUSTED_HOOKS_PATH)
+        changed = False
+        for ws_key in list(trust.keys()):
+            cmds = trust.get(ws_key, [])
+            if not isinstance(cmds, list):
+                continue
+            filtered = [c for c in cmds if c != ba_cmd and c != aa_cmd]
+            if filtered != cmds:
+                if filtered:
+                    trust[ws_key] = filtered
+                else:
+                    del trust[ws_key]
+                changed = True
+        if changed:
+            _write_trusted_hooks(TRUSTED_HOOKS_PATH, trust)
+            print(
+                "[install --target gemini] removed mega-tron entries from "
+                f"{TRUSTED_HOOKS_PATH}.",
+                file=sys.stderr,
+            )
+    except Exception as e:  # noqa: BLE001
+        print(
+            f"[install --target gemini] trusted_hooks cleanup skipped: {e}",
+            file=sys.stderr,
+        )
 
     # Mode-A cleanup: wipe skills.disabled clean and remove the
     # install-time backup. The backup almost always captured legacy-tool

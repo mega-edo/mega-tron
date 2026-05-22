@@ -46,7 +46,14 @@ from typing import Callable
 
 DEFAULT_IDLE_TIMEOUT_S = 1800  # 30 minutes
 _CONNECT_TIMEOUT_S = 0.2
-_RESPONSE_TIMEOUT_S = 2.0
+# The first rank call after spawn pays the router warmup (embedder
+# load + skill embedding sync) inside the daemon process. 2 s wasn't
+# enough — the client would time out and the caller would think the
+# daemon was dead, falling back to its own cold-path. 30 s is well
+# above the worst-case warmup we've measured (~20 s on a 3 K-skill
+# pool with cold OS-page-cache) and still safely under any host
+# hook timeout. Subsequent rank calls return in <50 ms regardless.
+_RESPONSE_TIMEOUT_S = 30.0
 _SOCKET_BACKLOG = 16
 
 # How long a completed wisdom ignite stays "cached" for dedup. A second

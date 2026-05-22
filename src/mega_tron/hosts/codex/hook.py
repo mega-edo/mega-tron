@@ -306,6 +306,25 @@ def cmd_hook(args: argparse.Namespace) -> int:
         )
     if daemon_response and daemon_response.get("ok"):
         ctx = daemon_response.get("additional_context") or ""
+        # Log the route even on the daemon fast-path. Without this, only
+        # cold-path turns reach record_route and the dashboard's
+        # "measured median" never accumulates samples on the very hosts
+        # the daemon is fastest for. Pull picked names from the daemon
+        # response and compute total_tok client-side from the on-disk
+        # SKILL.md frontmatter (cheap — only touches the few picked
+        # entries, not the full pool).
+        try:
+            from mega_tron.hosts._route_log import log_route_from_daemon
+
+            log_route_from_daemon(
+                prompt,
+                daemon_response,
+                skills_dirs,
+                session_id=session_id,
+                host="codex",
+            )
+        except Exception:  # noqa: BLE001
+            pass
         if not ctx.strip():
             return _emit_empty()
         return _emit_additional_context(ctx)

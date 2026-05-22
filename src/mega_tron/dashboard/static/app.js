@@ -369,6 +369,12 @@ function renderContextSavings() {
   }
   perHostAxis = Math.max(perHostAxis, 1);
 
+  const scopeNote = (
+    "Scope: counts only global skill catalogs (~/.codex/skills, " +
+    "~/.claude/skills, ~/.gemini/skills, ~/.agents/skills) — " +
+    "project-local skills under a repo's .claude/skills/ aren't " +
+    "included."
+  );
   const heroTooltip = (
     cs.mega_tron_is_measured
       ? (
@@ -376,7 +382,7 @@ function renderContextSavings() {
         "skill count, summed (every host treats ~/.agents/skills as part " +
         "of its catalog too). mega-tron: your own sample median over the " +
         "last 30 days of invocations. Catalog overhead only — doesn't count " +
-        "your prompt itself."
+        "your prompt itself. " + scopeNote
       )
       : (
         "Vanilla: each installed host's native catalog at your current " +
@@ -385,7 +391,7 @@ function renderContextSavings() {
         "from the published benchmark) — switches to your own sample median " +
         "after you log " + (cs.warm_up_threshold || 20) + " invocations. " +
         "Each invocation = one mega-tron hook fire (the host's first prompt " +
-        "of a session)."
+        "of a session). " + scopeNote
       )
   );
 

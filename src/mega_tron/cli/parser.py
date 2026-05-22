@@ -164,7 +164,24 @@ def main(argv: list[str] | None = None) -> int:
         "--top-k",
         type=int,
         default=DEFAULT_TOP_K,
-        help=f"Final returned skill count. Default: {DEFAULT_TOP_K}.",
+        help=(
+            f"Hard cap on returned skill count (default: {DEFAULT_TOP_K}). "
+            "By default dynamic-K decides the actual count up to this cap "
+            "based on the prompt's score distribution; pass --no-dynamic-k "
+            "to always return exactly --top-k picks."
+        ),
+    )
+    p_search.add_argument(
+        "--no-dynamic-k",
+        dest="dynamic_k",
+        action="store_false",
+        default=True,
+        help=(
+            "Disable the dynamic-K policy and always return exactly "
+            "--top-k picks (manual mode). The hook subcommands offer the "
+            "same flag; mirrored here so `mega-tron search` and the hooks "
+            "behave identically."
+        ),
     )
     p_search.add_argument(
         "--output",

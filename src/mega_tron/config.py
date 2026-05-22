@@ -118,6 +118,53 @@ def _standard_skill_dirs() -> list[Path]:
     return out
 
 
+def _claude_plugin_skill_dirs() -> list[Path]:
+    """Find skill roots inside the Claude Code plugin tree.
+
+    Claude Code installs plugins under ``~/.claude/plugins/marketplaces/``;
+    each plugin is a full package (agents/, commands/, hooks/, skills/,
+    etc.) and only the ``skills/`` subdirectory carries SKILL.md
+    catalogs mega-tron can route over. We surface every such
+    ``<marketplace>/{plugins|external_plugins}/<plugin>/skills/``
+    directory so a user who installed e.g. ``hookify`` via the official
+    marketplace gets its writing-rules skill in the catalog without
+    having to ``mega-tron dirs add`` it by hand.
+
+    The plugin ``cache/`` tree is intentionally skipped — it holds
+    versioned snapshots and previously installed copies that would
+    introduce name collisions with the live marketplace install. Users
+    who want a specific cache layer can still ``mega-tron dirs add``
+    the exact version.
+    """
+    out: list[Path] = []
+    marketplaces = Path.home() / ".claude" / "plugins" / "marketplaces"
+    if not marketplaces.is_dir():
+        return out
+    try:
+        market_iter = sorted(marketplaces.iterdir())
+    except OSError:
+        return out
+    for marketplace in market_iter:
+        if not marketplace.is_dir():
+            continue
+        # Both ``plugins/`` and ``external_plugins/`` are first-class
+        # plugin containers — checked separately so a marketplace that
+        # exposes only one of them is still picked up.
+        for container_name in ("plugins", "external_plugins"):
+            container = marketplace / container_name
+            if not container.is_dir():
+                continue
+            try:
+                plugin_iter = sorted(container.iterdir())
+            except OSError:
+                continue
+            for plugin in plugin_iter:
+                skills = plugin / "skills"
+                if skills.is_dir():
+                    out.append(skills)
+    return out
+
+
 # ---------------------------------------------------------------------------
 # Config file — paths, schema, IO.
 # ---------------------------------------------------------------------------
@@ -276,9 +323,11 @@ def discover_skill_dirs(
     1. ``extra=`` argument (callers passing CLI ``--skills-dir`` flags).
     2. Standard locations: ``~/.claude/skills``, ``~/.codex/skills``,
        ``~/.gemini/skills``, ``~/.hermes/skills``, ``$CODEX_HOME/skills``.
-    3. ``[skills] extra_dirs`` from the user's config.toml.
-    4. ``MEGA_SKILL_DIRS`` env (colon-separated).
-    5. MEGA-Code wisdom skill cache, if ``MEGA_WITH_WISDOM=1`` (lowest
+    3. Claude plugin marketplace skill dirs
+       (``~/.claude/plugins/marketplaces/<m>/{plugins|external_plugins}/<p>/skills``).
+    4. ``[skills] extra_dirs`` from the user's config.toml.
+    5. ``MEGA_SKILL_DIRS`` env (colon-separated).
+    6. MEGA-Code wisdom skill cache, if ``MEGA_WITH_WISDOM=1`` (lowest
        priority — local skills always shadow wisdom skills on
        ``name:`` collision).
 
@@ -293,6 +342,13 @@ def discover_skill_dirs(
     candidates: list[Path] = []
     candidates.extend(Path(p).expanduser() for p in extra)
     candidates.extend(_standard_skill_dirs())
+    # Claude plugin marketplace skills — auto-discovered from
+    # ~/.claude/plugins/marketplaces/<m>/{plugins|external_plugins}/<p>/skills.
+    # Listed after the host-native dirs so a user-edited skill in
+    # ~/.claude/skills still wins on name collision, but ahead of
+    # the user's config.toml extra_dirs so plugin authors get a
+    # working default with zero configuration.
+    candidates.extend(_claude_plugin_skill_dirs())
     candidates.extend(config.extra_skill_dirs)
     candidates.extend(env_extra_dirs())
     candidates.extend(_wisdom_skill_dirs())

@@ -275,6 +275,22 @@ def cmd_claude_hook(args: argparse.Namespace) -> int:
         )
     if daemon_response and daemon_response.get("ok"):
         ctx = daemon_response.get("additional_context") or ""
+        # Log the route even on the daemon fast-path so the dashboard's
+        # measured median accumulates samples on every turn, not only
+        # cold-load turns. See hosts/_route_log.py for the shared
+        # helper used by all three host hooks.
+        try:
+            from mega_tron.hosts._route_log import log_route_from_daemon
+
+            log_route_from_daemon(
+                prompt,
+                daemon_response,
+                skills_dirs,
+                session_id=session_id,
+                host="claude_code",
+            )
+        except Exception:  # noqa: BLE001
+            pass
         if not ctx.strip():
             return _emit_empty()
         # Mode A (active/strict): daemon already returned top-K names —

@@ -15,7 +15,12 @@ import json
 import sys
 from pathlib import Path
 
-from mega_tron.cli._common import _build_agentic, _make_router, _resolve_mode
+from mega_tron.cli._common import (
+    _build_agentic,
+    _make_router,
+    _resolve_cache_path,
+    _resolve_mode,
+)
 from mega_tron.config import DEFAULT_PREFILTER
 from mega_tron.hosts.codex.compat import detect_version, warn_if_untested
 from mega_tron.prepender import build_prefix
@@ -32,6 +37,27 @@ def cmd_search(args: argparse.Namespace) -> int:
         print("[search] --output stage requires --target <CODEX_HOME>", file=sys.stderr)
         return 2
 
+    # ---- Daemon-first path (same pattern as host hooks) -------------------
+    # CLI search is the same kind of routing decision a hook makes — only
+    # the caller differs. Using the daemon when it's up keeps a CLI call
+    # at sub-second latency instead of paying the embedder cold-load
+    # (~5-30s) every time. Output forms that need full RankedSkill
+    # objects (bodies, stage, table-with-scores) fall through to the
+    # in-process path; meta/names land on the fast path because they
+    # only need the picked names + dirs.
+    #
+    # Agentic mode also falls through — the LLM rerank lives in the
+    # client process today, the daemon doesn't run it.
+    daemon_eligible = (
+        mode == "semantic"
+        and args.output in ("meta", "names")
+        and not getattr(args, "json", False)
+    )
+    if daemon_eligible:
+        rc = _try_daemon_path(args)
+        if rc is not None:
+            return rc
+
     router = _make_router(args)
     router.warmup_if_stale()
     agentic = _build_agentic(args, mode)
@@ -45,11 +71,20 @@ def cmd_search(args: argparse.Namespace) -> int:
             args.prefilter if args.prefilter is not None else DEFAULT_PREFILTER
         )
 
+    # Dynamic-K is the whole point of mega-tron's routing — let the
+    # distribution decide K instead of hard-coding the user's --top-k.
+    # The flag stays as the *cap* (so users who really want exactly 5
+    # picks still get them), but the default behaviour is dynamic.
+    # ``--no-dynamic-k`` reverts to manual mode for users who explicitly
+    # want a fixed K, matching the hook subcommands.
+    use_dynamic = getattr(args, "dynamic_k", True)
+
     ranked = router.rank(
         args.task,
         top_k=args.top_k,
         prefilter=semantic_prefilter,
         agentic=agentic,
+        dynamic=use_dynamic,
     )
 
     # Best-effort route log (Phase 2: dashboard measurement). The CLI
@@ -190,6 +225,112 @@ def _emit_stage(ranked, args: argparse.Namespace) -> int:
     return 0
 
 
+def _try_daemon_path(args: argparse.Namespace) -> int | None:
+    """Attempt to serve the search via the running router daemon.
+
+    Returns ``None`` when the daemon is unavailable / disabled / refused
+    — the caller falls through to the in-process path. Otherwise emits
+    the same output a hot in-process run would and returns the exit
+    code directly.
+
+    We also fire-and-forget ``spawn_detached()`` when the daemon is
+    down so the *next* CLI call lands on the fast path; this mirrors
+    the eager-spawn behaviour the host hooks rely on.
+    """
+    from mega_tron import daemon as daemon_mod
+    from mega_tron.config import discover_skill_dirs
+
+    if daemon_mod.daemon_disabled():
+        return None
+
+    if not daemon_mod.is_running():
+        # Same eager-spawn rule the hooks use: kick off a detached
+        # daemon startup before we fall back to the cold in-process
+        # path, so the *next* CLI invocation is fast even if this one
+        # has to pay the cold-load.
+        daemon_mod.spawn_detached()
+        return None
+
+    skills_dirs = discover_skill_dirs()
+    if not skills_dirs:
+        return None
+
+    # Daemon protocol still takes a single skills_dir per query — same
+    # constraint the hooks live with. Send the highest-priority root
+    # and the daemon's in-memory union covers the rest.
+    cache_path = _resolve_cache_path(args)
+    use_dynamic = getattr(args, "dynamic_k", True)
+    resp = daemon_mod.client_query(
+        {
+            "op": "rank",
+            "prompt": args.task,
+            "skills_dir": str(skills_dirs[0]),
+            "cache_path": str(cache_path),
+            "top_k": args.top_k,
+            "prepend_k": getattr(args, "prepend_k", 0),
+            "dynamic": use_dynamic,
+        }
+    )
+    if not resp or not resp.get("ok"):
+        return None
+
+    picked_names = resp.get("skills") or []
+    if not picked_names:
+        print(f"[search] no matching skill for {args.task!r}", file=sys.stderr)
+        return 1
+
+    # The daemon returns names only — resolve dirs + descriptions
+    # client-side. This stays fast (no embedder load) because we only
+    # touch the on-disk SKILL.md frontmatter for the picked names, not
+    # the full pool.
+    from mega_tron.router import load_skills
+
+    by_name = {s.name: s for s in load_skills(skills_dirs)}
+    chosen = [by_name[n] for n in picked_names if n in by_name]
+    if not chosen:
+        return None  # daemon returned names we can't resolve; cold-path
+
+    if args.output == "names":
+        for s in chosen:
+            sys.stdout.write(f"{s.name}\n")
+    else:  # meta — the default
+        for i, s in enumerate(chosen):
+            if i > 0:
+                sys.stdout.write("\n")
+            sys.stdout.write(f"- {s.name}\n")
+            sys.stdout.write(f"    dir:  {s.skill_dir}\n")
+            desc = (s.description or "").strip().replace("\n", " ")
+            sys.stdout.write(f"    desc: {desc}\n")
+
+    # Daemon-served calls still log to routes. The daemon already wrote
+    # the row on its side (when implemented) — but until that lands,
+    # the CLI mirrors the hook's pattern and logs client-side. Cheap
+    # since we have the picked names + token count in hand.
+    try:
+        extras = resp.get("extras") or {}
+        from mega_tron.config import store_path
+        from mega_tron.verdicts.store import Store
+        import hashlib
+
+        total_tok = int(extras.get("total_tok") or sum(getattr(s, "desc_tok", 0) for s in chosen))
+        k = int(extras.get("k") or len(chosen))
+        k_reason = extras.get("k_reason") or ("dynamic" if use_dynamic else "manual")
+        qhash = hashlib.sha256(args.task.encode("utf-8")).hexdigest()[:16]
+        Store(path=store_path()).record_route(
+            session_id=None,
+            host="cli",
+            query_hash=qhash,
+            picked_names=[s.name for s in chosen],
+            total_tok=total_tok,
+            k=k,
+            k_reason=k_reason,
+        )
+    except Exception:  # noqa: BLE001
+        pass
+
+    return 0
+
+
 def _log_route_cli(query: str, ranked, router) -> None:
     """Write one row to the ``routes`` analytics table for a CLI rank.
 
@@ -204,7 +345,12 @@ def _log_route_cli(query: str, ranked, router) -> None:
     from mega_tron.config import store_path
     from mega_tron.verdicts.store import Store
 
-    k, k_reason = router.last_dynamic or (len(ranked), "manual")
+    # Pull (K, reason) from the router if dynamic ran; otherwise this
+    # call used a fixed --top-k so we tag it accordingly.
+    if router.last_dynamic is not None:
+        k, k_reason = router.last_dynamic
+    else:
+        k, k_reason = len(ranked), "manual"
     total_tok = sum(r.skill.desc_tok for r in ranked)
     qhash = hashlib.sha256(query.encode("utf-8")).hexdigest()[:16]
     Store(path=store_path()).record_route(

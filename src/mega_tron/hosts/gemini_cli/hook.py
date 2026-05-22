@@ -256,6 +256,22 @@ def cmd_gemini_hook(args: argparse.Namespace) -> int:
             }
         )
     if daemon_response and daemon_response.get("ok"):
+        # Log the route even on the daemon fast-path so the dashboard's
+        # measured median accumulates samples on every turn, not only
+        # cold-load turns. See hosts/_route_log.py for the shared helper.
+        try:
+            from mega_tron.hosts._route_log import log_route_from_daemon
+
+            log_route_from_daemon(
+                prompt,
+                daemon_response,
+                skills_dirs,
+                session_id=session_id,
+                host="gemini_cli",
+            )
+        except Exception:  # noqa: BLE001
+            pass
+
         # If the daemon already rendered Gemini-shaped context, use it.
         # Otherwise re-render client-side from the returned ranked names.
         ctx = daemon_response.get("additional_context") or ""
