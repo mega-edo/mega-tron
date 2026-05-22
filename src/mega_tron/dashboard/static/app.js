@@ -1499,10 +1499,102 @@ function renderPanes() {
   }
 }
 
+// --- Pane resize ----------------------------------------------------------
+// Panes default to 420px (the value baked into the CSS). The user can
+// drag the left edge to grow/shrink them; the chosen width is mirrored
+// onto the document root as `--pane-width` and persisted to
+// localStorage. Clamp range matches what the CSS treats as sensible:
+// below 320px the header crowds the close button, above 1200px the
+// pane covers more than half of a typical laptop viewport.
+const PANE_WIDTH_MIN = 320;
+const PANE_WIDTH_MAX = 1200;
+const PANE_WIDTH_DEFAULT = 420;
+const PANE_WIDTH_STORAGE_KEY = "megaTronPaneWidth";
+
+function _readPaneWidth() {
+  try {
+    const raw = localStorage.getItem(PANE_WIDTH_STORAGE_KEY);
+    if (!raw) return PANE_WIDTH_DEFAULT;
+    const n = parseInt(raw, 10);
+    if (!Number.isFinite(n)) return PANE_WIDTH_DEFAULT;
+    return Math.min(PANE_WIDTH_MAX, Math.max(PANE_WIDTH_MIN, n));
+  } catch (_e) {
+    return PANE_WIDTH_DEFAULT;
+  }
+}
+
+function _applyPaneWidth(px) {
+  document.documentElement.style.setProperty("--pane-width", `${px}px`);
+}
+
+// Apply persisted width on first script load so the very first pane
+// opened in the session honors the user's choice without flicker.
+_applyPaneWidth(_readPaneWidth());
+
+function _onPaneResizeStart(ev) {
+  // Only react to primary button; ignore middle/right/macOS ctrl-click.
+  if (ev.button !== 0) return;
+  ev.preventDefault();
+  const startX = ev.clientX;
+  const startWidth = _readPaneWidth();
+  document.body.classList.add("pane-resizing");
+
+  const onMove = (mv) => {
+    // Pane is anchored to the right edge of the viewport, so dragging
+    // LEFT (smaller clientX) grows the pane. delta = startX - clientX.
+    const next = Math.min(
+      PANE_WIDTH_MAX,
+      Math.max(PANE_WIDTH_MIN, startWidth + (startX - mv.clientX)),
+    );
+    _applyPaneWidth(next);
+  };
+  const onUp = () => {
+    document.removeEventListener("mousemove", onMove);
+    document.removeEventListener("mouseup", onUp);
+    document.body.classList.remove("pane-resizing");
+    // Read the px value back from the variable (already clamped during
+    // the move) so we persist exactly what the user saw on release.
+    const final = parseInt(
+      getComputedStyle(document.documentElement).getPropertyValue("--pane-width"),
+      10,
+    ) || PANE_WIDTH_DEFAULT;
+    try {
+      localStorage.setItem(PANE_WIDTH_STORAGE_KEY, String(final));
+    } catch (_e) {
+      // localStorage may be disabled in incognito; resizing still works
+      // for the current session, only the next reload won't remember.
+    }
+  };
+  document.addEventListener("mousemove", onMove);
+  document.addEventListener("mouseup", onUp);
+}
+
+function _onPaneResizeReset() {
+  _applyPaneWidth(PANE_WIDTH_DEFAULT);
+  try {
+    localStorage.removeItem(PANE_WIDTH_STORAGE_KEY);
+  } catch (_e) { /* see _onPaneResizeStart */ }
+}
+
 function renderOnePane(pane) {
   const aside = document.createElement("aside");
   aside.className = `pane pane-${pane.kind}`;
   aside.dataset.paneId = String(pane.id);
+
+  // Left-edge resize handle. Every pane carries its own grip; the
+  // drag updates a single `--pane-width` CSS variable on document
+  // root, so all open panes resize together (no per-pane jitter when
+  // a stack of 2-3 panes is open) and the choice persists across
+  // sessions via localStorage.
+  const handle = document.createElement("div");
+  handle.className = "pane-resize-handle";
+  handle.setAttribute("role", "separator");
+  handle.setAttribute("aria-orientation", "vertical");
+  handle.setAttribute("aria-label", "Resize pane");
+  handle.title = "Drag to resize · double-click to reset";
+  handle.addEventListener("mousedown", _onPaneResizeStart);
+  handle.addEventListener("dblclick", _onPaneResizeReset);
+  aside.appendChild(handle);
 
   // Header is kind-specific: skill panes title with the skill name
   // and a "N uses" badge from payload.total_verdicts. Orphan panes

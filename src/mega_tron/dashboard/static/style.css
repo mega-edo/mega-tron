@@ -513,10 +513,14 @@ html, body {
 }
 .pane-rail.open { display: flex; }
 .pane-rail > .pane {
-  flex: 0 0 420px;
-  width: 420px;
+  /* --pane-width is set on :root by app.js (loaded from localStorage,
+     overridden live during a drag). The 420px fallback keeps the layout
+     valid if JS hasn't run yet (pre-hydration, no-JS fallback). */
+  flex: 0 0 var(--pane-width, 420px);
+  width: var(--pane-width, 420px);
   max-width: 92vw;
   height: 100vh;
+  position: relative;
   background: var(--bg-elev);
   border-left: 1px solid var(--hairline);
   box-shadow: -8px 0 32px rgba(0, 0, 0, 0.4);
@@ -534,6 +538,39 @@ html, body {
 .pane-rail > .pane:first-child {
   /* Rightmost (most recently opened) pane gets the strongest shadow. */
   box-shadow: -12px 0 36px rgba(0, 0, 0, 0.6);
+}
+
+/* Left-edge resize grip — sits over the pane's left border, 6px wide,
+   transparent until hover so it doesn't clutter the chrome. The
+   :hover/.active states promote it to a visible accent strip. The
+   handle is absolutely positioned to stay glued to the pane's left
+   edge regardless of inner scroll position. */
+.pane-rail > .pane > .pane-resize-handle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 6px;
+  height: 100%;
+  cursor: ew-resize;
+  z-index: 2;
+  background: transparent;
+  transition: background 0.12s ease;
+  touch-action: none;
+}
+.pane-rail > .pane > .pane-resize-handle:hover,
+body.pane-resizing .pane-rail > .pane > .pane-resize-handle {
+  background: var(--accent);
+  opacity: 0.55;
+}
+/* While dragging, kill text selection across the whole document and
+   force the ew-resize cursor everywhere — without this the cursor
+   flickers back to text when the mouse passes over labels mid-drag. */
+body.pane-resizing {
+  cursor: ew-resize;
+  user-select: none;
+}
+body.pane-resizing * {
+  cursor: ew-resize !important;
 }
 
 .pane-head {
