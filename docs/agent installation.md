@@ -274,16 +274,45 @@ The line must exit silently (no `AssertionError`). If it fails, the
 binary on disk predates the routing telemetry: re-run the install
 with `--force --reinstall` so uv blows away the old wheel.
 
-Then continue to Step 4. `mega-tron setup` is idempotent, so re-running
-it on an already-wired host just refreshes the managed blocks to the
-new version's content (sentinel keys are version-tagged for exactly
-this case).
+Then **continue to Step 4 — `mega-tron setup` is not optional on an
+update**. Refreshing the binary alone leaves the host-side artifacts
+(`CLAUDE.md` / `AGENTS.md` / `GEMINI.md` guidance blocks, `settings.json`
+hooks, `trusted_hooks.json`, the codex shell wrapper, the per-host
+`settings.local.json`) stamped with the *previous* version's text.
+The new binary then runs against a stale contract — for example, the
+host LLM will still see the old self-eval rules or the old skill-tag
+shape, and `mega-tron setup` is the only thing that re-stamps those
+files. The command is idempotent (every block is sentinel-fenced and
+gets the new content written in-place), so re-running it on an
+already-wired host is **safe and required** after every binary refresh.
+
+For an update, if the user has already answered Q1/Q2 in a previous
+install and is happy with those settings, you can reuse the same
+values without asking again. The agent should infer the current
+values from the environment when possible:
+
+- **Embedder profile** — read `~/.config/mega-tron/config.toml`'s
+  `embedder_model` field (or run `mega-tron embedder show` if you
+  can) and pick the profile whose default model matches:
+  `BAAI/bge-m3` → `multilingual`, `BAAI/bge-small-en-v1.5` →
+  `en-fast`, anything containing `SKILLRET` → `en-quality`.
+- **Claude native mode** — `grep MEGA_CLAUDE_NATIVE_MODE ~/.zshrc
+  ~/.bashrc` to see what the user's rc currently exports
+  (`passive` / `active` / `strict`). If nothing is set, that means
+  passive — surface the current recommendation (active for ≤ 300
+  skills, strict otherwise) and ask whether they want to switch.
+
+Only ask Q1/Q2 again when the inferred value doesn't exist (fresh
+machine) or when the user explicitly asked you to reconsider the
+profile / mode. **Q3 (qa-live)** is fine to ask every time — the
+check itself is short and the answer can legitimately change.
 
 ---
 
 ## 4. Run `mega-tron setup` non-interactively
 
-Compose the flags from the user's Q1/Q2 answers:
+Compose the flags from the user's Q1/Q2 answers (or the inferred
+values for an update — see the Step 3b note above):
 
 ```bash
 # Always pass --profile to skip the interactive picker.
