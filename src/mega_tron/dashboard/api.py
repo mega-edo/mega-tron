@@ -402,6 +402,17 @@ _BENCHMARK_POINTS: dict[str, list[tuple[int, int]]] = {
     "bge-m3":    [(0, 0), (59, 112), (183, 145), (500, 208)],
     "bge-small": [(0, 0), (59, 312), (183, 400), (500, 527)],
 }
+# K_max per embedder tier (see dynamic_k.py:_TIERS). Linear extrapolation
+# beyond the 500-skill measurement ceiling is bounded by this cap: the
+# router will never inject more than K_max skills regardless of catalog
+# size, so the per-session token cost asymptotes at
+# ``K_max × avg_picked_tok`` where avg_picked_tok is derived from the
+# last measured benchmark point.
+_K_MAX_BY_FAMILY: dict[str, int] = {
+    "skillret":  10,   # tier="strong"
+    "bge-m3":    15,   # tier="medium"
+    "bge-small": 20,   # tier="weak"
+}
 # Default family when we can't classify the user's embedder. bge-m3 is
 # the install-time default and the safest middle estimate.
 _DEFAULT_EMBEDDER_FAMILY = "bge-m3"
@@ -462,10 +473,15 @@ def _interpolate_reference_tokens(
 
     Piecewise linear over the family's anchor points. Below 0 is clamped
     to 0. Above the last measured point the slope of the final segment
-    is reused (transparent extrapolation) and ``is_extrapolated`` flips
-    to True.
+    is reused as transparent extrapolation, BUT capped at the family's
+    ``K_max × avg_picked_tok`` ceiling — the router's K cap means a
+    larger catalog cannot ship more than K_max skills per turn, so the
+    per-session token cost asymptotes rather than growing linearly.
+    ``is_extrapolated`` flips to True above the last measured point
+    (whether or not the ceiling has clamped the result).
     """
-    points = _BENCHMARK_POINTS.get(family, _BENCHMARK_POINTS[_DEFAULT_EMBEDDER_FAMILY])
+    fam = family if family in _BENCHMARK_POINTS else _DEFAULT_EMBEDDER_FAMILY
+    points = _BENCHMARK_POINTS[fam]
     n = max(0, int(pool_size))
 
     # In-range linear interpolation.
@@ -477,11 +493,24 @@ def _interpolate_reference_tokens(
             return int(round(y1 + t * (y2 - y1))), False
 
     # Above the last measured point: extrapolate by maintaining the
-    # slope of the last segment.
+    # slope of the last segment, then clamp to the K-cap ceiling.
     (x_last_1, y_last_1), (x_last, y_last) = points[-2], points[-1]
     slope = (y_last - y_last_1) / (x_last - x_last_1)
-    extrapolated = int(round(y_last + slope * (n - x_last)))
-    return max(0, extrapolated), True
+    raw = y_last + slope * (n - x_last)
+
+    # Ceiling = K_max × avg_picked_tok. We don't know K_avg at the
+    # benchmark's last measurement point, but the pool-59 → pool-500
+    # slope is non-trivial across all families, which means K_avg there
+    # was still well below K_max (a saturated K_avg would have flattened
+    # the slope). We use the conservative assumption K_avg(@500) ≈
+    # K_max / 2, giving avg_picked_tok = 2 × y_last / K_max and ceiling
+    # = 2 × y_last. The extrapolation hits this ceiling at roughly 3-4×
+    # the last measured pool size depending on slope.
+    k_max = _K_MAX_BY_FAMILY.get(fam, _K_MAX_BY_FAMILY[_DEFAULT_EMBEDDER_FAMILY])
+    avg_picked_tok = 2 * y_last / k_max
+    ceiling = k_max * avg_picked_tok  # == 2 × y_last
+    clamped = min(raw, ceiling)
+    return max(0, int(round(clamped))), True
 
 # Below this many recorded sessions the median is too unstable (one
 # outlier shifts it 10+%). Above it, we trust the user's median.

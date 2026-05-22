@@ -1401,6 +1401,29 @@ def test_interpolate_reference_tokens_curve():
     assert extrap is True
     assert ref > 208  # strictly larger than the last measured point
 
+    # K-cap ceiling: the router never injects more than K_max skills
+    # per turn, so the extrapolation must asymptote at 2 × last_measured
+    # (the conservative K_avg ≈ K_max/2 assumption). At 30,000 skills
+    # the raw linear curve would predict ~6,000 tok for bge-m3 — the
+    # cap clamps it back down to 416.
+    ref_huge, extrap_huge = _interpolate_reference_tokens("bge-m3", 30_000)
+    assert extrap_huge is True
+    assert ref_huge == 416  # ceiling = 2 × 208
+
+    # Same ceiling logic for the other families.
+    ref_huge_skillret, _ = _interpolate_reference_tokens("skillret", 30_000)
+    assert ref_huge_skillret == 314  # 2 × 157
+    ref_huge_small, _ = _interpolate_reference_tokens("bge-small", 30_000)
+    assert ref_huge_small == 1054  # 2 × 527
+
+    # Ceiling is monotone: the extrapolated curve never exceeds it.
+    prev = 208
+    for n in (600, 1000, 2000, 5000, 10_000, 30_000):
+        ref_n, _ = _interpolate_reference_tokens("bge-m3", n)
+        assert ref_n >= prev, f"non-monotone at pool={n}"
+        assert ref_n <= 416, f"pool={n} exceeded ceiling: got {ref_n}"
+        prev = ref_n
+
     # Unknown family falls back to bge-m3 silently.
     ref_unknown, _ = _interpolate_reference_tokens("voyage-3", 100)
     ref_bge, _ = _interpolate_reference_tokens("bge-m3", 100)
