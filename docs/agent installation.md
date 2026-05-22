@@ -58,6 +58,52 @@ the answer up front lets you frame the next question correctly. If
 **no** host is detected, install for all three but tell the user only
 the hosts they later install will actually receive routing.
 
+### When `which` says "not found" but the user uses the CLI daily
+
+The shell you spawn as an agent inherits a **minimal** `PATH` —
+typically just `/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin`.
+The user's interactive shell has more (`~/.npm-global/bin`,
+`~/.local/bin`, `~/.cargo/bin`, Volta / pnpm / asdf shims, etc.) because
+their `~/.zshrc` / `~/.bashrc` adds them at login. So a CLI the user
+*does* have installed — and uses every day — can still come back as
+"not found" in your `which` check.
+
+Before reporting "not installed," look in the usual locations and add
+any hits to your `PATH` for the rest of this procedure:
+
+```bash
+# Common JS-toolchain locations (Gemini CLI ships via npm)
+ls ~/.npm-global/bin/{codex,claude,gemini}     2>/dev/null
+ls ~/.volta/bin/{codex,claude,gemini}          2>/dev/null
+ls ~/Library/pnpm/{codex,claude,gemini}        2>/dev/null
+# User-local installs (mega-tron itself goes here too)
+ls ~/.local/bin/{codex,claude,gemini}          2>/dev/null
+# Cargo / pip-user installs
+ls ~/.cargo/bin/{codex,claude,gemini}          2>/dev/null
+# Single sweep across the home tree, depth-capped so it stays fast
+find ~ -maxdepth 5 -type f -name 'gemini' -perm -u+x 2>/dev/null \
+  | grep -v node_modules | head -5
+```
+
+If any of those return a path, prepend its directory to `PATH` before
+running `mega-tron setup` / `qa-live`:
+
+```bash
+export PATH="$HOME/.npm-global/bin:$HOME/.local/bin:$PATH"
+```
+
+This matters because `mega-tron setup` uses `shutil.which()` to decide
+whether a host is "installed enough to wire" — wiring a host whose
+binary isn't on your `PATH` still works (the hook scripts run via
+their absolute paths), but `qa-live` re-spawns the host CLI by name
+and will report `SKIP …'gemini' CLI not on PATH` for a host the user
+plainly has. The fix is your `PATH`, not the user's install.
+
+> If `which gemini` still returns nothing after the search above, ask
+> the user where it lives (`type gemini` in their interactive shell
+> prints the resolved path). Don't conclude "Gemini CLI not installed"
+> from `PATH` alone — it's the most common false negative.
+
 ---
 
 ## 2. Ask the user three questions

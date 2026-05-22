@@ -441,6 +441,70 @@ def test_partial_diagnostic_ignores_contract_example_in_user_message(
     assert "EMITTED" not in detail
 
 
+def test_marker_tag_in_last_assistant_finds_well_formed_tag(fake_home):
+    """Codex transcript whose last assistant message ends with the
+    canonical marker tag must be recognised as a PASS-equivalent, even
+    when the Stop hook would otherwise reject it for `claimed_use` (no
+    matching exec_command). This is the narrow exception qa-live makes
+    for its own planted marker skill.
+    """
+    sessions = fake_home / ".codex" / "sessions" / "2026" / "05" / "23"
+    sessions.mkdir(parents=True)
+    transcript = sessions / "rollout-marker-emitted.jsonl"
+    transcript.write_text(
+        '{"payload":{"type":"message","role":"assistant","content":[{"type":"output_text",'
+        '"text":"MEGA-TRON-CHECK-OK\\n<skill-used name=\\"_mega-tron-check\\" '
+        'verdict=\\"HELPFUL\\" reason=\\"ran the script\\"/>"}]}}\n',
+        encoding="utf-8",
+    )
+    assert qa_live._marker_tag_in_last_assistant("codex") is True
+
+
+def test_marker_tag_in_last_assistant_rejects_wrong_skill_name(fake_home):
+    """A `<skill-used>` tag with a different skill name (model coined
+    its own / ran an unrelated skill) must NOT pass as a marker tag.
+    The qa-live PASS exception is narrowly scoped to the planted
+    marker name to avoid masking real hallucinations from succeeding
+    as 'wiring OK'.
+    """
+    sessions = fake_home / ".codex" / "sessions" / "2026" / "05" / "23"
+    sessions.mkdir(parents=True)
+    transcript = sessions / "rollout-wrong-name.jsonl"
+    transcript.write_text(
+        '{"payload":{"type":"message","role":"assistant","content":[{"type":"output_text",'
+        '"text":"<skill-used name=\\"some-other-skill\\" verdict=\\"HELPFUL\\" '
+        'reason=\\"x\\"/>"}]}}\n',
+        encoding="utf-8",
+    )
+    assert qa_live._marker_tag_in_last_assistant("codex") is False
+
+
+def test_marker_tag_in_last_assistant_requires_canonical_verdict(fake_home):
+    """A marker-named tag with an unrecognised verdict label is not
+    accepted — guards against accidentally treating a hallucinated tag
+    with weird attribute values as a PASS signal.
+    """
+    sessions = fake_home / ".codex" / "sessions" / "2026" / "05" / "23"
+    sessions.mkdir(parents=True)
+    transcript = sessions / "rollout-weird-verdict.jsonl"
+    transcript.write_text(
+        '{"payload":{"type":"message","role":"assistant","content":[{"type":"output_text",'
+        '"text":"<skill-used name=\\"_mega-tron-check\\" verdict=\\"MAYBE\\" '
+        'reason=\\"x\\"/>"}]}}\n',
+        encoding="utf-8",
+    )
+    assert qa_live._marker_tag_in_last_assistant("codex") is False
+
+
+def test_marker_tag_in_last_assistant_returns_false_on_missing_transcript(
+    fake_home,  # noqa: ARG001 — fixture isolates HOME so no real transcript leaks in
+):
+    """Host wrote no transcript at all → cannot claim the marker
+    pipeline succeeded. Returns False, which keeps the PARTIAL path
+    so `_diagnose_partial` can surface the wiring issue."""
+    assert qa_live._marker_tag_in_last_assistant("codex") is False
+
+
 def test_qa_prompt_template_spells_out_required_tag():
     """The marker prompt must name the skill explicitly inside the
     required tag shape, so Codex / Gemini don't skip the trailer on a
