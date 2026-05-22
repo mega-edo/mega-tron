@@ -2062,6 +2062,21 @@ button.history-row-head:focus-visible {
   visibility: visible;
   transition-delay: 0s;
 }
+/* Auto-flip: when the trigger is too close to the viewport top to
+   show its tooltip above without clipping, JS adds `.tooltip-flipped`
+   and the tooltip drops below the trigger instead. The CSS reverses
+   only the vertical anchor; horizontal alignment and sizing rules
+   (incl. `.info-icon::after`'s left/right override) carry over. */
+.tooltip-trigger.tooltip-flipped::after {
+  bottom: auto;
+  top: calc(100% + 6px);
+}
+/* Last-resort safety net so a long tooltip can never grow beyond the
+   viewport height even when flipped — the user can scroll within. */
+.tooltip-trigger::after {
+  max-height: calc(100vh - 24px);
+  overflow-y: auto;
+}
 
 /* Inline info icon — a tooltip trigger sized to sit next to a
    card title without dominating it. */

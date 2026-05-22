@@ -512,6 +512,7 @@ function renderContextSavings() {
     const overlap = h.overlap_with_shared || 0;
     const unique = h.unique_to_host || 0;
     const visible = h.skill_count || 0;
+    const pluginContribution = h.plugin_skill_count || 0;
     const pctOverlap = privateCount > 0 ? Math.round((overlap / privateCount) * 100) : 0;
     const overlapCell = overlap > 0
       ? `${overlap.toLocaleString()} <span class="cs-tbl-pct">(${pctOverlap}%)</span>`
@@ -519,10 +520,14 @@ function renderContextSavings() {
     const uniqueCell = unique > 0
       ? unique.toLocaleString()
       : `<span class="cs-tbl-muted">0</span>`;
+    const pluginCell = pluginContribution > 0
+      ? pluginContribution.toLocaleString()
+      : `<span class="cs-tbl-muted">0</span>`;
     tableRows.push(`
       <tr class="cs-tbl-row host-${host}">
         <td class="cs-tbl-host"><span class="cs-tbl-host-label">${CS_HOSTS[host].label}</span></td>
         <td class="cs-tbl-num">${visible.toLocaleString()}</td>
+        <td class="cs-tbl-num">${pluginCell}</td>
         <td class="cs-tbl-num">${privateCount.toLocaleString()}</td>
         <td class="cs-tbl-num">${overlapCell}</td>
         <td class="cs-tbl-num">${uniqueCell}</td>
@@ -540,9 +545,16 @@ function renderContextSavings() {
   // names that live in ~/.agents/skills but in none of the host private
   // dirs. The full shared count is in YOUR FILES.
   const sharedOnly = cs.shared_only_count ?? 0;
+  const pluginCount = cs.plugin_skill_count ?? 0;
+  // 6-column footer: HOST | SEES | PLUGIN | YOUR FILES | SHARED OVERLAP | UNIQUE.
+  // ``shared`` and ``plugins`` rows put their headline count under
+  // YOUR FILES (that's the "what this source contains" column for
+  // non-host rows). The PLUGIN column is meaningless for the shared
+  // row itself and for the plugin-source row, so both are muted.
   const sharedFooter = sharedSkillCount > 0
     ? `<tr class="cs-tbl-row shared-row">
          <td class="cs-tbl-host"><span class="cs-tbl-host-label">shared</span></td>
+         <td class="cs-tbl-num"><span class="cs-tbl-muted">—</span></td>
          <td class="cs-tbl-num"><span class="cs-tbl-muted">—</span></td>
          <td class="cs-tbl-num">${sharedSkillCount.toLocaleString()}</td>
          <td class="cs-tbl-num"><span class="cs-tbl-muted">—</span></td>
@@ -557,7 +569,7 @@ function renderContextSavings() {
   const totalRow = totalUnique > 0
     ? `<tr class="cs-tbl-row total-row">
          <td class="cs-tbl-host"><span class="cs-tbl-host-label">total</span></td>
-         <td colspan="3" class="cs-tbl-total-note">distinct skills across every dir (union, deduped by name)</td>
+         <td colspan="4" class="cs-tbl-total-note">distinct skills across every dir (union, deduped by name)</td>
          <td class="cs-tbl-num"><strong>${totalUnique.toLocaleString()}</strong></td>
        </tr>`
     : "";
@@ -566,20 +578,58 @@ function renderContextSavings() {
       `<span class="cs-dir-entry"><span class="cs-dir-tag host-shared">shared</span> <code>${cs.shared_skills_dir || "~/.agents/skills"}</code></span>`
     );
   }
+  if (pluginCount > 0) {
+    const claudePluginCount = (perHost.claude && perHost.claude.plugin_skill_count) || 0;
+    const codexPluginCount = (perHost.codex && perHost.codex.plugin_skill_count) || 0;
+    const geminiPluginCount = (perHost.gemini && perHost.gemini.plugin_skill_count) || 0;
+    if (claudePluginCount > 0) {
+      dirRows.push(
+        `<span class="cs-dir-entry"><span class="cs-dir-tag host-plugin">claude plugins</span> <code>~/.claude/plugins/marketplaces/*/{plugins,external_plugins}/*/skills</code></span>`
+      );
+    }
+    if (codexPluginCount > 0) {
+      dirRows.push(
+        `<span class="cs-dir-entry"><span class="cs-dir-tag host-plugin">codex plugins</span> <code>~/.codex/plugins/cache/*/*/*/skills</code></span>`
+      );
+    }
+    if (geminiPluginCount > 0) {
+      dirRows.push(
+        `<span class="cs-dir-entry"><span class="cs-dir-tag host-plugin">gemini plugins</span> <code>~/.gemini/plugins/.../skills</code></span>`
+      );
+    }
+  }
 
+  // Sub-header: explain the host-neutral source (shared) and the
+  // per-host plugin contribution. Plugin skills are host-specific —
+  // Claude's marketplace doesn't ship into Codex's vanilla bill —
+  // so the sentence describes them as a per-host addition, not a
+  // shared pool. The exact per-host counts already live in the
+  // plugin column of each row.
+  let breakdownSub;
+  if (sharedSkillCount > 0 && pluginCount > 0) {
+    breakdownSub = (
+      `<code>~/.agents/skills</code> is host-neutral — every host sees those `
+      + `<strong>${sharedSkillCount.toLocaleString()}</strong> shared skills on top of its own folder. `
+      + `Each host's plugin marketplace adds more on top: `
+      + `<strong>${pluginCount.toLocaleString()}</strong> total across hosts.`
+    );
+  } else if (sharedSkillCount > 0) {
+    breakdownSub = `<code>~/.agents/skills</code> is host-neutral — every host sees those <strong>${sharedSkillCount.toLocaleString()}</strong> shared skills on top of its own folder.`;
+  } else if (pluginCount > 0) {
+    breakdownSub = `Per-host plugin marketplaces contribute <strong>${pluginCount.toLocaleString()}</strong> skills total — only into the owning host's vanilla catalog.`;
+  } else {
+    breakdownSub = "Each row shows what that host sees in isolation.";
+  }
   const breakdownHTML = `
     <section class="card cs-breakdown">
       <div class="card-title">Your catalog right now</div>
-      <div class="card-sub">${
-        sharedSkillCount > 0
-          ? `<code>~/.agents/skills</code> is host-neutral — every host sees those <strong>${sharedSkillCount.toLocaleString()}</strong> shared skills on top of its own folder.`
-          : "Each row shows what that host sees in isolation."
-      }</div>
+      <div class="card-sub">${breakdownSub}</div>
       <table class="cs-tbl">
         <thead>
           <tr>
             <th class="cs-tbl-host">HOST</th>
-            <th class="cs-tbl-num" title="Total skills this host actually sees (private ∪ shared, deduped)">SEES</th>
+            <th class="cs-tbl-num" title="Total skills this host actually sees (private ∪ shared ∪ this host's plugin marketplace, deduped)">SEES</th>
+            <th class="cs-tbl-num" title="Skills pulled in from this host's plugin marketplace. Claude marketplace and Codex plugin cache attribute separately — they don't bleed into each other's vanilla cost.">PLUGIN</th>
             <th class="cs-tbl-num" title="SKILL.md files under this host's own directory">YOUR FILES</th>
             <th class="cs-tbl-num" title="Of YOUR FILES, how many names also exist in ~/.agents/skills">SHARED OVERLAP</th>
             <th class="cs-tbl-num" title="Of YOUR FILES, how many are truly only in this host's directory">UNIQUE</th>
@@ -2598,6 +2648,38 @@ function bootstrap() {
   // switching back.
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") tick();
+  });
+
+  // Tooltip auto-flip — measure available space above the trigger on
+  // hover/focus, and if the tooltip would clip past the viewport top,
+  // drop it below the trigger instead (CSS toggles via the
+  // `tooltip-flipped` class). Event-delegated on document so it covers
+  // every existing and re-rendered .tooltip-trigger without re-wiring.
+  // Estimating the tooltip's actual rendered height before it's shown
+  // is brittle, so we use a conservative budget (`MIN_ABOVE_PX`) that
+  // matches the realistic info-icon tooltip height (~3–6 lines × 1.4
+  // line-height × 11px font + 14px padding ≈ 80 px floor). Triggers
+  // closer to the top than that flip down.
+  const MIN_ABOVE_PX = 140;
+  const updateTooltipFlip = (trigger) => {
+    if (!trigger || !trigger.getBoundingClientRect) return;
+    const rect = trigger.getBoundingClientRect();
+    const spaceAbove = rect.top;
+    if (spaceAbove < MIN_ABOVE_PX) {
+      trigger.classList.add("tooltip-flipped");
+    } else {
+      trigger.classList.remove("tooltip-flipped");
+    }
+  };
+  // mouseover/focusin bubble (unlike mouseenter/focus), so a single
+  // listener at document level catches every trigger.
+  document.addEventListener("mouseover", (e) => {
+    const t = e.target && e.target.closest && e.target.closest(".tooltip-trigger");
+    if (t) updateTooltipFlip(t);
+  });
+  document.addEventListener("focusin", (e) => {
+    const t = e.target && e.target.closest && e.target.closest(".tooltip-trigger");
+    if (t) updateTooltipFlip(t);
   });
 
   // Auto-open a skill pane from URL hash — used by headless snapshot

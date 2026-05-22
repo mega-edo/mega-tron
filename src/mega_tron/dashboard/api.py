@@ -471,21 +471,37 @@ def _interpolate_reference_tokens(
     """Return ``(tokens_per_session, is_extrapolated)`` for the given
     embedder family + catalog size.
 
-    Piecewise linear over the family's anchor points. Below 0 is clamped
-    to 0. Above the last measured point the slope of the final segment
-    is reused as transparent extrapolation, BUT capped at the family's
+    Empty catalog (pool=0) returns 0 — nothing is injected. Below the
+    first measured anchor (pool=59) we have no measurements, so we
+    floor to the first anchor's value as the conservative reference
+    and mark it extrapolated. The ``(0, 0)`` entry in
+    ``_BENCHMARK_POINTS`` is a mathematical sentinel kept for callers
+    that iterate the full list; this function skips it because
+    interpolating through it underestimates by ~50× for tiny pools
+    (e.g. pool=1 + skillret returned 2 tok instead of the realistic
+    ~100 tok floor).
+
+    Above the last measured point the slope of the final segment is
+    reused as transparent extrapolation, BUT capped at the family's
     ``K_max × avg_picked_tok`` ceiling — the router's K cap means a
     larger catalog cannot ship more than K_max skills per turn, so the
     per-session token cost asymptotes rather than growing linearly.
-    ``is_extrapolated`` flips to True above the last measured point
-    (whether or not the ceiling has clamped the result).
     """
     fam = family if family in _BENCHMARK_POINTS else _DEFAULT_EMBEDDER_FAMILY
     points = _BENCHMARK_POINTS[fam]
     n = max(0, int(pool_size))
 
-    # In-range linear interpolation.
-    for (x1, y1), (x2, y2) in zip(points, points[1:]):
+    # Empty catalog: no inject at all.
+    if n == 0:
+        return 0, False
+
+    # Below the first measured anchor: floor to first anchor value.
+    x_first, y_first = points[1]  # skip the (0, 0) sentinel
+    if n < x_first:
+        return int(y_first), True
+
+    # In-range linear interpolation between measured anchors.
+    for (x1, y1), (x2, y2) in zip(points[1:], points[2:]):
         if x1 <= n <= x2:
             if x2 == x1:
                 return int(y1), False

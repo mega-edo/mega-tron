@@ -1380,20 +1380,30 @@ def test_context_savings_multiplier_floored_not_rounded(env, monkeypatch):
 def test_interpolate_reference_tokens_curve():
     """The reference curve passes through the published benchmark
     anchors and extrapolates by maintaining the last segment's slope.
+    Below the first measured anchor (pool=59) we floor to that anchor's
+    value (no measurements down there to interpolate through).
     """
     from mega_tron.dashboard.api import _interpolate_reference_tokens
 
-    # bge-m3 anchors from results.md: (0,0), (59,112), (183,145), (500,208).
-    for n, expected in [(0, 0), (59, 112), (183, 145), (500, 208)]:
+    # bge-m3 measured anchors: (59,112), (183,145), (500,208). The (0,0)
+    # entry in _BENCHMARK_POINTS is a mathematical sentinel only — it is
+    # NOT a measurement and is intentionally not interpolated through.
+    for n, expected in [(59, 112), (183, 145), (500, 208)]:
         ref, extrap = _interpolate_reference_tokens("bge-m3", n)
         assert ref == expected, f"pool={n} expected {expected}, got {ref}"
         assert extrap is False, f"pool={n} should be in-range"
 
-    # In-between values land on the line between anchors. At pool=29
-    # (halfway from 0 to 59) we expect ~56 tok for bge-m3.
-    ref, extrap = _interpolate_reference_tokens("bge-m3", 29)
-    assert 50 <= ref <= 60
+    # Empty catalog returns 0 cleanly (no inject, no extrap label).
+    ref, extrap = _interpolate_reference_tokens("bge-m3", 0)
+    assert ref == 0
     assert extrap is False
+
+    # Any pool in 1..58 floors to the first anchor's value (112 for
+    # bge-m3), flagged extrapolated since we're below the measured range.
+    for n in (1, 5, 29, 58):
+        ref, extrap = _interpolate_reference_tokens("bge-m3", n)
+        assert ref == 112, f"pool={n} should floor to y_first=112, got {ref}"
+        assert extrap is True
 
     # Above the last anchor → extrapolated, slope of the last segment
     # (183→500: 63 tok over 317 skills = ~0.2 tok/skill) applied.
