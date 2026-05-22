@@ -20,8 +20,12 @@
     </header>
 
     <nav class="tab-strip" role="tablist" aria-label="Dashboard sections">
-      <button class="tab-btn active" data-tab="overview" type="button" role="tab"
-              aria-controls="tab-panel-overview" aria-selected="true">
+      <button class="tab-btn active" data-tab="context-savings" type="button" role="tab"
+              aria-controls="tab-panel-context-savings" aria-selected="true">
+        Context savings
+      </button>
+      <button class="tab-btn" data-tab="overview" type="button" role="tab"
+              aria-controls="tab-panel-overview" aria-selected="false">
         Skills overview
       </button>
       <button class="tab-btn" data-tab="review" type="button" role="tab"
@@ -30,9 +34,24 @@
       </button>
     </nav>
 
+    <!-- Tab 0 — Context savings (token estimate vs vanilla hosts) -->
+    <section id="tab-panel-context-savings" class="tab-panel" data-tab-panel="context-savings"
+             role="tabpanel" aria-labelledby="Context savings">
+      <div id="context-savings-root" class="context-savings-root">
+        <!-- Server-side placeholder so the user sees motion before the
+             first poll resolves (catalog discovery + simulators take
+             ~150-400ms on a 3K-skill install). JS overwrites this on
+             first render. -->
+        <section class="card cs-loading">
+          <span class="cs-spinner" aria-hidden="true"></span>
+          <span class="cs-loading-text">Scanning your catalogs and simulating native injection costs…</span>
+        </section>
+      </div>
+    </section>
+
     <!-- Tab 1 — Skills overview (observability) -->
     <section id="tab-panel-overview" class="tab-panel" data-tab-panel="overview"
-             role="tabpanel" aria-labelledby="Skills overview">
+             role="tabpanel" aria-labelledby="Skills overview" hidden>
       <div id="big-numbers" class="big-numbers"></div>
 
       <section class="card">

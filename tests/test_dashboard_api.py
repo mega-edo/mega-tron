@@ -1010,3 +1010,411 @@ def test_bulk_delete_orphans_empty_list_is_noop(env):
     _home, _store = env
     out = api.bulk_delete_orphans({"names": []})
     assert out == {"deleted": [], "skipped": []}
+
+
+# --------------------------------------------------------------------------- #
+# GET /api/context-savings — token-injection estimate per host.
+# --------------------------------------------------------------------------- #
+
+
+def test_context_savings_no_hosts_installed(env):
+    home, _store = env
+    # No host dirs created under tmp $HOME.
+    out = api.context_savings()
+    assert out["installed_host_count"] == 0
+    assert out["per_host"] == {}
+    assert out["vanilla_sum_tokens_per_turn"] == 0
+    # No routes logged yet → fallback to the benchmark constant.
+    assert out["mega_tron_per_turn"] == api.MEGA_TRON_BENCHMARK_TOKENS
+    assert out["mega_tron_is_measured"] is False
+    assert out["mega_tron_turn_count"] == 0
+    assert out["warm_up_threshold"] == 20
+    assert out["multiplier"] == 0
+    assert out["claude_mode"] == "passive"
+    assert out["shared_skill_count"] == 0
+    assert "benchmark" in out["mega_tron_baseline_source"].lower()
+
+
+def test_context_savings_single_host_codex_only(env):
+    home, _store = env
+    # Wire up only Codex with a handful of skills.
+    codex_root = home / ".codex" / "skills"
+    for i in range(5):
+        _write_skill(
+            codex_root / f"skill-{i}" / "SKILL.md",
+            name=f"skill-{i}",
+            description=f"Description for skill {i} explaining what it does.",
+        )
+    out = api.context_savings()
+    assert out["installed_host_count"] == 1
+    assert "codex" in out["per_host"]
+    assert "claude" not in out["per_host"]
+    assert "gemini" not in out["per_host"]
+    codex = out["per_host"]["codex"]
+    assert codex["skill_count"] == 5
+    assert codex["tokens_per_turn"] > 0
+    # New shape: names_emitted vs descriptions_emitted.
+    assert codex["names_emitted"] == 5
+    assert codex["descriptions_emitted"] >= 0
+    assert "cap-bound" in codex["rule_summary"]
+    # codex / gemini have no actionable advice — only claude carries
+    # a non-null severity icon. This keeps the row sub-line short
+    # for the hosts where there's nothing to recommend.
+    assert codex["rule_advice"] is None
+    assert codex["rule_severity"] is None
+    assert codex["shared_skill_count"] == 0
+    # vanilla sum equals the single host's tokens.
+    assert out["vanilla_sum_tokens_per_turn"] == codex["tokens_per_turn"]
+
+
+def test_context_savings_three_hosts_passive_claude(env, monkeypatch):
+    home, _store = env
+    monkeypatch.delenv("MEGA_CLAUDE_NATIVE_MODE", raising=False)
+    for host in ("codex", "claude", "gemini"):
+        root = home / f".{host}" / "skills"
+        for i in range(3):
+            _write_skill(
+                root / f"s{i}" / "SKILL.md",
+                name=f"{host}-skill-{i}",
+                description=f"A description for {host}-skill-{i} that's long enough to exercise the token counter.",
+            )
+
+    out = api.context_savings()
+    assert out["installed_host_count"] == 3
+    assert set(out["per_host"].keys()) == {"codex", "claude", "gemini"}
+    assert out["claude_mode"] == "passive"
+
+    claude = out["per_host"]["claude"]
+    assert claude["claude_mode"] == "passive"
+    # Passive-mode rule subtitle is short — the actionable advice
+    # lives in the hover-only `rule_advice`. Small pool (3 skills) →
+    # suggest active mode.
+    assert "1% × ctx" in claude["rule_summary"]
+    assert "MEGA_CLAUDE_NATIVE_MODE=active" in claude["rule_advice"]
+    assert claude["rule_severity"] == "suggest"
+    # Claude's "names always" rule: every skill ships its name.
+    assert claude["names_emitted"] == 3
+
+    # Sum == sum of three hosts.
+    assert out["vanilla_sum_tokens_per_turn"] == sum(
+        h["tokens_per_turn"] for h in out["per_host"].values()
+    )
+
+
+def test_context_savings_grand_total_and_shared_only(env):
+    """The breakdown table's bottom rows depend on two derived
+    counts: ``shared_only_count`` (in ~/.agents/skills but in no
+    host's private dir) and ``total_unique_count`` (the grand union
+    across every dir, deduped by name)."""
+    home, _store = env
+    shared = home / ".agents" / "skills"
+    claude_root = home / ".claude" / "skills"
+
+    # Layout:
+    #   shared: { s1, s2, s3, s4, s5 }
+    #   claude private: { s4, s5, c-only-1, c-only-2 }
+    # → s1, s2, s3 are shared-only (3)
+    # → c-only-1, c-only-2 are claude-unique (2)
+    # → s4, s5 are in both
+    # → total union = {s1..s5, c-only-1, c-only-2} = 7
+    for i in range(1, 6):
+        _write_skill(shared / f"s{i}" / "SKILL.md", name=f"s{i}", description="d.")
+    for i in range(4, 6):
+        _write_skill(claude_root / f"s{i}" / "SKILL.md", name=f"s{i}", description="d.")
+    for i in (1, 2):
+        _write_skill(
+            claude_root / f"c-only-{i}" / "SKILL.md",
+            name=f"c-only-{i}", description="d.",
+        )
+
+    out = api.context_savings()
+    assert out["shared_skill_count"] == 5
+    assert out["shared_only_count"] == 3
+    assert out["total_unique_count"] == 7
+
+
+def test_context_savings_shared_agents_dir_folded_into_every_host(env):
+    """~/.agents/skills is host-neutral — every host's catalog must pick
+    those skills up on top of its private dir."""
+    home, _store = env
+    # 2 skills in shared, 1 in codex only.
+    shared = home / ".agents" / "skills"
+    for i in range(2):
+        _write_skill(
+            shared / f"shared-{i}" / "SKILL.md",
+            name=f"shared-skill-{i}",
+            description=f"Shared skill {i} description.",
+        )
+    codex_root = home / ".codex" / "skills"
+    _write_skill(
+        codex_root / "only-codex" / "SKILL.md",
+        name="only-codex",
+        description="Codex-private skill.",
+    )
+
+    out = api.context_savings()
+    # The shared count is surfaced at the top level.
+    assert out["shared_skill_count"] == 2
+    # Every host where private OR shared has content shows up.
+    # Codex has private + shared → pool = 3.
+    assert out["per_host"]["codex"]["skill_count"] == 3
+    # Claude / Gemini have no private dirs, but shared exists so they
+    # are still surfaced with the shared pool.
+    assert "claude" in out["per_host"]
+    assert out["per_host"]["claude"]["skill_count"] == 2
+    assert "gemini" in out["per_host"]
+    assert out["per_host"]["gemini"]["skill_count"] == 2
+    # Per-host carries the shared count for the UI footer row.
+    for h in out["per_host"].values():
+        assert h["shared_skill_count"] == 2
+
+    # New decomposition keys for the breakdown card:
+    # codex has 1 private skill, none of which overlap with shared.
+    codex = out["per_host"]["codex"]
+    assert codex["private_skill_count"] == 1
+    assert codex["overlap_with_shared"] == 0
+    assert codex["unique_to_host"] == 1
+    # claude has no private dir → private_count=0, overlap=0, unique=0.
+    cl = out["per_host"]["claude"]
+    assert cl["private_skill_count"] == 0
+    assert cl["overlap_with_shared"] == 0
+    assert cl["unique_to_host"] == 0
+
+
+def test_context_savings_overlap_decomposition_with_duplicates(env):
+    """When a host's private folder duplicates names from
+    ~/.agents/skills, the breakdown payload must expose
+    (private_count, overlap_with_shared, unique_to_host) so the UI
+    can tell the user how much of their private folder is "really"
+    just a mirror of the shared pool."""
+    home, _store = env
+    shared = home / ".agents" / "skills"
+    claude_root = home / ".claude" / "skills"
+    # 10 shared skills.
+    for i in range(10):
+        _write_skill(
+            shared / f"sk-{i}" / "SKILL.md",
+            name=f"sk-{i}",
+            description=f"Shared {i}.",
+        )
+    # claude's folder: 7 of them mirror shared, 3 are unique to claude.
+    for i in range(7):
+        _write_skill(
+            claude_root / f"sk-{i}" / "SKILL.md",
+            name=f"sk-{i}",
+            description=f"Claude's copy of shared {i}.",
+        )
+    for i in range(3):
+        _write_skill(
+            claude_root / f"claude-only-{i}" / "SKILL.md",
+            name=f"claude-only-{i}",
+            description=f"Claude-unique {i}.",
+        )
+
+    out = api.context_savings()
+    cl = out["per_host"]["claude"]
+    # 7 mirrored + 3 unique = 10 files under ~/.claude/skills.
+    assert cl["private_skill_count"] == 10
+    assert cl["overlap_with_shared"] == 7
+    assert cl["unique_to_host"] == 3
+    # Visible (deduped) pool = 7 (shared keeps its copy) + 3 unique
+    # + 3 shared-only that claude doesn't mirror = 13.
+    assert cl["skill_count"] == 13
+
+
+def test_context_savings_claude_active_mode_small_pool_saves_tokens(env, monkeypatch):
+    """Small-pool active mode collapses descriptions → fewer tokens.
+
+    Below the passive budget saturation point (~250 skills), active
+    mode meaningfully drops description tokens. Above that point
+    passive already evicts everything; see the dedicated
+    test_context_savings_claude_active_no_op_at_large_pool below."""
+    home, _store = env
+    claude_root = home / ".claude" / "skills"
+    for i in range(20):
+        _write_skill(
+            claude_root / f"s{i}" / "SKILL.md",
+            name=f"skill-{i:03d}",
+            description="A reasonably long description so passive-mode budget gets exercised. " * 3,
+        )
+
+    monkeypatch.delenv("MEGA_CLAUDE_NATIVE_MODE", raising=False)
+    passive_out = api.context_savings()
+    passive_tok = passive_out["per_host"]["claude"]["tokens_per_turn"]
+    assert passive_out["claude_mode"] == "passive"
+
+    monkeypatch.setenv("MEGA_CLAUDE_NATIVE_MODE", "active")
+    active_out = api.context_savings()
+    active_tok = active_out["per_host"]["claude"]["tokens_per_turn"]
+    assert active_out["claude_mode"] == "active"
+    assert active_out["per_host"]["claude"]["claude_mode"] == "active"
+    # Small pool, active mode → "names-only catalog (skillOverrides)" +
+    # suggest icon. Strict is the next-step advice.
+    cl = active_out["per_host"]["claude"]
+    assert "names-only" in cl["rule_summary"]
+    assert cl["rule_severity"] == "suggest"
+    assert "MEGA_CLAUDE_NATIVE_MODE=strict" in cl["rule_advice"]
+    # Active mode drops descriptions → strictly fewer tokens.
+    assert active_tok < passive_tok
+
+
+def test_context_savings_claude_active_no_op_at_large_pool(env, monkeypatch):
+    """At pool sizes > the saturation threshold, active mode produces
+    the same token count as passive (because passive already evicts
+    every description to make room for names). The rule message must
+    warn the user that strict is the only remaining lever."""
+    home, _store = env
+    claude_root = home / ".claude" / "skills"
+    # 300 > _CLAUDE_ACTIVE_USEFUL_BELOW (250). Description doesn't
+    # need to be huge — the budget is consumed by name lines alone.
+    for i in range(300):
+        _write_skill(
+            claude_root / f"s{i:03d}" / "SKILL.md",
+            name=f"skill-{i:03d}",
+            description="A description.",
+        )
+
+    monkeypatch.setenv("MEGA_CLAUDE_NATIVE_MODE", "active")
+    out = api.context_savings()
+    cl = out["per_host"]["claude"]
+    assert cl["claude_mode"] == "active"
+    # The warning is the load-bearing UX signal — now in the hover
+    # advice + severity icon, not in the inline summary text.
+    assert cl["rule_severity"] == "warn"
+    assert "no effect" in cl["rule_advice"]
+    assert "MEGA_CLAUDE_NATIVE_MODE=strict" in cl["rule_advice"]
+
+
+def test_context_savings_claude_strict_zeros_native_catalog(env, monkeypatch):
+    """Strict mode removes the native catalog entirely; tokens → 0
+    and the rule message confirms the suppression."""
+    home, _store = env
+    claude_root = home / ".claude" / "skills"
+    for i in range(50):
+        _write_skill(
+            claude_root / f"s{i:02d}" / "SKILL.md",
+            name=f"skill-{i:02d}",
+            description="Some description text.",
+        )
+
+    monkeypatch.setenv("MEGA_CLAUDE_NATIVE_MODE", "strict")
+    out = api.context_savings()
+    cl = out["per_host"]["claude"]
+    assert out["claude_mode"] == "strict"
+    assert cl["claude_mode"] == "strict"
+    assert cl["tokens_per_turn"] == 0
+    # Strict-mode summary mentions the kill switch; severity is ok
+    # (no further action needed).
+    rule = cl["rule_summary"]
+    assert "suppressed" in rule.lower()
+    assert "disallowedTools" in rule or "skill tool" in rule.lower()
+    assert cl["rule_severity"] == "ok"
+
+
+def test_context_savings_empty_skill_dir_shows_row_with_zero(env):
+    """Dir exists but has no SKILL.md — still surface the host so the
+    user sees it's wired up but inert."""
+    home, _store = env
+    (home / ".codex" / "skills").mkdir(parents=True)
+    # No skills under it.
+    out = api.context_savings()
+    assert "codex" in out["per_host"]
+    assert out["per_host"]["codex"]["skill_count"] == 0
+    assert out["per_host"]["codex"]["tokens_per_turn"] == 0
+    assert "no skills installed" in out["per_host"]["codex"]["rule_summary"]
+
+
+def test_context_savings_skips_codex_dotfile_dirs(env):
+    """~/.codex/skills/.system holds Codex's bundled sample cache.
+    A user who never installed anything themselves shouldn't see those
+    counted in their catalog size."""
+    home, _store = env
+    codex_root = home / ".codex" / "skills"
+    _write_skill(
+        codex_root / ".system" / "bundled-cache" / "SKILL.md",
+        name="bundled",
+        description="codex bundled sample, not user-owned",
+    )
+    _write_skill(
+        codex_root / "user-skill" / "SKILL.md",
+        name="user-skill",
+        description="user-installed skill",
+    )
+    out = api.context_savings()
+    # Only the user-installed skill counted; ".system" tree is filtered out.
+    assert out["per_host"]["codex"]["skill_count"] == 1
+
+
+def test_context_savings_multiplier_floored_not_rounded(env, monkeypatch):
+    """The multiplier must never overstate — `floor(sum / baseline)`."""
+    home, _store = env
+    # Build a catalog whose vanilla simulation sums to a value
+    # comfortably above 1× baseline so we can verify the integer floor.
+    gemini_root = home / ".gemini" / "skills"
+    for i in range(20):
+        _write_skill(
+            gemini_root / f"s{i}" / "SKILL.md",
+            name=f"gemini-skill-{i:02d}",
+            description="Some description, somewhat long, so the per-skill token cost is non-trivial under Gemini's uncapped catalog rules.",
+        )
+
+    out = api.context_savings()
+    vsum = out["vanilla_sum_tokens_per_turn"]
+    baseline = out["mega_tron_per_turn"]
+    expected = vsum // baseline
+    assert out["multiplier"] == expected
+    # Sanity: with 20 skills emitted in full under Gemini's uncapped
+    # rules we should see at least 5× the 150-tok baseline.
+    assert out["multiplier"] >= 5
+
+
+def test_context_savings_warming_up_below_threshold(env):
+    """Fewer than WARM_UP_THRESHOLD routes → endpoint must keep the
+    benchmark fallback and flag the warming-up state for the UI."""
+    home, store = env
+    for i in range(api.WARM_UP_THRESHOLD - 1):
+        store.record_route(
+            session_id=f"sess-{i}",
+            host="codex",
+            query_hash=f"q-{i}",
+            picked_names=["x"],
+            total_tok=200 + i,
+            k=1,
+            k_reason="gap-cut@1",
+        )
+    out = api.context_savings()
+    assert out["mega_tron_is_measured"] is False
+    assert out["mega_tron_turn_count"] == api.WARM_UP_THRESHOLD - 1
+    assert out["mega_tron_per_turn"] == api.MEGA_TRON_BENCHMARK_TOKENS
+    assert "benchmark" in out["mega_tron_baseline_source"].lower()
+
+
+def test_context_savings_measured_above_threshold(env):
+    """At ≥ WARM_UP_THRESHOLD routes the endpoint switches to the
+    measured median + reports p50/p90 in the subtitle."""
+    home, store = env
+    # 20 samples with median 200 (10 below, 10 ≥): values
+    # [191, 192, …, 200, 201, …, 210]. Median (even N) =
+    # (samples[9] + samples[10]) // 2 = (200 + 201) // 2 = 200.
+    for i in range(20):
+        store.record_route(
+            session_id=f"sess-{i}",
+            host="codex",
+            query_hash=f"q-{i}",
+            picked_names=["x"],
+            total_tok=191 + i,
+            k=2,
+            k_reason="gap-cut@2",
+        )
+    out = api.context_savings()
+    assert out["mega_tron_is_measured"] is True
+    assert out["mega_tron_turn_count"] == 20
+    assert out["mega_tron_per_turn"] == 200
+    # Subtitle must surface the measurement so the user sees the
+    # provenance — including p50 and p90, plus the "sessions" unit
+    # (a session = one mega-tron hook fire, not per-turn).
+    src = out["mega_tron_baseline_source"]
+    assert "sample median" in src.lower() or "median" in src.lower()
+    assert "20 sessions" in src
+    assert "p50" in src.lower()
+    assert "p90" in src.lower()

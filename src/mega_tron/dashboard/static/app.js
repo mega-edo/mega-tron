@@ -55,13 +55,19 @@ window.addEventListener("unhandledrejection", (e) => {
 });
 
 const state = {
-  // Active top-level tab: "overview" = catalog observability landing
-  // (big numbers / host bars / active-skills list); "review" = HITL
-  // verdict cleanup (the original dashboard chrome — verdicts list,
-  // skill detail pane, orphan pane). Persisted to localStorage so a
-  // reload doesn't keep snapping the user back to overview.
+  // Active top-level tab. Three tabs:
+  //  - "context-savings" — landing for fresh installs. Token-injection
+  //    estimate against the user's real catalog vs vanilla hosts. This
+  //    is the headline value proposition of mega-tron, so it's the
+  //    default tab; existing localStorage values are honored.
+  //  - "overview" — catalog observability (big numbers / host bars /
+  //    active-skills list).
+  //  - "review" — HITL verdict cleanup (verdicts list, skill detail
+  //    pane, orphan pane).
+  // Persisted to localStorage so a reload keeps the user on whichever
+  // tab they were last using.
   activeTab: (typeof localStorage !== "undefined"
-    && localStorage.getItem("megaTronTab")) || "overview",
+    && localStorage.getItem("megaTronTab")) || "context-savings",
   // Time window applied to /api/overview, /api/skills{,-by-name},
   // /api/verdicts via qsParams(). Fixed at 30d because the
   // user-facing toggle that used to sit under Activity was removed
@@ -79,6 +85,10 @@ const state = {
   skillsByName: [],
   skills: [],
   verdicts: [],
+  // Tab 0 (Context savings) payload from /api/context-savings.
+  // Static estimate, recomputed on every poll because the user might
+  // install/remove skills between turns.
+  contextSavings: null,
   // Multi-category search for the Review tab. Replaces the old
   // verdict-reason FTS search. `field` decides which value the
   // string match runs against; `value` is the query string (or a
@@ -121,16 +131,18 @@ async function loadAll() {
   // substring match against skill rows or verdict rows); no need
   // to hit the server-side /api/verdicts/search FTS endpoint here.
   try {
-    const [overview, skillsByName, skills, verdicts] = await Promise.all([
+    const [overview, skillsByName, skills, verdicts, contextSavings] = await Promise.all([
       fetchJSON(`/api/overview?${params}`),
       fetchJSON(`/api/skills-by-name?${params}`),
       fetchJSON(`/api/skills?${params}`),
       fetchJSON(`/api/verdicts?limit=100&${params}`),
+      fetchJSON(`/api/context-savings`),
     ]);
     state.overview = overview;
     state.skillsByName = skillsByName;
     state.skills = skills;
     state.verdicts = verdicts;
+    state.contextSavings = contextSavings;
     setConnection("live");
     renderAll();
   } catch (err) {
@@ -154,7 +166,9 @@ function setConnection(status) {
 // ---------- Rendering ---------- //
 
 function renderAll() {
-  if (state.activeTab === "overview") {
+  if (state.activeTab === "context-savings") {
+    renderContextSavings();
+  } else if (state.activeTab === "overview") {
     renderBigNumbers();
     renderHostBars();
     renderActiveSkillsList();
@@ -167,7 +181,7 @@ function renderAll() {
 // ---------- Tab switching ---------- //
 
 function setActiveTab(name) {
-  if (name !== "overview" && name !== "review") return;
+  if (name !== "context-savings" && name !== "overview" && name !== "review") return;
   if (state.activeTab === name) return;
   state.activeTab = name;
   try {
@@ -188,6 +202,383 @@ function syncTabChrome() {
   document.querySelectorAll("[data-tab-panel]").forEach((p) => {
     p.hidden = p.dataset.tabPanel !== state.activeTab;
   });
+}
+
+// ---------- Tab 0 — Context savings (token-injection estimate) ---------- //
+
+// Each host's native-catalog doc, plus a short rule summary used in the
+// info tooltip. `docPath` is rendered as a GitHub repo link so the user
+// can click through to the full analysis we keep in `docs/`. The same
+// repo URL is used for every host — only the path under it varies.
+const CS_DOCS_REPO = "https://github.com/mega-edo/mega-tron/blob/main";
+const CS_HOSTS = {
+  codex: {
+    label: "codex",
+    docPath: "docs/Native%20Skill%20Catalog%20in%20Codex%20CLI.md",
+    blurb:
+      "Codex ships a char-budget catalog every turn: min(2% × ctx, 8K chars). " +
+      "Skills listed alphabetically by name; names always come first, descriptions " +
+      "filled in round-robin until budget runs out. Past the cap, names get dropped " +
+      "entirely.",
+  },
+  claude: {
+    label: "claude",
+    docPath: "docs/Native%20Skill%20Catalog%20in%20Claude%20Code.md",
+    blurb:
+      "Claude's native catalog runs on a 1% × ctx token budget (~2K tokens). " +
+      "Every skill name is ALWAYS emitted — descriptions are evicted LRU under " +
+      "budget pressure. With a large catalog the model sees mostly bare names " +
+      "with no trigger text, which collapses retrieval on close neighbours.",
+  },
+  gemini: {
+    label: "gemini",
+    docPath: "docs/Native%20Skill%20Catalog%20in%20Gemini%20CLI.md",
+    blurb:
+      "Gemini has no catalog cap. Every enabled skill ships its full name + " +
+      "description + location as an XML block, every turn. Cost scales linearly " +
+      "with pool size (~99 tok per skill including XML framing).",
+  },
+  megatron: {
+    label: "mega-tron",
+    docPath: "docs/mega-tron%20routing.md",
+    blurb:
+      "Per turn: embed the user's prompt, cosine-rank every skill in the pool, " +
+      "ship only the top-K above the gap-cut threshold. Pool size becomes " +
+      "irrelevant — token cost is proportional to RELEVANCE, not to how many " +
+      "skills you've installed.",
+  },
+};
+
+// Per-host advice icon — only rendered when the endpoint attaches
+// rule_advice + rule_severity to the row. severity drives the glyph:
+//   "ok"      → ✓ (info/success, no immediate action needed)
+//   "suggest" → 💡 (an upgrade exists and is worth considering)
+//   "warn"    → ⚠ (current settings are wasting tokens — fix recommended)
+// The full advice text shows on hover via the existing
+// .tooltip-trigger[data-tooltip]::after CSS (instant, no native delay).
+function _csAdviceIconHTML(host) {
+  const advice = host && host.rule_advice;
+  if (!advice) return "";
+  const sev = host.rule_severity || "info";
+  const glyph = sev === "ok" ? "✓" : sev === "warn" ? "⚠" : "💡";
+  const safe = String(advice).replace(/"/g, "&quot;");
+  return ` <span class="cs-advice-icon sev-${sev} tooltip-trigger" tabindex="0"
+                 role="img" aria-label="${safe}"
+                 data-tooltip="${safe}">${glyph}</span>`;
+}
+
+function _csInfoIconHTML(blurb, docPath) {
+  // Single inline pattern reused for every info icon on this tab.
+  // Click-to-open-docs + hover-to-read-blurb.
+  const safeBlurb = blurb.replace(/"/g, "&quot;");
+  const docURL = `${CS_DOCS_REPO}/${docPath}`;
+  // Two children inside the wrapper:
+  //   1. an instant-tooltip span (hover shows blurb)
+  //   2. an external-link anchor (click jumps to the docs page)
+  return `<span class="cs-info-pair">
+    <span class="info-icon tooltip-trigger" tabindex="0" role="img"
+          aria-label="${safeBlurb}" data-tooltip="${safeBlurb}">ⓘ</span>
+    <a class="cs-doc-link" href="${docURL}" target="_blank" rel="noopener noreferrer"
+       title="Open native-catalog analysis in the repo">docs ↗</a>
+  </span>`;
+}
+
+function _csHostInstalledCountPhrase(n) {
+  if (n === 1) return "Per turn across your 1 installed host";
+  return `Per turn across your ${n} installed hosts`;
+}
+
+// mega-tron row badge — switches between "warming up · 7/20" and
+// "measured · 47 sessions" based on how many route rows the store has.
+// Below the warm-up threshold the median is too noisy to trust, so
+// the UI labels it as in-progress while still showing the reference
+// value next to it. A "session" = one mega-tron hook fire (the
+// host's first prompt of a session). Subsequent turns in the same
+// session reuse the already-injected catalog and don't re-rank, so
+// they're not separate measurement points.
+function _csMegaTronBadge(cs) {
+  if (cs.mega_tron_is_measured) {
+    const n = cs.mega_tron_turn_count || 0;
+    return `<span class="cs-multiplier">measured · ${n} sessions</span>`;
+  }
+  const n = cs.mega_tron_turn_count || 0;
+  const t = cs.warm_up_threshold || 20;
+  return `<span class="cs-warming">warming up · ${n}/${t} sessions</span>`;
+}
+
+function renderContextSavings() {
+  const root = document.getElementById("context-savings-root");
+  if (!root) return;
+  const cs = state.contextSavings;
+  if (!cs) {
+    // Mirror the static placeholder so an in-flight re-render (e.g.
+    // navigation back to the tab while the poll is still pending)
+    // doesn't strip the spinner.
+    root.innerHTML = `
+      <section class="card cs-loading">
+        <span class="cs-spinner" aria-hidden="true"></span>
+        <span class="cs-loading-text">Scanning your catalogs and simulating native injection costs…</span>
+      </section>
+    `;
+    return;
+  }
+
+  const perHost = cs.per_host || {};
+  const installed = Object.keys(perHost);
+  if (installed.length === 0) {
+    root.innerHTML = `
+      <section class="card cs-empty">
+        <div class="card-title">No skills detected</div>
+        <div class="cs-empty-body">
+          No skills under <code>~/.codex/skills</code>,
+          <code>~/.claude/skills</code>, <code>~/.gemini/skills</code>,
+          or the shared <code>~/.agents/skills</code>.
+          <br><br>
+          Run <code>mega-tron setup</code> to wire up your installed hosts,
+          then this tab will fill in.
+        </div>
+      </section>
+    `;
+    return;
+  }
+
+  const vanillaSum = cs.vanilla_sum_tokens_per_turn || 0;
+  const megaTron = cs.mega_tron_per_turn || 0;
+  const baselineSource = cs.mega_tron_baseline_source || "";
+  const multiplier = cs.multiplier || 0;
+  const sharedSkillCount = cs.shared_skill_count || 0;
+  // Axis max for the hero comparison bars.
+  const heroAxis = Math.max(vanillaSum, megaTron, 1);
+  const vanillaWidth = (vanillaSum / heroAxis) * 100;
+  const megaWidth = Math.max((megaTron / heroAxis) * 100, 0.6); // floor so the bar is at least visible
+
+  // Per-host bar axis = max single-host tokens (so the bars compare
+  // honestly with each other, not with the sum).
+  let perHostAxis = megaTron;
+  for (const h of Object.keys(perHost)) {
+    perHostAxis = Math.max(perHostAxis, perHost[h].tokens_per_turn || 0);
+  }
+  perHostAxis = Math.max(perHostAxis, 1);
+
+  const heroTooltip = (
+    cs.mega_tron_is_measured
+      ? (
+        "Vanilla: each installed host's native catalog at your current " +
+        "skill count, summed (every host treats ~/.agents/skills as part " +
+        "of its catalog too). mega-tron: your own sample median over the " +
+        "last 30 days of sessions. Catalog overhead only — doesn't count " +
+        "your prompt itself."
+      )
+      : (
+        "Vanilla: each installed host's native catalog at your current " +
+        "skill count, summed (every host treats ~/.agents/skills as part " +
+        "of its catalog too). mega-tron: reference value (~150 tok/session " +
+        "from the published benchmark) — switches to your own sample median " +
+        "after you log " + (cs.warm_up_threshold || 20) + " sessions. " +
+        "Each session = one mega-tron hook fire (the host's first prompt of " +
+        "the session)."
+      )
+  );
+
+  const heroHTML = `
+    <section class="card cs-hero">
+      <div class="card-title">
+        <span class="title-with-info">
+          <span>${_csHostInstalledCountPhrase(installed.length)}</span>
+          <span class="info-icon tooltip-trigger" tabindex="0" role="img"
+                aria-label="${heroTooltip.replace(/"/g, '&quot;')}"
+                data-tooltip="${heroTooltip.replace(/"/g, '&quot;')}">ⓘ</span>
+        </span>
+      </div>
+      <div class="cs-hero-bars">
+        <div class="cs-hero-row">
+          <span class="cs-hero-label">vanilla</span>
+          <span class="cs-hero-track">
+            <span class="cs-hero-fill vanilla" style="width:${vanillaWidth}%"></span>
+          </span>
+          <span class="cs-hero-tok">${vanillaSum.toLocaleString()} tok</span>
+        </div>
+        <div class="cs-hero-row">
+          <span class="cs-hero-label">mega-tron</span>
+          <span class="cs-hero-track">
+            <span class="cs-hero-fill mega" style="width:${megaWidth}%"></span>
+          </span>
+          <span class="cs-hero-tok">${megaTron.toLocaleString()} tok</span>
+        </div>
+      </div>
+      <div class="cs-hero-takeaway">
+        ${multiplier > 0
+          ? `mega-tron ships <strong>${multiplier.toLocaleString()}× fewer tokens</strong> per session ${
+              cs.mega_tron_is_measured
+                ? `<span class="cs-takeaway-note">(sample median over ${cs.mega_tron_turn_count} sessions)</span>`
+                : `<span class="cs-takeaway-note">(reference value — switches to your sample median after ${cs.warm_up_threshold || 20} sessions)</span>`
+            }.`
+          : `mega-tron reference ~${megaTron} tok/session.`
+        }
+      </div>
+    </section>
+  `;
+
+  // --- Per-host comparison bars ---
+  const hostRows = [];
+  for (const host of Object.keys(CS_HOSTS)) {
+    if (host === "megatron") continue; // baseline row is appended below
+    const h = perHost[host];
+    if (!h) continue;
+    const tok = h.tokens_per_turn || 0;
+    const width = (tok / perHostAxis) * 100;
+    const ratio = tok > 0 && megaTron > 0
+      ? Math.max(1, Math.floor(tok / megaTron)) : 0;
+    let label = CS_HOSTS[host].label;
+    if (host === "claude" && h.claude_mode) {
+      label = `claude (${h.claude_mode})`;
+    }
+    hostRows.push(`
+      <div class="cs-host-row host-${host}">
+        <div class="cs-host-row-top">
+          <span class="cs-host-label-cell">
+            <span class="cs-host-label">${label}</span>
+            ${_csInfoIconHTML(CS_HOSTS[host].blurb, CS_HOSTS[host].docPath)}
+          </span>
+          <span class="cs-host-bar-track">
+            <span class="cs-host-bar-fill ${host}" style="width:${width}%"></span>
+          </span>
+          <span class="cs-host-tok">${tok.toLocaleString()} tok</span>
+          ${ratio > 0
+            ? `<span class="cs-multiplier">${ratio.toLocaleString()}× mega-tron</span>`
+            : ""
+          }
+        </div>
+        <div class="cs-host-row-sub">${h.rule_summary || ""}${_csAdviceIconHTML(h)}</div>
+      </div>
+    `);
+  }
+  // mega-tron baseline row (always last).
+  const megaRowWidth = Math.max((megaTron / perHostAxis) * 100, 0.6);
+  hostRows.push(`
+    <div class="cs-host-row host-megatron">
+      <div class="cs-host-row-top">
+        <span class="cs-host-label-cell">
+          <span class="cs-host-label">mega-tron</span>
+          ${_csInfoIconHTML(CS_HOSTS.megatron.blurb, CS_HOSTS.megatron.docPath)}
+        </span>
+        <span class="cs-host-bar-track">
+          <span class="cs-host-bar-fill mega" style="width:${megaRowWidth}%"></span>
+        </span>
+        <span class="cs-host-tok">${megaTron.toLocaleString()} tok</span>
+        ${_csMegaTronBadge(cs)}
+      </div>
+      <div class="cs-host-row-sub">${baselineSource}</div>
+    </div>
+  `);
+
+  const perHostHTML = `
+    <section class="card cs-perhost">
+      <div class="card-title">Per-host comparison</div>
+      <div class="card-sub">Static estimate based on each host's native injection rules at your current catalog size.</div>
+      <div class="cs-host-list">${hostRows.join("")}</div>
+    </section>
+  `;
+
+  // --- Catalog breakdown table ---
+  // One row per host. Five compact columns the user can scan side-by-side:
+  //   HOST | SEES | YOUR FILES | SHARED OVERLAP | UNIQUE
+  // The shared pool gets a footer row with its own count + a "+ pulled
+  // into every host above" annotation. Directory paths move to a small
+  // footnote under the table so they're available without crowding the
+  // numerical comparison.
+  const tableRows = [];
+  const dirRows = [];
+  for (const host of Object.keys(CS_HOSTS)) {
+    if (host === "megatron") continue;
+    const h = perHost[host];
+    if (!h) continue;
+    const privateCount = h.private_skill_count || 0;
+    const overlap = h.overlap_with_shared || 0;
+    const unique = h.unique_to_host || 0;
+    const visible = h.skill_count || 0;
+    const pctOverlap = privateCount > 0 ? Math.round((overlap / privateCount) * 100) : 0;
+    const overlapCell = overlap > 0
+      ? `${overlap.toLocaleString()} <span class="cs-tbl-pct">(${pctOverlap}%)</span>`
+      : `<span class="cs-tbl-muted">0</span>`;
+    const uniqueCell = unique > 0
+      ? unique.toLocaleString()
+      : `<span class="cs-tbl-muted">0</span>`;
+    tableRows.push(`
+      <tr class="cs-tbl-row host-${host}">
+        <td class="cs-tbl-host"><span class="cs-tbl-host-label">${CS_HOSTS[host].label}</span></td>
+        <td class="cs-tbl-num">${visible.toLocaleString()}</td>
+        <td class="cs-tbl-num">${privateCount.toLocaleString()}</td>
+        <td class="cs-tbl-num">${overlapCell}</td>
+        <td class="cs-tbl-num">${uniqueCell}</td>
+      </tr>
+    `);
+    dirRows.push(
+      `<span class="cs-dir-entry"><span class="cs-dir-tag host-${host}">${CS_HOSTS[host].label}</span> <code>${h.skills_dir}</code></span>`
+    );
+  }
+  // Shared footer row: visually offset so the user knows it's the source
+  // the per-host rows pull from. SEES and SHARED-OVERLAP are self-
+  // referential for the shared pool (it IS the shared source — comparing
+  // it to itself is meaningless), so we dash them out. UNIQUE here uses
+  // the SAME definition as the other rows ("only here, nowhere else"):
+  // names that live in ~/.agents/skills but in none of the host private
+  // dirs. The full shared count is in YOUR FILES.
+  const sharedOnly = cs.shared_only_count ?? 0;
+  const sharedFooter = sharedSkillCount > 0
+    ? `<tr class="cs-tbl-row shared-row">
+         <td class="cs-tbl-host"><span class="cs-tbl-host-label">shared</span></td>
+         <td class="cs-tbl-num"><span class="cs-tbl-muted">—</span></td>
+         <td class="cs-tbl-num">${sharedSkillCount.toLocaleString()}</td>
+         <td class="cs-tbl-num"><span class="cs-tbl-muted">—</span></td>
+         <td class="cs-tbl-num">${sharedOnly.toLocaleString()}</td>
+       </tr>`
+    : "";
+
+  // Grand-total row: union of every name across every dir, counted
+  // once. Surfaced as a dedicated bottom row so it can't be confused
+  // with the per-row UNIQUE definition above.
+  const totalUnique = cs.total_unique_count ?? 0;
+  const totalRow = totalUnique > 0
+    ? `<tr class="cs-tbl-row total-row">
+         <td class="cs-tbl-host"><span class="cs-tbl-host-label">total</span></td>
+         <td colspan="3" class="cs-tbl-total-note">distinct skills across every dir (union, deduped by name)</td>
+         <td class="cs-tbl-num"><strong>${totalUnique.toLocaleString()}</strong></td>
+       </tr>`
+    : "";
+  if (sharedSkillCount > 0) {
+    dirRows.push(
+      `<span class="cs-dir-entry"><span class="cs-dir-tag host-shared">shared</span> <code>${cs.shared_skills_dir || "~/.agents/skills"}</code></span>`
+    );
+  }
+
+  const breakdownHTML = `
+    <section class="card cs-breakdown">
+      <div class="card-title">Your catalog right now</div>
+      <div class="card-sub">${
+        sharedSkillCount > 0
+          ? `<code>~/.agents/skills</code> is host-neutral — every host sees those <strong>${sharedSkillCount.toLocaleString()}</strong> shared skills on top of its own folder.`
+          : "Each row shows what that host sees in isolation."
+      }</div>
+      <table class="cs-tbl">
+        <thead>
+          <tr>
+            <th class="cs-tbl-host">HOST</th>
+            <th class="cs-tbl-num" title="Total skills this host actually sees (private ∪ shared, deduped)">SEES</th>
+            <th class="cs-tbl-num" title="SKILL.md files under this host's own directory">YOUR FILES</th>
+            <th class="cs-tbl-num" title="Of YOUR FILES, how many names also exist in ~/.agents/skills">SHARED OVERLAP</th>
+            <th class="cs-tbl-num" title="Of YOUR FILES, how many are truly only in this host's directory">UNIQUE</th>
+          </tr>
+        </thead>
+        <tbody>${tableRows.join("")}${sharedFooter}${totalRow}</tbody>
+      </table>
+      <div class="cs-dir-list">
+        ${dirRows.join(" · ")}
+      </div>
+    </section>
+  `;
+
+  root.innerHTML = heroHTML + perHostHTML + breakdownHTML;
 }
 
 // ---------- Tab 1 — Skills overview (observability) ---------- //

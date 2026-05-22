@@ -95,6 +95,10 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 payload = api.orphans()
                 self._send_json(payload)
                 return
+            if path == "/api/context-savings":
+                payload = api.context_savings()
+                self._send_json(payload)
+                return
             if path.startswith("/api/skill/"):
                 name = path[len("/api/skill/"):]
                 if not name:

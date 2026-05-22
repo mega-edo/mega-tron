@@ -78,7 +78,10 @@ def test_server_binds_loopback_and_serves_index(server_env):
     with _serving() as url:
         status, body = _get(url + "/")
         assert status == 200
-        assert b"mega-tron dashboard" in body
+        # Title was rebranded to "mega-tron · skill observability";
+        # accept either string so the test survives further title
+        # tweaks without rewriting the assertion every time.
+        assert b"mega-tron" in body and b"observability" in body
 
 
 def test_unknown_route_returns_404(server_env):

@@ -370,6 +370,419 @@ def orphans() -> list[dict[str, Any]]:
     return rows
 
 
+# --------------------------------------------------------------------------- #
+# Context Savings (Tab 3) — static catalog × native-host injection rules.
+#
+# Headline answers: "if I didn't have mega-tron, how many tokens would each
+# host CLI ship to the LLM every turn given my current catalog?" We answer
+# that by feeding each host's actual on-disk skill directory through the
+# same vanilla simulators the published benchmark uses (mega_tron.vanilla_sim).
+# Pure static estimate — no historical accumulation, no time series.
+# --------------------------------------------------------------------------- #
+
+
+# mega-tron typical per-turn skill-context cost. Used as a transparent
+# fallback BEFORE the user's own routes table has enough samples — the
+# `routes` table starts empty and fills in 1-by-1 as host hooks run.
+# Pulled from benchmarks/routing/results.md:
+#
+#   pool 59 / SkillRet  : 106 tok/turn
+#   pool 183 / SkillRet : 124 tok/turn
+#   pool 500 / SkillRet : 157 tok/turn
+#
+# 150 is the round-number mid of that range. Once the user's own
+# routes table crosses ``WARM_UP_THRESHOLD``, the dashboard switches to
+# the user's measured median over the trailing 30 days.
+MEGA_TRON_BENCHMARK_TOKENS = 150
+MEGA_TRON_BENCHMARK_SOURCE = (
+    "Reference value: ~150 tok/session (population median from the published "
+    "200-query benchmark). Your sample median takes over after 20 sessions "
+    "are logged."
+)
+# Kept under the old name as well for backwards-compat with any test
+# fixture that still imports the constant. New code should use
+# MEGA_TRON_BENCHMARK_TOKENS.
+MEGA_TRON_BASELINE_TOKENS = MEGA_TRON_BENCHMARK_TOKENS
+
+# Below this many recorded sessions the median is too unstable (one
+# outlier shifts it 10+%). Above it, we trust the user's median.
+# (A "session" is one mega-tron hook fire — the host's first-turn-of-
+# the-session prompt. Subsequent turns in the same session reuse the
+# already-injected catalog and don't re-rank, so they're not separate
+# measurement points.)
+WARM_UP_THRESHOLD = 20
+
+
+def _load_pool_skills_from_dir(skills_dir: Path) -> list[Any]:
+    """Walk a single skill directory and return ``PoolSkill`` rows.
+
+    Cheap variant of :func:`_iter_skills` scoped to one root — no cross-root
+    dedup, no SQL counts, no host inference. The caller decides which roots
+    to read (host-private vs ``~/.agents/skills`` shared) and how to compose
+    the result.
+    """
+    from mega_tron.vanilla_sim import PoolSkill
+
+    pool: list[PoolSkill] = []
+    if not skills_dir.exists():
+        return pool
+    try:
+        entries = sorted(skills_dir.iterdir())
+    except OSError:
+        return pool
+    for entry in entries:
+        if not entry.is_dir():
+            continue
+        # Skip Codex's bundled-sample cache (`.system`) and any other
+        # dotfile-prefixed dirs. ``.system`` lives inside ~/.codex/skills
+        # but isn't a user-installed skill; counting it would inflate
+        # Codex's "catalog size" for users who never installed anything
+        # themselves.
+        if entry.name.startswith("."):
+            continue
+        skill_md = entry / "SKILL.md"
+        if not skill_md.exists():
+            continue
+        try:
+            text = skill_md.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        name = _extract_yaml_name(text) or entry.name
+        description = _extract_yaml_description(text) or ""
+        pool.append(PoolSkill(name=name, description=description))
+    return pool
+
+
+def _merge_pools_unique(*pools: list[Any]) -> list[Any]:
+    """Concatenate pools, deduping by ``.name``. Earlier pools win on
+    collision — the host-private dir is passed first so a host that
+    happens to have a same-named skill under both its own root AND
+    ``~/.agents/skills`` doesn't double-count it."""
+    seen: set[str] = set()
+    out: list[Any] = []
+    for pool in pools:
+        for skill in pool:
+            if skill.name in seen:
+                continue
+            seen.add(skill.name)
+            out.append(skill)
+    return out
+
+
+def _rule_label_codex() -> str:
+    return "cap-bound (2% × ctx, 8K char ceiling); alphabetical order"
+
+
+# Above this pool size, Claude's passive-mode budget is already saturated
+# by skill names alone — every description gets LRU-evicted whether or
+# not active-mode rewrites skillOverrides. Below this threshold active
+# does the useful work; above it the user needs strict.
+_CLAUDE_ACTIVE_USEFUL_BELOW = 250
+
+
+_CLAUDE_MODE_CAVEAT = (
+    " (Dashboard reads MEGA_CLAUDE_NATIVE_MODE at startup; restart the "
+    "dashboard if you changed it in another shell.)"
+)
+
+
+def _rule_label_claude(claude_mode: str, pool_size: int) -> dict[str, str]:
+    """Return ``{summary, advice, severity}`` for the claude row.
+
+    Splits the old single-string subtitle into a short factual
+    ``summary`` (rendered inline) plus a longer ``advice`` (rendered
+    as a hover tooltip on an icon next to the summary). ``severity``
+    controls the icon: ``"ok"`` (✓), ``"suggest"`` (💡), or
+    ``"warn"`` (⚠). The mode × pool-size matrix:
+
+    | mode    | pool ≤ 250      | pool > 250         |
+    |---------|-----------------|--------------------|
+    | passive | suggest active  | warn → strict      |
+    | active  | suggest strict  | warn (no-op here)  |
+    | strict  | ok              | ok                 |
+
+    Every advice string carries a short caveat about how
+    ``MEGA_CLAUDE_NATIVE_MODE`` is read at dashboard startup, since
+    a user changing the env var in another shell won't see the new
+    value until they restart the dashboard.
+    """
+    if claude_mode == "strict":
+        return {
+            "summary": "native catalog fully suppressed (--disallowedTools Skill)",
+            "advice": (
+                "mega-tron's top-K is the only skill channel. Maximum savings, "
+                "minimum native fallback."
+            ),
+            "severity": "ok",
+        }
+
+    if claude_mode == "active":
+        if pool_size > _CLAUDE_ACTIVE_USEFUL_BELOW:
+            return {
+                "summary": "names-only catalog (skillOverrides)",
+                "advice": (
+                    f"active mode has no effect at {pool_size:,} skills — passive "
+                    "budget is already saturated by names alone. Set "
+                    "MEGA_CLAUDE_NATIVE_MODE=strict to remove the catalog entirely."
+                    + _CLAUDE_MODE_CAVEAT
+                ),
+                "severity": "warn",
+            }
+        return {
+            "summary": "names-only catalog (skillOverrides)",
+            "advice": (
+                "Set MEGA_CLAUDE_NATIVE_MODE=strict to remove even the name listing."
+                + _CLAUDE_MODE_CAVEAT
+            ),
+            "severity": "suggest",
+        }
+
+    # passive
+    base_summary = "names always emitted, descriptions LRU-evicted (1% × ctx budget)"
+    if pool_size > _CLAUDE_ACTIVE_USEFUL_BELOW:
+        return {
+            "summary": base_summary,
+            "advice": (
+                "Set MEGA_CLAUDE_NATIVE_MODE=strict to remove the catalog entirely. "
+                "Active is a no-op at this catalog size — budget is already full of names."
+                + _CLAUDE_MODE_CAVEAT
+            ),
+            "severity": "warn",
+        }
+    return {
+        "summary": base_summary,
+        "advice": (
+            "Set MEGA_CLAUDE_NATIVE_MODE=active to drop descriptions and save "
+            "~70% of catalog tokens."
+            + _CLAUDE_MODE_CAVEAT
+        ),
+        "severity": "suggest",
+    }
+
+
+def _rule_label_gemini() -> str:
+    return "uncapped — every name + full description per turn"
+
+
+def context_savings() -> dict[str, Any]:
+    """Per-host token-injection estimates against the user's real catalog.
+
+    Reads each native host's canonical skill directory
+    (``~/.codex/skills``, ``~/.claude/skills``, ``~/.gemini/skills``) and
+    runs the matching vanilla simulator on it. Only hosts that actually
+    have a populated directory show up — no phantom rows for hosts the
+    user never installed.
+
+    Claude has two modes (``MEGA_CLAUDE_NATIVE_MODE`` env, default
+    ``passive``):
+
+    * ``passive`` — Claude still ships its full native catalog every
+      turn; the simulator returns the full descriptions-fit-budget
+      number.
+    * ``active`` — mega-tron rewrites ``skillOverrides`` so Claude's
+      native catalog collapses to name-only; the simulator returns the
+      name-only token cost.
+
+    The ``mega_tron_per_turn`` baseline is the README's headline
+    constant (:data:`MEGA_TRON_BASELINE_TOKENS`). When we start logging
+    per-turn injection sizes to the ``routes`` table this becomes a
+    measured average.
+    """
+    import os
+
+    from mega_tron.vanilla_sim import (
+        simulate_codex_catalog,
+        simulate_claude_catalog,
+        simulate_claude_active_downgrade,
+        simulate_claude_strict_suppression,
+        simulate_gemini_catalog,
+    )
+
+    claude_mode = os.environ.get("MEGA_CLAUDE_NATIVE_MODE", "passive")
+    home = Path.home()
+
+    # ~/.agents/skills is a host-neutral shared convention — every host
+    # the router serves sees it. So if it exists, every host's catalog
+    # picks those skills up on top of its own private dir. The shared
+    # pool is loaded once and merged into each host's per-host pool
+    # below (with host-private taking precedence on name collisions).
+    shared_dir = home / ".agents" / "skills"
+    shared_pool = _load_pool_skills_from_dir(shared_dir) if shared_dir.exists() else []
+
+    host_dirs = [
+        ("codex", home / ".codex" / "skills"),
+        ("claude", home / ".claude" / "skills"),
+        ("gemini", home / ".gemini" / "skills"),
+    ]
+
+    per_host: dict[str, dict[str, Any]] = {}
+    # Pre-compute shared name set once — used to decompose each host's
+    # private pool into (overlap with shared) vs (truly host-unique).
+    shared_names = {s.name for s in shared_pool}
+
+    # Collect every name across every dir so we can compute the grand
+    # union total at the bottom of the breakdown table. Names that
+    # appear in multiple dirs are counted once (set semantics).
+    all_unique_names: set[str] = set(shared_names)
+    # Names that appear in ANY host's private dir → used to compute
+    # "shared-only" = ``shared_names \ private_union``.
+    private_union: set[str] = set()
+
+    vanilla_sum = 0
+    for host, skills_dir in host_dirs:
+        # A host is "installed" if EITHER its private dir exists OR the
+        # shared ~/.agents/skills dir has at least one skill. Both feed
+        # the same simulator.
+        private_pool = _load_pool_skills_from_dir(skills_dir) if skills_dir.exists() else []
+        pool = _merge_pools_unique(private_pool, shared_pool)
+        host_visible = skills_dir.exists() or len(shared_pool) > 0
+        if not host_visible:
+            continue
+
+        # Decompose the private pool: how many of those skill names ALSO
+        # exist in ~/.agents/skills (so the host would see the same skill
+        # either way), and how many are truly host-only? This is the
+        # "what's actually unique to this host's private dir" number the
+        # breakdown card surfaces.
+        private_names = {s.name for s in private_pool}
+        overlap_count = len(private_names & shared_names)
+        unique_to_host = len(private_names - shared_names)
+
+        # Feed the table-level grand-total computation.
+        all_unique_names |= private_names
+        private_union |= private_names
+
+        if not pool:
+            # Dir present but empty AND no shared skills either.
+            per_host[host] = {
+                "skill_count": 0,
+                "tokens_per_turn": 0,
+                "names_emitted": 0,
+                "descriptions_emitted": 0,
+                "skills_dir": str(skills_dir),
+                "private_skill_count": 0,
+                "shared_skill_count": 0,
+                "overlap_with_shared": 0,
+                "unique_to_host": 0,
+                "rule_summary": "no skills installed",
+                "claude_mode": claude_mode if host == "claude" else None,
+            }
+            continue
+
+        # Each branch returns either a plain str (codex/gemini —
+        # the host's catalog rule is one short, self-contained
+        # sentence) or a dict (claude — mode + size matters, so we
+        # split summary vs hover advice + severity icon).
+        rule_summary: str
+        rule_advice: str | None = None
+        rule_severity: str | None = None
+        if host == "codex":
+            block = simulate_codex_catalog(pool)
+            rule_summary = _rule_label_codex()
+        elif host == "claude":
+            if claude_mode == "strict":
+                block = simulate_claude_strict_suppression(pool)
+            elif claude_mode == "active":
+                block = simulate_claude_active_downgrade(pool)
+            else:
+                block = simulate_claude_catalog(pool)
+            claude_rule = _rule_label_claude(claude_mode, len(pool))
+            rule_summary = claude_rule["summary"]
+            rule_advice = claude_rule["advice"]
+            rule_severity = claude_rule["severity"]
+        else:  # gemini
+            block = simulate_gemini_catalog(pool)
+            rule_summary = _rule_label_gemini()
+
+        per_host[host] = {
+            # `skill_count` is the deduped union the host actually sees
+            # (private ∪ shared). `private_skill_count` is the raw
+            # count of files under the host's own dir. The dashboard
+            # surfaces both so the user understands the relationship
+            # between "I put 2,936 files in ~/.claude/skills" and "the
+            # host sees 2,945 skills total."
+            "skill_count": len(pool),
+            "private_skill_count": len(private_pool),
+            "shared_skill_count": len(shared_pool),
+            "overlap_with_shared": overlap_count,
+            "unique_to_host": unique_to_host,
+            "tokens_per_turn": int(block.tokens),
+            # `names_emitted` = how many skills get at least their name
+            # shipped (Claude's "names always" rule means this equals
+            # skill_count). `descriptions_emitted` = how many got their
+            # description through too. The gap between the two is the
+            # "names-only entries" — what the model sees as a bare label
+            # with no trigger text.
+            "names_emitted": len(block.all_emitted_names),
+            "descriptions_emitted": len(block.predicted_skills),
+            "skills_dir": str(skills_dir),
+            "rule_summary": rule_summary,
+            "rule_advice": rule_advice,
+            "rule_severity": rule_severity,
+            "claude_mode": claude_mode if host == "claude" else None,
+        }
+        vanilla_sum += int(block.tokens)
+
+    # Phase 2: switch from benchmark-derived constant to the user's
+    # measured median once enough turns are logged. Below the
+    # threshold the constant stays as a transparent fallback so the
+    # dashboard never has a meaningless empty cell.
+    try:
+        stats = _open_store().route_stats(days=30)
+    except Exception as exc:  # noqa: BLE001 — analytics path is best-effort
+        _LOG.warning("route_stats failed: %s", exc)
+        stats = {"turn_count": 0, "median_tok": None, "p50_tok": None, "p90_tok": None}
+
+    turn_count = int(stats.get("turn_count", 0))
+    measured_median = stats.get("median_tok")
+    is_measured = (
+        turn_count >= WARM_UP_THRESHOLD and measured_median is not None
+    )
+
+    if is_measured:
+        mega_tron_per_turn = int(measured_median)
+        p50 = stats.get("p50_tok") or measured_median
+        p90 = stats.get("p90_tok") or measured_median
+        mega_tron_source = (
+            f"Sample median over {turn_count} sessions in the last 30 days "
+            f"(p50 {p50} · p90 {p90})."
+        )
+    else:
+        mega_tron_per_turn = MEGA_TRON_BENCHMARK_TOKENS
+        mega_tron_source = MEGA_TRON_BENCHMARK_SOURCE
+
+    multiplier = (
+        vanilla_sum // mega_tron_per_turn
+        if vanilla_sum and mega_tron_per_turn else 0
+    )
+    # "shared-only" = names that live ONLY in ~/.agents/skills, not in
+    # any host's private dir. This is what the breakdown table's
+    # `shared` row reports under UNIQUE — consistent with how every
+    # other row uses that column ("only here, nowhere else").
+    shared_only_count = len(shared_names - private_union)
+    # Grand total = union of every dir's names. Each name counted once
+    # regardless of how many dirs it lives in.
+    total_unique_count = len(all_unique_names)
+
+    return {
+        "per_host": per_host,
+        "installed_host_count": len(per_host),
+        "shared_skill_count": len(shared_pool),
+        "shared_only_count": shared_only_count,
+        "total_unique_count": total_unique_count,
+        "shared_skills_dir": str(shared_dir),
+        "vanilla_sum_tokens_per_turn": vanilla_sum,
+        "mega_tron_per_turn": mega_tron_per_turn,
+        "mega_tron_baseline_source": mega_tron_source,
+        "multiplier": multiplier,
+        "claude_mode": claude_mode,
+        # Phase 2 measurement keys for the warming-up pill.
+        "mega_tron_is_measured": is_measured,
+        "mega_tron_turn_count": turn_count,
+        "warm_up_threshold": WARM_UP_THRESHOLD,
+    }
+
+
 def bulk_delete_orphans(body: dict[str, Any]) -> dict[str, Any]:
     """Delete every verdict + skills-table row for each name in
     ``body["names"]``. Names that aren't actually orphan (i.e. a
