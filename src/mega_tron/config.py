@@ -18,6 +18,7 @@ override so CI and one-shot scripts don't need to mutate the file.
 """
 from __future__ import annotations
 
+import json
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -121,47 +122,93 @@ def _standard_skill_dirs() -> list[Path]:
 def _claude_plugin_skill_dirs() -> list[Path]:
     """Find skill roots inside the Claude Code plugin tree.
 
-    Claude Code installs plugins under ``~/.claude/plugins/marketplaces/``;
-    each plugin is a full package (agents/, commands/, hooks/, skills/,
-    etc.) and only the ``skills/`` subdirectory carries SKILL.md
-    catalogs mega-tron can route over. We surface every such
-    ``<marketplace>/{plugins|external_plugins}/<plugin>/skills/``
-    directory so a user who installed e.g. ``hookify`` via the official
-    marketplace gets its writing-rules skill in the catalog without
-    having to ``mega-tron dirs add`` it by hand.
+    Claude Code stores plugins in TWO trees, both of which can carry
+    routable skills:
 
-    Claude's marketplace tree is the *live* install — Claude Code
-    reads exactly those files at runtime, so what mega-tron sees
-    matches what Claude Code itself ships per session. Other hosts'
-    plugin trees live under their own per-host roots and are surfaced
-    by :func:`_codex_plugin_skill_dirs` / :func:`_gemini_plugin_skill_dirs`.
+    1. ``~/.claude/plugins/marketplaces/<m>/{plugins|external_plugins}/<p>/skills/``
+       — the marketplace mirror. Some plugins keep their full package
+       (agents/, commands/, hooks/, skills/) directly under the
+       marketplace path.
+
+    2. ``~/.claude/plugins/cache/<m>/<p>/<version>/skills/`` — the
+       installed-package cache. Other plugins (and the official
+       Claude superpowers tree) only carry their actual code under
+       this versioned path; the marketplace entry alongside it is
+       just a manifest stub. ``installed_plugins.json`` records the
+       *active* version per plugin — we read it so we only surface
+       the version Claude Code itself is loading at runtime, never
+       stale older versions that happen to be left on disk.
+
+    Falling back gracefully matters: if the manifest is missing or
+    malformed (fresh install, hand-edited file, schema change), we
+    skip the cache leg entirely rather than guessing. The marketplace
+    leg always runs so users still see hookify / frontend-design /
+    etc. even when the cache tree can't be read.
     """
     out: list[Path] = []
-    marketplaces = Path.home() / ".claude" / "plugins" / "marketplaces"
-    if not marketplaces.is_dir():
+    plugins_root = Path.home() / ".claude" / "plugins"
+    if not plugins_root.is_dir():
         return out
-    try:
-        market_iter = sorted(marketplaces.iterdir())
-    except OSError:
-        return out
-    for marketplace in market_iter:
-        if not marketplace.is_dir():
-            continue
-        # Both ``plugins/`` and ``external_plugins/`` are first-class
-        # plugin containers — checked separately so a marketplace that
-        # exposes only one of them is still picked up.
-        for container_name in ("plugins", "external_plugins"):
-            container = marketplace / container_name
-            if not container.is_dir():
+
+    # --- Leg 1: marketplace mirror -----------------------------------
+    marketplaces = plugins_root / "marketplaces"
+    if marketplaces.is_dir():
+        try:
+            market_iter = sorted(marketplaces.iterdir())
+        except OSError:
+            market_iter = []
+        for marketplace in market_iter:
+            if not marketplace.is_dir():
                 continue
-            try:
-                plugin_iter = sorted(container.iterdir())
-            except OSError:
+            # Both ``plugins/`` and ``external_plugins/`` are first-class
+            # plugin containers — checked separately so a marketplace
+            # that exposes only one of them is still picked up.
+            for container_name in ("plugins", "external_plugins"):
+                container = marketplace / container_name
+                if not container.is_dir():
+                    continue
+                try:
+                    plugin_iter = sorted(container.iterdir())
+                except OSError:
+                    continue
+                for plugin in plugin_iter:
+                    skills = plugin / "skills"
+                    if skills.is_dir():
+                        out.append(skills)
+
+    # --- Leg 2: installed-package cache (versioned, manifest-pinned) -
+    manifest = plugins_root / "installed_plugins.json"
+    if manifest.is_file():
+        try:
+            data = json.loads(manifest.read_text(encoding="utf-8"))
+            entries = (data or {}).get("plugins") or {}
+        except (OSError, json.JSONDecodeError):
+            entries = {}
+        # Each plugin maps to a list of install records (Claude allows
+        # multiple scopes — user, project, etc.). We surface every
+        # install_path that has a skills/ subdir, deduped.
+        seen: set[Path] = set(out)
+        for records in entries.values():
+            if not isinstance(records, list):
                 continue
-            for plugin in plugin_iter:
-                skills = plugin / "skills"
-                if skills.is_dir():
+            for rec in records:
+                if not isinstance(rec, dict):
+                    continue
+                install_path = rec.get("installPath")
+                if not isinstance(install_path, str) or not install_path:
+                    continue
+                skills = Path(install_path) / "skills"
+                # Resolve to a stable form for dedup against the
+                # marketplace leg; some marketplaces symlink cache
+                # contents through `marketplaces/.../plugins/<name>/`.
+                try:
+                    resolved = skills.resolve()
+                except OSError:
+                    resolved = skills
+                if skills.is_dir() and resolved not in seen:
+                    seen.add(resolved)
                     out.append(skills)
+
     return out
 
 

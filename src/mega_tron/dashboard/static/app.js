@@ -537,7 +537,15 @@ function renderContextSavings() {
     // so the user sees one row per host with both sources. Glob is
     // identical across users (template path, not a real fs entry).
     const pluginGlob = {
-      claude: "~/.claude/plugins/marketplaces/*/{plugins,external_plugins}/*/skills",
+      // Claude lives in two trees: the marketplace mirror (which keeps
+      // the full plugin package directly under it for some plugins) and
+      // the versioned cache (which keeps the actual package contents
+      // for installed-via-manifest plugins like superpowers / mega-code).
+      // ``_claude_plugin_skill_dirs`` reads both — the footer mirrors
+      // that so the user can audit where their numbers come from.
+      claude:
+        "~/.claude/plugins/marketplaces/*/{plugins,external_plugins}/*/skills, " +
+        "~/.claude/plugins/cache/*/*/*/skills (active version per installed_plugins.json)",
       codex: "~/.codex/plugins/cache/*/*/*/skills",
       gemini: "~/.gemini/plugins/.../skills",
     }[host];

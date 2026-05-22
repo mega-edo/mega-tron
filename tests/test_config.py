@@ -177,3 +177,85 @@ def test_discover_wisdom_dir_filtered_when_missing(fake_home, monkeypatch):
 
     found = discover_skill_dirs(existing_only=True)
     assert missing.resolve() not in [p.resolve() for p in found]
+
+
+def test_claude_plugin_skill_dirs_picks_up_cache_tree_via_manifest(
+    fake_home,
+):
+    """The cache/<m>/<p>/<version>/skills/ tree carries the actual
+    skill content for plugins that don't replicate it under the
+    marketplaces mirror (e.g. Anthropic's superpowers, third-party
+    versioned plugins). Read installed_plugins.json to pick the
+    *active* version per plugin so stale leftover versions are
+    excluded the same way Claude Code itself excludes them at
+    runtime."""
+    from mega_tron.config import _claude_plugin_skill_dirs
+
+    # Two versions of the same plugin on disk; only 1.1.3 is active.
+    cache_root = fake_home / ".claude" / "plugins" / "cache" / "marketX" / "pluginA"
+    (cache_root / "1.1.2-beta" / "skills").mkdir(parents=True)
+    active_skills = cache_root / "1.1.3" / "skills"
+    active_skills.mkdir(parents=True)
+
+    manifest = fake_home / ".claude" / "plugins" / "installed_plugins.json"
+    manifest.parent.mkdir(parents=True, exist_ok=True)
+    import json as _json
+    manifest.write_text(_json.dumps({
+        "version": 2,
+        "plugins": {
+            "pluginA@marketX": [
+                {
+                    "scope": "user",
+                    "installPath": str(cache_root / "1.1.3"),
+                    "version": "1.1.3",
+                }
+            ]
+        },
+    }))
+
+    dirs = _claude_plugin_skill_dirs()
+    assert active_skills in dirs, (
+        "active version's skills/ must be surfaced from the cache tree"
+    )
+    # Stale version is NOT included.
+    stale = cache_root / "1.1.2-beta" / "skills"
+    assert stale not in dirs, (
+        "stale plugin version must NOT be surfaced — manifest pins active"
+    )
+
+
+def test_claude_plugin_skill_dirs_survives_missing_manifest(fake_home):
+    """A fresh install (or hand-edited home) may have no
+    installed_plugins.json at all. The marketplace leg must still
+    return its entries; the cache leg silently no-ops.
+    """
+    from mega_tron.config import _claude_plugin_skill_dirs
+
+    market_skills = (
+        fake_home / ".claude" / "plugins" / "marketplaces" / "marketX"
+        / "plugins" / "pluginA" / "skills"
+    )
+    market_skills.mkdir(parents=True)
+    # No installed_plugins.json on disk.
+
+    dirs = _claude_plugin_skill_dirs()
+    assert market_skills in dirs
+
+
+def test_claude_plugin_skill_dirs_survives_malformed_manifest(fake_home):
+    """A corrupted manifest must not crash discovery — fall through
+    to marketplace-only mode."""
+    from mega_tron.config import _claude_plugin_skill_dirs
+
+    market_skills = (
+        fake_home / ".claude" / "plugins" / "marketplaces" / "marketX"
+        / "plugins" / "pluginA" / "skills"
+    )
+    market_skills.mkdir(parents=True)
+
+    manifest = fake_home / ".claude" / "plugins" / "installed_plugins.json"
+    manifest.parent.mkdir(parents=True, exist_ok=True)
+    manifest.write_text("{ this is not valid json")
+
+    dirs = _claude_plugin_skill_dirs()
+    assert market_skills in dirs  # marketplace leg unaffected
