@@ -2645,12 +2645,17 @@ function bootstrap() {
   // drop it below the trigger instead (CSS toggles via the
   // `tooltip-flipped` class). Event-delegated on document so it covers
   // every existing and re-rendered .tooltip-trigger without re-wiring.
-  // Estimating the tooltip's actual rendered height before it's shown
-  // is brittle, so we use a conservative budget (`MIN_ABOVE_PX`) that
-  // matches the realistic info-icon tooltip height (~3–6 lines × 1.4
-  // line-height × 11px font + 14px padding ≈ 80 px floor). Triggers
-  // closer to the top than that flip down.
-  const MIN_ABOVE_PX = 140;
+  //
+  // The hero tooltip on the Context Savings card spans ~10 lines once
+  // the measured-median copy plus the catalog-scope note are both in
+  // it — easily 260+ px tall. The earlier MIN_ABOVE_PX=140 floor was
+  // tuned for short advice tooltips and left the long hero one
+  // clipping above the viewport. Use a larger floor (240 px) so a
+  // trigger sitting in the upper third of the screen flips below,
+  // where the page has room. The :has-CSS safety net (max-height:
+  // calc(100vh - 24px); overflow-y: auto) still applies as the
+  // last-resort guard for triggers near the bottom edge.
+  const MIN_ABOVE_PX = 240;
   const updateTooltipFlip = (trigger) => {
     if (!trigger || !trigger.getBoundingClientRect) return;
     const rect = trigger.getBoundingClientRect();
