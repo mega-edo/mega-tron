@@ -74,6 +74,14 @@ mega-tron rebuilds the catalog layer above each host so all three properties fli
 
 ## 🏃 Try it
 
+🤖 **Easiest path: just ask your agent.** Tell Claude / Codex / Cursor / Copilot:
+
+```bash
+install or update mega-tron for me following https://github.com/mega-edo/mega-tron/blob/main/docs/agent%20installation.md
+```
+
+Or, do it yourself in two commands:
+
 ```bash
 uv tool install mega-tron && ~/.local/bin/mega-tron setup
 ```
