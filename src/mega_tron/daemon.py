@@ -17,8 +17,11 @@ Wire protocol (line-delimited JSON, one request per connection):
     request:  {"op": "shutdown"}
     response: {"ok": true}   # daemon then exits
 
-The daemon idles out after :data:`DEFAULT_IDLE_TIMEOUT_S` seconds with
-no request — bounds resident memory.
+The daemon stays alive until it receives an explicit shutdown
+(``{"op": "shutdown"}`` or SIGTERM). Tests can pass an explicit
+``idle_timeout_s`` to :func:`serve` for bounded runs, but production
+never does — the user expectation is "once spawned, it lives until
+the machine shuts down."
 
 Failure semantics: clients fall back to the in-process path.
 :func:`client_query` returns ``None`` for any of:
@@ -369,16 +372,18 @@ def _make_embedder() -> object:
 
 def serve(
     socket_path: Path | None = None,
-    idle_timeout_s: float = DEFAULT_IDLE_TIMEOUT_S,
+    idle_timeout_s: float | None = None,
     embedder_factory: Callable[[], object] | None = None,
     log_prefix: str = "[mega-trond]",
     ready_event: "threading.Event | None" = None,
 ) -> int:
-    """Run the daemon in the calling thread. Blocks until SIGTERM/idle/shutdown.
+    """Run the daemon in the calling thread. Blocks until SIGTERM/shutdown.
 
     Args:
         socket_path: AF_UNIX path. Defaults to :func:`default_socket_path`.
-        idle_timeout_s: exit after this many idle seconds (no requests).
+        idle_timeout_s: ``None`` (default) means the daemon stays alive
+            until an explicit shutdown signal. Pass an explicit float for
+            tests that need a bounded run; production never sets this.
         embedder_factory: callable that returns an Embedder. Defaults to the
             same selection logic the hook uses (``MEGA_HOOK_EMBEDDER``).
         log_prefix: stderr prefix for daemon log lines.
@@ -415,7 +420,16 @@ def serve(
     except OSError:
         pass
     srv.listen(_SOCKET_BACKLOG)
-    srv.settimeout(min(30.0, max(1.0, idle_timeout_s / 4)))
+    # With idle_timeout_s=None the daemon runs forever; we still want
+    # the accept() loop to wake periodically so signal handlers (SIGTERM
+    # etc.) actually fire — a blocking-forever socket wouldn't return
+    # control to Python to process the signal. 30 s is a quiet poll
+    # that costs effectively nothing.
+    accept_poll_s = (
+        30.0 if idle_timeout_s is None
+        else min(30.0, max(1.0, idle_timeout_s / 4))
+    )
+    srv.settimeout(accept_poll_s)
     if ready_event is not None:
         ready_event.set()
 
@@ -434,8 +448,15 @@ def serve(
             try:
                 conn, _ = srv.accept()
             except socket.timeout:
-                # Idle check.
-                if time.monotonic() - state.last_request_ts > idle_timeout_s:
+                # Idle check — only enforced when the caller passed an
+                # explicit timeout. With idle_timeout_s=None (production
+                # default) the daemon stays up until an explicit signal,
+                # matching the user expectation that "once started, it
+                # lives until the machine shuts down."
+                if (
+                    idle_timeout_s is not None
+                    and time.monotonic() - state.last_request_ts > idle_timeout_s
+                ):
                     print(
                         f"{log_prefix} idle {idle_timeout_s:.0f}s — exiting",
                         file=sys.stderr,

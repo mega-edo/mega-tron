@@ -48,6 +48,21 @@ def cmd_search(args: argparse.Namespace) -> int:
     #
     # Agentic mode also falls through — the LLM rerank lives in the
     # client process today, the daemon doesn't run it.
+    # Eager spawn — regardless of whether THIS call can use the daemon
+    # fast-path, we want a running daemon for the NEXT call (and for
+    # every host hook on the system). Output modes like ``stage`` and
+    # ``bodies`` need full RankedSkill objects the daemon doesn't
+    # return, so they fall through to the in-process path — but we
+    # still kick off ``spawn_detached`` so the daemon is up by the
+    # time the user (or codex's shell wrapper) calls again.
+    try:
+        from mega_tron import daemon as daemon_mod
+
+        if not daemon_mod.daemon_disabled() and not daemon_mod.is_running():
+            daemon_mod.spawn_detached()
+    except Exception:  # noqa: BLE001
+        pass
+
     daemon_eligible = (
         mode == "semantic"
         and args.output in ("meta", "names")
