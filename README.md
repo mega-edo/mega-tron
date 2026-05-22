@@ -82,7 +82,7 @@ Two commands, three hosts. Token usage drops 18–30× on the very next turn wit
 - **One edit, three hosts.** Fix a bug in `webhook-signer` and Codex, Claude, and Gemini (and Antigravity, when it lands) all see it on the next turn.
 - **Skills that broke last week stop showing up this week** — MEGA Tron is the only layer that records *whether a skill actually helped*. Three consecutive failures auto-retires it; a `HELPFUL` in any host lifts the same skill's rank in every host on the next turn.
 
-## 📊 Does it actually work? — measured
+## 📊 Does it actually work? 
 
 A 200-query benchmark on a pool of third-party skills sampled deterministically from the open-source ecosystem ([full report](benchmarks/routing/results.md)). No API calls; every number below is from [the repo](benchmarks/routing/).
 
