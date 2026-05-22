@@ -52,6 +52,13 @@
     <!-- Tab 1 — Skills overview (observability) -->
     <section id="tab-panel-overview" class="tab-panel" data-tab-panel="overview"
              role="tabpanel" aria-labelledby="Skills overview" hidden>
+      <!-- Placeholder shown until the first /api/overview poll resolves.
+           JS removes [data-loading] from the panel once any child
+           container has been populated. -->
+      <div class="tab-loading" data-tab-placeholder="overview">
+        <span class="tab-spinner" aria-hidden="true"></span>
+        <span class="tab-loading-text">Loading skill counts and recent verdicts…</span>
+      </div>
       <div id="big-numbers" class="big-numbers"></div>
 
       <section class="card">
@@ -79,6 +86,13 @@
     <!-- Tab 2 — Review (HITL verdict cleanup) -->
     <section id="tab-panel-review" class="tab-panel" data-tab-panel="review"
              role="tabpanel" aria-labelledby="Review" hidden>
+      <!-- Placeholder shown until the first /api/review poll resolves.
+           JS removes [data-loading] from the panel once any child
+           container has been populated. -->
+      <div class="tab-loading" data-tab-placeholder="review">
+        <span class="tab-spinner" aria-hidden="true"></span>
+        <span class="tab-loading-text">Loading verdicts and health checks…</span>
+      </div>
       <!-- Top bar combines the health warnings (when any) with the
            multi-category filter. Default state shows just the filter
            — no chatty "all clear" sentence. -->

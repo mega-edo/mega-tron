@@ -176,6 +176,15 @@ function renderAll() {
     renderHealth();
     renderMainList();
   }
+  // Pull every server-side spinner placeholder once data has landed.
+  // Done globally (not per-tab) so switching tabs after first paint
+  // always lands on populated content, never a stale "Loading…" card.
+  // Context savings has its own root-replace render path and is
+  // already covered there — this only clears the overview/review
+  // placeholders.
+  document.querySelectorAll("[data-tab-placeholder]").forEach((el) => {
+    el.remove();
+  });
 }
 
 // ---------- Tab switching ---------- //

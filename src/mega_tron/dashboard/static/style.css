@@ -2160,9 +2160,16 @@ button.history-row-head:focus-visible {
 }
 .review-toolbar .health-row[hidden] { display: none; }
 .review-filter {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 6px;
+  /* Let the filter row stretch into the toolbar's free space so the
+     search input can grow well past its 220px minimum. The health-row
+     sibling has flex: 1 1 auto too, so they share the leftover width
+     and the search field doesn't end up pinned to its minimum on
+     wide screens. */
+  flex: 1 1 360px;
+  min-width: 0;
 }
 .review-filter-label {
   font-size: 10.5px;
@@ -2202,7 +2209,12 @@ button.history-row-head:focus-visible {
   font: inherit;
   font-size: 12px;
   padding: 5px 8px;
+  /* Grow to fill leftover toolbar width. Min 220 covers the narrow
+     case (review-filter wrapped onto its own row); max stops it from
+     becoming an unwieldy giant on ultra-wide screens. */
+  flex: 1 1 auto;
   min-width: 220px;
+  max-width: 720px;
 }
 .review-filter-input:focus,
 .review-filter-field:focus,
@@ -2552,11 +2564,23 @@ button.history-row-head:focus-visible {
   font-size: 12.5px;
 }
 
+/* Hide every panel's real content while [data-tab-placeholder] is
+   still in the DOM. JS removes the placeholder once first-frame data
+   arrives, which un-hides everything below. The placeholder itself
+   stays visible until JS pulls it (the :has selector keeps the rule
+   simple — supported in every browser we target). */
+.tab-panel:has([data-tab-placeholder]) > *:not([data-tab-placeholder]) {
+  display: none;
+}
+
 /* Loading placeholder — also rendered server-side into
-   index.html so the user sees motion before the first /api/
-   roundtrip completes (catalog scan + simulator run ~150-400ms
-   on a 3K-skill install). */
-.cs-loading {
+   index.html for every tab so the user sees motion before the
+   first /api/ roundtrip completes (catalog scan + simulator run
+   ~150-400ms on a 3K-skill install). The .cs-* aliases predate
+   the multi-tab rollout and are kept for the context-savings
+   placeholder; .tab-loading is the canonical class for new tabs. */
+.cs-loading,
+.tab-loading {
   margin: 18px 28px;
   color: var(--fg-muted);
   font-size: 13px;
@@ -2564,10 +2588,12 @@ button.history-row-head:focus-visible {
   align-items: center;
   gap: 12px;
 }
-.cs-loading-text {
+.cs-loading-text,
+.tab-loading-text {
   font-style: italic;
 }
-.cs-spinner {
+.cs-spinner,
+.tab-spinner {
   display: inline-block;
   width: 16px;
   height: 16px;
