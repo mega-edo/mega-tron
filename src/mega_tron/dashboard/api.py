@@ -254,12 +254,31 @@ def overview(*, days: int = 30) -> dict[str, Any]:
                 by_host[short] += 1
                 seen_short.add(short)
 
+    # Hosts the dashboard exposes to the user. Hermes (mega-tron's
+    # internal tooling host) and the codex ``.system`` bundle are
+    # functional parts of the routing pool but the user never
+    # installed them, so they would only confuse the "your catalog"
+    # numbers if we counted them. They're tracked as a separate
+    # ``hidden_skill_count`` so the user can still see they exist
+    # without dragging them into the headline total.
+    _HIDDEN_HOSTS = {"hermes"}
+
     total = 0
     used = 0
     net_harmful = 0
     on_disk_names: set[str] = set()
     unknown_on_disk = 0
+    hidden_count = 0
     for _name, _dir, _md, meta, host in _iter_skills(roots):
+        if host in _HIDDEN_HOSTS:
+            hidden_count += 1
+            continue
+        # The codex ``.system`` bundle is classified as host="codex"
+        # by infer_host_from_skill_dir, so we need an extra check on
+        # the path itself to keep it out of the user-facing inventory.
+        if "/.codex/skills/.system/" in str(_md):
+            hidden_count += 1
+            continue
         total += 1
         on_disk_names.add(_name)
         sql = sql_by_skill.get(_name)
@@ -305,6 +324,10 @@ def overview(*, days: int = 30) -> dict[str, Any]:
         "noise_verdict_count": noise_count,
         "orphan_count": orphan_count,
         "unknown_host_count": unknown_on_disk,
+        # Skills mega-tron's router sees but the dashboard intentionally
+        # hides from the headline total — currently the hermes
+        # internal-tooling host + the codex ``.system`` bundle.
+        "hidden_skill_count": hidden_count,
     }
 
 
@@ -733,6 +756,35 @@ def context_savings() -> dict[str, Any]:
     shared_dir = home / ".agents" / "skills"
     shared_pool = _load_pool_skills_from_dir(shared_dir) if shared_dir.exists() else []
 
+    # Per-host plugin trees. Each host's plugin marketplace skills only
+    # ship in *that* host's vanilla catalog — Claude plugins are not
+    # part of Codex's vanilla cost and vice versa. mega-tron's routing
+    # union still pulls all of them (via discover_skill_dirs), but the
+    # dashboard's vanilla-cost math has to keep them attributed to the
+    # right owner host or the vanilla numbers leak across hosts.
+    from mega_tron.config import (
+        _claude_plugin_skill_dirs,
+        _codex_plugin_skill_dirs,
+        _gemini_plugin_skill_dirs,
+    )
+
+    def _dedup_pool(dirs):
+        pool: list = []
+        seen: set = set()
+        for d in dirs:
+            for ps in _load_pool_skills_from_dir(d):
+                if ps.name in seen:
+                    continue
+                seen.add(ps.name)
+                pool.append(ps)
+        return pool
+
+    host_plugin_pools = {
+        "codex": _dedup_pool(_codex_plugin_skill_dirs()),
+        "claude": _dedup_pool(_claude_plugin_skill_dirs()),
+        "gemini": _dedup_pool(_gemini_plugin_skill_dirs()),
+    }
+
     host_dirs = [
         ("codex", home / ".codex" / "skills"),
         ("claude", home / ".claude" / "skills"),
@@ -746,20 +798,35 @@ def context_savings() -> dict[str, Any]:
 
     # Collect every name across every dir so we can compute the grand
     # union total at the bottom of the breakdown table. Names that
-    # appear in multiple dirs are counted once (set semantics).
-    all_unique_names: set[str] = set(shared_names)
+    # appear in multiple dirs are counted once (set semantics). Every
+    # host's plugin pool feeds the union — they're host-specific for
+    # the *vanilla* math but mega-tron's routing union covers all.
+    plugin_names: set[str] = set()
+    for p in host_plugin_pools.values():
+        plugin_names |= {s.name for s in p}
+    all_unique_names: set[str] = set(shared_names) | plugin_names
     # Names that appear in ANY host's private dir → used to compute
     # "shared-only" = ``shared_names \ private_union``.
     private_union: set[str] = set()
 
     vanilla_sum = 0
     for host, skills_dir in host_dirs:
-        # A host is "installed" if EITHER its private dir exists OR the
-        # shared ~/.agents/skills dir has at least one skill. Both feed
-        # the same simulator.
+        # Each host's vanilla catalog = private + shared + its OWN
+        # plugin tree. Claude's marketplace doesn't ship into Codex's
+        # vanilla bill and vice versa.
+        host_plugin_pool = host_plugin_pools.get(host, [])
         private_pool = _load_pool_skills_from_dir(skills_dir) if skills_dir.exists() else []
-        pool = _merge_pools_unique(private_pool, shared_pool)
-        host_visible = skills_dir.exists() or len(shared_pool) > 0
+        # Merge order is private > shared > plugin, so a user-edited
+        # version of a skill name wins over the plugin marketplace
+        # version on collision (matches Router.warmup precedence).
+        pool = _merge_pools_unique(
+            _merge_pools_unique(private_pool, shared_pool), host_plugin_pool
+        )
+        host_visible = (
+            skills_dir.exists()
+            or len(shared_pool) > 0
+            or len(host_plugin_pool) > 0
+        )
         if not host_visible:
             continue
 
@@ -777,7 +844,7 @@ def context_savings() -> dict[str, Any]:
         private_union |= private_names
 
         if not pool:
-            # Dir present but empty AND no shared skills either.
+            # Dir present but empty AND no shared / plugin skills either.
             per_host[host] = {
                 "skill_count": 0,
                 "tokens_per_turn": 0,
@@ -786,6 +853,7 @@ def context_savings() -> dict[str, Any]:
                 "skills_dir": str(skills_dir),
                 "private_skill_count": 0,
                 "shared_skill_count": 0,
+                "plugin_skill_count": 0,
                 "overlap_with_shared": 0,
                 "unique_to_host": 0,
                 "rule_summary": "no skills installed",
@@ -820,14 +888,15 @@ def context_savings() -> dict[str, Any]:
 
         per_host[host] = {
             # `skill_count` is the deduped union the host actually sees
-            # (private ∪ shared). `private_skill_count` is the raw
-            # count of files under the host's own dir. The dashboard
-            # surfaces both so the user understands the relationship
-            # between "I put 2,936 files in ~/.claude/skills" and "the
-            # host sees 2,945 skills total."
+            # (private ∪ shared ∪ plugin). The three sub-counts make it
+            # easy to surface "you have 2,936 in ~/.claude/skills,
+            # 2,837 in ~/.agents/skills, and 28 picked up from the
+            # Claude plugin marketplace" without the user having to do
+            # set math.
             "skill_count": len(pool),
             "private_skill_count": len(private_pool),
             "shared_skill_count": len(shared_pool),
+            "plugin_skill_count": len(host_plugin_pool),
             "overlap_with_shared": overlap_count,
             "unique_to_host": unique_to_host,
             "tokens_per_turn": int(block.tokens),
@@ -924,6 +993,11 @@ def context_savings() -> dict[str, Any]:
         "installed_host_count": len(per_host),
         "shared_skill_count": len(shared_pool),
         "shared_only_count": shared_only_count,
+        # Union of every host's plugin tree, deduped by name. The
+        # per-host breakdown carries the per-host attribution; this
+        # top-level number is the count of distinct plugin-sourced
+        # skills the user has installed across all hosts.
+        "plugin_skill_count": len(plugin_names),
         "total_unique_count": total_unique_count,
         "shared_skills_dir": str(shared_dir),
         "vanilla_sum_tokens_per_turn": vanilla_sum,

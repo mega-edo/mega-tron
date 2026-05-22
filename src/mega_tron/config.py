@@ -130,11 +130,11 @@ def _claude_plugin_skill_dirs() -> list[Path]:
     marketplace gets its writing-rules skill in the catalog without
     having to ``mega-tron dirs add`` it by hand.
 
-    The plugin ``cache/`` tree is intentionally skipped — it holds
-    versioned snapshots and previously installed copies that would
-    introduce name collisions with the live marketplace install. Users
-    who want a specific cache layer can still ``mega-tron dirs add``
-    the exact version.
+    Claude's marketplace tree is the *live* install — Claude Code
+    reads exactly those files at runtime, so what mega-tron sees
+    matches what Claude Code itself ships per session. Other hosts'
+    plugin trees live under their own per-host roots and are surfaced
+    by :func:`_codex_plugin_skill_dirs` / :func:`_gemini_plugin_skill_dirs`.
     """
     out: list[Path] = []
     marketplaces = Path.home() / ".claude" / "plugins" / "marketplaces"
@@ -163,6 +163,62 @@ def _claude_plugin_skill_dirs() -> list[Path]:
                 if skills.is_dir():
                     out.append(skills)
     return out
+
+
+def _codex_plugin_skill_dirs() -> list[Path]:
+    """Find skill roots inside the Codex CLI plugin cache.
+
+    Codex stores its installed plugins under
+    ``~/.codex/plugins/cache/<marketplace>/<plugin>/<commit-hash>/skills/``;
+    the ``<commit-hash>`` directory holds the actual checkout for the
+    pinned plugin version. We pick the most-recent commit-hash per
+    plugin so a user with multiple cached versions only gets the live
+    one into the routing pool.
+    """
+    out: list[Path] = []
+    plugin_root = Path.home() / ".codex" / "plugins" / "cache"
+    if not plugin_root.is_dir():
+        return out
+    try:
+        market_iter = sorted(plugin_root.iterdir())
+    except OSError:
+        return out
+    for marketplace in market_iter:
+        if not marketplace.is_dir():
+            continue
+        try:
+            plugin_iter = sorted(marketplace.iterdir())
+        except OSError:
+            continue
+        for plugin in plugin_iter:
+            if not plugin.is_dir():
+                continue
+            # Pick the newest commit-hash dir (mtime). Older snapshots
+            # are intentionally skipped — they would race name-wise
+            # against the live install for no benefit.
+            try:
+                hash_dirs = [h for h in plugin.iterdir() if h.is_dir()]
+            except OSError:
+                continue
+            if not hash_dirs:
+                continue
+            hash_dirs.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+            skills = hash_dirs[0] / "skills"
+            if skills.is_dir():
+                out.append(skills)
+    return out
+
+
+def _gemini_plugin_skill_dirs() -> list[Path]:
+    """Find skill roots inside the Gemini CLI plugin tree.
+
+    Gemini does not currently expose a plugin marketplace with skill
+    catalogs (Antigravity transition is in flight); this function is
+    a forward-looking stub so the dashboard can attribute per-host
+    plugin contributions uniformly when Gemini adds the feature.
+    Returns an empty list today.
+    """
+    return []
 
 
 # ---------------------------------------------------------------------------
@@ -323,8 +379,12 @@ def discover_skill_dirs(
     1. ``extra=`` argument (callers passing CLI ``--skills-dir`` flags).
     2. Standard locations: ``~/.claude/skills``, ``~/.codex/skills``,
        ``~/.gemini/skills``, ``~/.hermes/skills``, ``$CODEX_HOME/skills``.
-    3. Claude plugin marketplace skill dirs
-       (``~/.claude/plugins/marketplaces/<m>/{plugins|external_plugins}/<p>/skills``).
+    3. Per-host plugin trees:
+       - Claude marketplace
+         (``~/.claude/plugins/marketplaces/<m>/{plugins|external_plugins}/<p>/skills``)
+       - Codex plugin cache
+         (``~/.codex/plugins/cache/<m>/<p>/<commit-hash>/skills``)
+       - Gemini extensions (stub; the marketplace doesn't carry skills yet).
     4. ``[skills] extra_dirs`` from the user's config.toml.
     5. ``MEGA_SKILL_DIRS`` env (colon-separated).
     6. MEGA-Code wisdom skill cache, if ``MEGA_WITH_WISDOM=1`` (lowest
@@ -342,13 +402,17 @@ def discover_skill_dirs(
     candidates: list[Path] = []
     candidates.extend(Path(p).expanduser() for p in extra)
     candidates.extend(_standard_skill_dirs())
-    # Claude plugin marketplace skills — auto-discovered from
-    # ~/.claude/plugins/marketplaces/<m>/{plugins|external_plugins}/<p>/skills.
+    # Per-host plugin trees — Claude marketplace, Codex plugin cache,
+    # Gemini extensions (when available). mega-tron unifies them into
+    # one routing pool, but the dashboard's vanilla-cost math attributes
+    # each tree back to its owner host (see dashboard/api.py).
     # Listed after the host-native dirs so a user-edited skill in
     # ~/.claude/skills still wins on name collision, but ahead of
     # the user's config.toml extra_dirs so plugin authors get a
     # working default with zero configuration.
     candidates.extend(_claude_plugin_skill_dirs())
+    candidates.extend(_codex_plugin_skill_dirs())
+    candidates.extend(_gemini_plugin_skill_dirs())
     candidates.extend(config.extra_skill_dirs)
     candidates.extend(env_extra_dirs())
     candidates.extend(_wisdom_skill_dirs())

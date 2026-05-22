@@ -533,8 +533,19 @@ function renderContextSavings() {
         <td class="cs-tbl-num">${uniqueCell}</td>
       </tr>
     `);
+    // Per-host plugin glob — appended after the host's native dir
+    // so the user sees one row per host with both sources. Glob is
+    // identical across users (template path, not a real fs entry).
+    const pluginGlob = {
+      claude: "~/.claude/plugins/marketplaces/*/{plugins,external_plugins}/*/skills",
+      codex: "~/.codex/plugins/cache/*/*/*/skills",
+      gemini: "~/.gemini/plugins/.../skills",
+    }[host];
+    const pluginDirCode = pluginContribution > 0 && pluginGlob
+      ? `, <code>${pluginGlob}</code>`
+      : "";
     dirRows.push(
-      `<span class="cs-dir-entry"><span class="cs-dir-tag host-${host}">${CS_HOSTS[host].label}</span> <code>${h.skills_dir}</code></span>`
+      `<span class="cs-dir-entry"><span class="cs-dir-tag host-${host}">${CS_HOSTS[host].label}</span> <code>${h.skills_dir}</code>${pluginDirCode}</span>`
     );
   }
   // Shared footer row: visually offset so the user knows it's the source
@@ -578,27 +589,6 @@ function renderContextSavings() {
       `<span class="cs-dir-entry"><span class="cs-dir-tag host-shared">shared</span> <code>${cs.shared_skills_dir || "~/.agents/skills"}</code></span>`
     );
   }
-  if (pluginCount > 0) {
-    const claudePluginCount = (perHost.claude && perHost.claude.plugin_skill_count) || 0;
-    const codexPluginCount = (perHost.codex && perHost.codex.plugin_skill_count) || 0;
-    const geminiPluginCount = (perHost.gemini && perHost.gemini.plugin_skill_count) || 0;
-    if (claudePluginCount > 0) {
-      dirRows.push(
-        `<span class="cs-dir-entry"><span class="cs-dir-tag host-plugin">claude plugins</span> <code>~/.claude/plugins/marketplaces/*/{plugins,external_plugins}/*/skills</code></span>`
-      );
-    }
-    if (codexPluginCount > 0) {
-      dirRows.push(
-        `<span class="cs-dir-entry"><span class="cs-dir-tag host-plugin">codex plugins</span> <code>~/.codex/plugins/cache/*/*/*/skills</code></span>`
-      );
-    }
-    if (geminiPluginCount > 0) {
-      dirRows.push(
-        `<span class="cs-dir-entry"><span class="cs-dir-tag host-plugin">gemini plugins</span> <code>~/.gemini/plugins/.../skills</code></span>`
-      );
-    }
-  }
-
   // Sub-header: explain the host-neutral source (shared) and the
   // per-host plugin contribution. Plugin skills are host-specific —
   // Claude's marketplace doesn't ship into Codex's vanilla bill —

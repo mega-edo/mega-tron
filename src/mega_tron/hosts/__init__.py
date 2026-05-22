@@ -141,6 +141,20 @@ def infer_host_from_skill_dir(skill_dir: Path) -> str:
         if parent_str.endswith(suffix):
             return host
 
+    # Plugin marketplace trees: anything under ``~/.claude/plugins/``,
+    # ``~/.codex/plugins/``, or ``~/.gemini/plugins/`` belongs to that
+    # host. Substring (not suffix) match because each plugin nests its
+    # skills several levels deep (marketplaces/<m>/plugins/<p>/skills,
+    # cache/<m>/<p>/<commit>/skills, etc.) and we don't want to
+    # enumerate every variant.
+    for plugin_marker, host in (
+        ("/.claude/plugins/", "claude"),
+        ("/.codex/plugins/", "codex"),
+        ("/.gemini/plugins/", "gemini"),
+    ):
+        if plugin_marker in parent_str:
+            return host
+
     # ``$CODEX_HOME`` can point anywhere; check it explicitly.
     codex_home = os.environ.get("CODEX_HOME", "").strip()
     if codex_home:
