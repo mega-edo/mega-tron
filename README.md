@@ -37,24 +37,27 @@
 
 ## ✨ Three problems that compound with more skills
 
-- **🧨 Token leak.** Type `hi` into Gemini CLI with 150 skills enabled and **~8,400 tokens** of skill metadata ship along with it. Codex and Claude cap their catalogs (8K chars / ~2K tokens), but they still inject the cap-full *every turn* (Codex) or *every session* (Claude), filled by alphabet or by past-usage frequency. **Never by what you actually typed.**
+1. **🧨 Token leak.** Type `hi` into Gemini CLI with 150 skills enabled and **~8,400 tokens** of skill metadata ship along with it. Codex and Claude cap their catalogs (8K chars / ~2K tokens), but they still inject the cap-full *every turn* (Codex) or *every session* (Claude), filled by alphabet or by past-usage frequency. **Never by what you actually typed.**
 
-> 💡 **The waste is structural.** The hosts have never seen your current prompt when they decide what to inject — so even a one-word greeting drags the entire catalog along.
+2. **🏝 Host isolation.** You spent a week tuning `webhook-signer` in Codex. Tomorrow you open Claude Code on the same project — `webhook-signer` isn't there, or it's an older copy you forgot to update. **Editing a skill is a per-host chore**, and forgetting one host means that host quietly runs a stale version for weeks.
 
-> **Quick check** — open your host CLI and count what's loaded. Most users believe they have "maybe 20 skills." Once you count the host's bundles + everything you installed, it's typically **2–5× that**. All of it ships, regardless of relevance.
+3. **🙈 Evidence blind.** Which 5 of your skills actually shifted an answer for the better last month? Which 3 are silently broken against a library update from last week? You don't know. **None of the three hosts records whether a skill *actually helped*** when it was loaded. Claude tracks invocation *frequency*, but frequency isn't quality — "least-invoked-first" eviction protects exactly the *harmful but frequent* skills you'd want to drop.
 
-- **🏝 Host isolation.** You spent a week tuning `webhook-signer` in Codex. Tomorrow you open Claude Code on the same project — `webhook-signer` isn't there, or it's an older copy you forgot to update. **Editing a skill is a per-host chore**, and forgetting one host means that host quietly runs a stale version for weeks.
+<details>
+<summary>Why each problem is structural, not configuration</summary>
 
-> 💡 **The three CLIs are three islands — same skills in name, drifting in content.** Editing a skill is a per-host chore, and forgetting one host means that host quietly runs a stale version for weeks.
+- **Token leak is structural.** The hosts have never seen your current prompt when they decide what to inject — so even a one-word greeting drags the entire catalog along. *Quick check:* open your host CLI and count what's loaded. Most users believe they have "maybe 20 skills." Once you count host bundles + everything you installed, it's typically **2–5× that**, all shipped regardless of relevance.
+- **Host isolation is structural.** The three CLIs are three islands — same skills in name, drifting in content. Editing a skill is a per-host chore, and forgetting one host means that host quietly runs a stale version for weeks. (Gemini CLI is [merging into Antigravity CLI](https://developers.googleblog.com/an-important-update-transitioning-gemini-cli-to-antigravity-cli/) — same architecture, same island problem. The host count keeps going up, not down.)
+- **Evidence blindness is structural.** The model picks a broken skill, the skill fails silently, next turn it tries the same broken skill again. You see "the answer is weird" without knowing a stale skill is behind it — the host never recorded a verdict to learn from.
 
-> [!NOTE]
-> Gemini CLI is [merging into Antigravity CLI](https://developers.googleblog.com/an-important-update-transitioning-gemini-cli-to-antigravity-cli/) — same architecture, same island problem. The host count keeps going up, not down.
+</details>
 
-- **🙈 Evidence blind.** Which 5 of your skills actually shifted an answer for the better last month? Which 3 are silently broken against a library update from last week? You don't know. **None of the three hosts records whether a skill *actually helped*** when it was loaded. Claude tracks invocation *frequency*, but frequency isn't quality — "least-invoked-first" eviction protects exactly the *harmful but frequent* skills you'd want to drop.
+<details>
+<summary>The measurements behind these claims (per-host)</summary>
 
-> 💡 **The model picks a broken skill, the skill fails silently, next turn it tries the same broken skill again.** You see "the answer is weird" without knowing a stale skill is behind it.
+Documented in [Claude Code](docs/Native%20Skill%20Catalog%20in%20Claude%20Code.md) · [Codex CLI](docs/Native%20Skill%20Catalog%20in%20Codex%20CLI.md) · [Gemini CLI](docs/Native%20Skill%20Catalog%20in%20Gemini%20CLI.md). Each walks through storage layout, the catalog-injection pipeline, the structural limits that fall out of the design, and the 500-skill benchmark numbers behind the table below.
 
-> 📐 **The measurements behind these problems** are documented per-host: [Claude Code](docs/Native%20Skill%20Catalog%20in%20Claude%20Code.md) · [Codex CLI](docs/Native%20Skill%20Catalog%20in%20Codex%20CLI.md) · [Gemini CLI](docs/Native%20Skill%20Catalog%20in%20Gemini%20CLI.md). Each one walks through storage layout, the catalog-injection pipeline, the structural limits that fall out of the design, and the 500-skill benchmark numbers behind the table below.
+</details>
 
 ## 🧩 Same root cause behind all three problems
 
@@ -68,7 +71,7 @@ mega-tron rebuilds the catalog layer above each host so all three properties fli
 
 | Problem | Fix | Component |
 |---|---|---|
-| Token leak | **Optimize** — per-turn semantic top-K against your actual prompt, ~600 tok regardless of pool size | `router.py`, `dynamic_k.py` |
+| Token leak | **Optimize** — per-turn semantic top-K against your actual prompt, under ~200 tok regardless of pool size | `router.py`, `dynamic_k.py` |
 | Host isolation | **Unify** — one master pool, symlinks to every host, cross-host verdict economy | `pool.py` |
 | Evidence blind | **Evolve** — session-end self-evaluation, evidence-blended ranking, auto-retirement of broken skills | `verdicts/` |
 
@@ -86,7 +89,7 @@ The agent handles the three install-time choices (embedder profile, Claude nativ
 
 Mega-tron is a local layer that sits above Codex, Claude Code, and Gemini CLI and fixes four things:
 
-1. **Router — per-turn semantic top-K.** Your prompt gets embedded, ranked against every skill in your pool, and only the relevant ones ship. Flat ~600 tokens/turn whether you have 30 skills or 500. In [benchmarks](#-does-it-actually-work): 0.96 coverage at ~100 tokens vs. native hosts' 0.71–0.75 at 1,200–3,500 tokens.
+1. **Router — per-turn semantic top-K.** Your prompt gets embedded, ranked against every skill in your pool, and only the relevant ones ship. Catalog cost stays flat under ~600 tokens/turn whether you have 30 skills or 500. In [benchmarks](#-does-it-actually-work): 0.96 coverage at ~100 tokens vs. native hosts' 0.71–0.75 at 1,200–3,500 tokens.
 
 2. **Observability — every skill use captured as a verdict** (HELPFUL / HARMFUL / NEUTRAL) with the prompt context, source host, and reason. The [built-in dashboard](#-see-what-your-skills-are-actually-doing) surfaces which skills are pulling their weight, which silently broke after last week's API update, and how performance trends across hosts — so you have a feedback signal instead of guessing from "the answer felt weird."
 
