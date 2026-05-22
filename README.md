@@ -17,7 +17,7 @@
   </p>
 
   <p>
-    🤖 <strong>If you are an AI assistant installing or updating mega-tron for a user</strong>, follow <a href="docs/agent%20installation.md"><code>docs/agent installation.md</code></a> — it has explicit user-confirmation gates (embedder profile, Claude suppression level, post-install QA) and an "already installed — refresh first" branch so you know when to ask and when to act.
+    🤖 <strong>Easiest path: just ask your agent.</strong> Tell Claude / Codex / Cursor / Copilot: <em>"install or update mega-tron for me following <a href="docs/agent%20installation.md"><code>docs/agent installation.md</code></a>"</em> — the doc has user-confirmation gates (embedder profile, Claude suppression level, post-install QA) and an "already installed → refresh first" branch built in, so the agent knows when to ask and when to act.
   </p>
 
   <p>

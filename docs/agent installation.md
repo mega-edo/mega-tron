@@ -162,17 +162,33 @@ Branch on the result:
 
 ### 3a. Fresh install (command not found)
 
+Try the PyPI path first:
+
 ```bash
 uv tool install mega-tron
 ```
 
-If `uv` is missing, install it first
-(`curl -LsSf https://astral.sh/uv/install.sh | sh` on macOS/Linux).
-Confirm `mega-tron --version` works before proceeding. If
-`mega-tron: command not found` even after installing, `~/.local/bin`
-needs to be on PATH — `mega-tron setup` (next step) will add it to the
-user's shell rc automatically, but you can verify by adding
-`~/.local/bin` to PATH yourself for the current shell.
+**If that fails with `package not found`** — mega-tron isn't published
+to PyPI yet, so on most machines today this is the expected outcome —
+fall back to installing from the GitHub repo:
+
+```bash
+git clone https://github.com/mega-edo/mega-tron.git /tmp/mega-tron
+uv tool install --from /tmp/mega-tron mega-tron
+```
+
+You can clone anywhere — `/tmp/mega-tron` just keeps the working
+copy out of the user's home. `uv tool install --from` copies the
+package into its own venv, so the clone directory isn't load-bearing
+after install completes.
+
+If `uv` itself is missing, install it first
+(`curl -LsSf https://astral.sh/uv/install.sh | sh` on macOS/Linux),
+then retry the install. Confirm `mega-tron --version` works before
+proceeding. If `mega-tron: command not found` even after installing,
+`~/.local/bin` needs to be on PATH — `mega-tron setup` (next step)
+will add it to the user's shell rc automatically, but you can verify
+by adding `~/.local/bin` to PATH yourself for the current shell.
 
 ### 3b. Already installed — update before re-wiring
 
@@ -186,8 +202,20 @@ refresh the binary first.
 Pick the path that matches where they got it from:
 
 - **PyPI install:** `uv tool upgrade mega-tron`
-- **Local git clone** (developing against an unreleased branch):
-  `uv tool install --force --reinstall --from <repo-path> mega-tron`
+- **Local git clone** (the common path today, since PyPI isn't
+  published yet): find the user's clone first, then refresh it. Most
+  users keep the clone where they originally ran it — ask if you're
+  unsure rather than guessing.
+
+  ```bash
+  cd <repo-path>          # e.g. ~/code/mega-tron, /tmp/mega-tron, …
+  git pull
+  uv tool install --force --reinstall --from . mega-tron
+  ```
+
+  If the user has no clone (e.g. fresh shell on a new machine), treat
+  this as a fresh install and follow 3a's fallback path instead — it
+  clones into `/tmp/mega-tron` and installs from there.
 
 Sanity-check the refresh worked by listing a feature this guide uses
 that only exists in current builds:
