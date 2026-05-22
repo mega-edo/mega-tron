@@ -816,6 +816,17 @@ def run_install(args: argparse.Namespace) -> int:
         # 4) ~/.codex/config.toml — restore codex's native catalog by removing
         #    our managed `[skills]` block.
         _uninstall_codex_config_toml(codex_config_path)
+
+        # 5) Remove the qa-live marker skill if a prior `mega-tron qa-live`
+        #    left it behind. Idempotent — silent on absence.
+        from mega_tron.cli.qa_live import unplant_qa_skill
+
+        if unplant_qa_skill("codex"):
+            print(
+                "[install] removed qa-live marker skill _mega-tron-check "
+                "from ~/.codex/skills/.",
+                file=sys.stderr,
+            )
         return 0
 
     snippet = render_snippet(

@@ -68,6 +68,7 @@ from mega_tron.cli.maintenance import (
     cmd_compact_skills,
     cmd_export_frontmatter,
     cmd_migrate_to_sqlite,
+    cmd_qa_live,
 )
 from mega_tron.cli.search import cmd_search
 from mega_tron.cli.skills import cmd_skills
@@ -294,6 +295,21 @@ def main(argv: list[str] | None = None) -> int:
         )
         p.add_argument("--shell", choices=["zsh", "bash", "auto"], default="auto")
         p.add_argument("--rc-file", default=None, help="Override the rc file path.")
+        p.add_argument(
+            "--claude-native-mode",
+            choices=["passive", "active", "strict"],
+            default="passive",
+            help=(
+                "How aggressively mega-tron suppresses Claude Code's "
+                "native skill catalog. 'passive' (default): overlay-only, "
+                "no token saving. 'active': per-turn skillOverrides rewrite "
+                "so non-top-K skills become name-only. 'strict': active "
+                "behaviour + a shell wrapper that adds "
+                "`--disallowedTools Skill` to every `claude` invocation, "
+                "removing the Skill tool entirely. Only meaningful when "
+                "Claude Code is one of the install targets."
+            ),
+        )
         p.add_argument(
             "--skills-dir",
             default=None,
@@ -852,6 +868,26 @@ def main(argv: list[str] | None = None) -> int:
     p_cs.add_argument("--json", action="store_true")
     _add_cache_path(p_cs)
     p_cs.set_defaults(func=cmd_compact_skills)
+
+    # --- qa-live ------------------------------------------------------------
+    p_qa = sub.add_parser(
+        "qa-live",
+        help=(
+            "End-to-end self-check: plants a marker skill in each "
+            "wired host, drives a one-shot non-interactive call, and "
+            "confirms a verdict row landed. Use after `setup` to verify "
+            "the UserPromptSubmit → routing → Stop-hook loop works."
+        ),
+    )
+    p_qa.add_argument(
+        "--host",
+        default=None,
+        help=(
+            "Comma-separated subset to check (codex,claude,gemini). "
+            "Default: auto-detect every installed host."
+        ),
+    )
+    p_qa.set_defaults(func=cmd_qa_live)
 
     # --- regressions ---------------------------------------------------------
     p_reg = sub.add_parser(

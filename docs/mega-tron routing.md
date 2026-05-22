@@ -39,7 +39,7 @@ into two camps:
 | Host        | Camp | Cap on skill catalog                       | What happens at 500 skills                                            | Core problem                                                                                                                            | Catalog tok @ 500 |
 |-------------|:----:|--------------------------------------------|-----------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------|------------------:|
 | **Codex**   | A    | `min(2% × ctx, 8,000 chars)` — hardcoded   | Descriptions truncated mid-sentence (~223 chars/skill); ~340 skills omitted entirely | **Bounded context window for the catalog, but filled blindly.** Codex never sees the user's prompt before deciding which skills' descriptions to keep — load order alphabetical, not top-K relevance. "USE WHEN: …" trigger phrases get chopped, and overflow skills disappear from implicit selection. |             6,910 |
-| **Claude**  | A    | `1% × ctx ≈ 2,000 tokens` (knob: `skillListingBudgetFraction`) | Names retained for all 500; descriptions evicted by *invocation frequency* (least-invoked first) past ~250 skills | **Same root cause as Codex — fixed catalog budget, no prompt-aware ranking.** The cap fraction is user-tunable but the eviction algorithm (least-invoked first) is not, and the user's current prompt is never an input. Past ~250 skills the description disappears entirely and the model sees `password-hash-argon2` next to `password-hash-bcrypt` as bare names with no trigger text. Selection collapses on close neighbours. |             2,572 |
+| **Claude**  | A    | `1% × ctx ≈ 2,000 tokens` (knob: `skillListingBudgetFraction`) | Names retained for all 500; descriptions evicted by *invocation frequency* (least-invoked first) once the budget overflows — at ~60 tok/description × 500 skills the budget ran out around skill #33, so the vast majority of descriptions are dropped | **Same root cause as Codex — fixed catalog budget, no prompt-aware ranking.** The cap fraction is user-tunable but the eviction algorithm (least-invoked first) is not, and the user's current prompt is never an input. Once the budget overflows, the model sees `password-hash-argon2` next to `password-hash-bcrypt` as bare names with no trigger text. Selection collapses on close neighbours. |             2,572 |
 | **Gemini**  | B    | **None.** Every enabled skill injected unconditionally | Catalog grows linearly to 28,140 tokens; on real user pool (1,671 skills) → ~137K tokens / session (~6.9% of 2M context, ~$2 / 5-turn session) | **No catalog cap means the model burns enormous context on browsing.** Every `name + description` of every skill ships in the system prompt before the user has typed anything. Signal is preserved but the signal-to-noise ratio collapses — the right skill sits among 1,670 distractors — and the token bill scales linearly with the pool. |            28,140 |
 
 
@@ -309,20 +309,36 @@ seam each host exposes).
   passed on every launch; there is no `settings.json` key that
   permanently disables the `Skill` tool, and `disallowedTools` in
   settings *blocks invocation* but leaves the catalog in the prompt.
-  mega-tron therefore offers two strategies that *do* persist
-  across sessions and lets the user pick at hook time:
-  - **Mode P (passive overlay, default).** Leave the native catalog
-    alone. mega-tron emits its top-K block as `additionalContext`
-    that *stacks on top of* Claude's flat catalog. Better routing
-    signal but no token saving — the full catalog is still loaded.
-  - **Mode A (active downgrade), `MEGA_CLAUDE_NATIVE_MODE=active`.**
-    Rewrite `~/.claude/settings.local.json`'s `skillOverrides` so
-    every non-top-K skill becomes `"name-only"`. The native catalog
-    then carries the name but drops the description for those
-    skills, recovering most of the token saving the
-    `--disallowedTools Skill` flag would have given but persistently
-    and per-turn. mega-tron owns the `skillOverrides` key entirely;
-    uninstall removes it.
+  mega-tron therefore offers three escalating strategies that *do*
+  persist across sessions, picked at install via
+  `--claude-native-mode {passive|active|strict}`. The choice is
+  persisted in the user's shell rc (sentinel-fenced) so the hook
+  reads the right `MEGA_CLAUDE_NATIVE_MODE` value on every fire:
+  - **Passive (default).** Leave the native catalog alone. mega-tron
+    emits its top-K block as `additionalContext` that *stacks on top
+    of* Claude's flat catalog. Better routing signal but no token
+    saving — the full catalog is still loaded. No rc modification.
+  - **Active, `MEGA_CLAUDE_NATIVE_MODE=active`.** Rewrite
+    `~/.claude/settings.local.json`'s `skillOverrides` so every
+    non-top-K skill becomes `"name-only"`. The native catalog then
+    carries the name but drops the description for those skills.
+    Most of the token saving `--disallowedTools Skill` would give,
+    but persistently and per-turn, with the `Skill` tool still
+    available so the user can fall back to manual `/skillname`
+    invocation when mega-tron's top-K misses something. mega-tron
+    owns the `skillOverrides` key entirely; uninstall removes it.
+    `setup` writes a small `export MEGA_CLAUDE_NATIVE_MODE=active`
+    block into the user's shell rc so the level persists.
+  - **Strict, `MEGA_CLAUDE_NATIVE_MODE=strict`.** Active behaviour
+    *plus* a `claude()` shell function (also sentinel-fenced in the
+    user's rc) that adds `--disallowedTools Skill` to every `claude`
+    invocation. The `Skill` tool itself disappears from the model;
+    only mega-tron's `additionalContext` block surfaces skills.
+    Maximum token saving; minimum fallback for routing misses
+    (the user would have to bypass the wrapper with
+    `command claude ...` or temporarily unset the env var). Best
+    for catalogs > 300 skills where the token cost dominates and
+    mega-tron's routing is the practical-only path anyway.
 - **Prepend wire format.** `additionalContext` stdout JSON, appended
   to the system prompt for that turn:
   ```json
@@ -402,11 +418,14 @@ seam each host exposes).
 │           + W_RELATED × (verdict-store HELPFUL − HARMFUL)            │
 │         × status_multiplier  {active:1.0, suspect:0.5, archived:-1}  │
 │                                                                      │
-│   4. Mode A (if MEGA_CLAUDE_NATIVE_MODE=active)                      │
+│   4. Mode A (if MEGA_CLAUDE_NATIVE_MODE in {active, strict})         │
 │        non_topk = all_skill_names − {top-K names}                    │
 │        rewrite ~/.claude/settings.local.json's skillOverrides so     │
 │        every name in non_topk maps to "name-only"                    │
 │        atomic write; native catalog descriptions drop for non-top-K │
+│        (strict: shell wrapper also added `--disallowedTools Skill`   │
+│         to the parent `claude` invocation, so the Skill tool itself  │
+│         is missing — see install.py shell-rc block.)                 │
 │                                                                      │
 │   5. Render top-K block via build_claude_hook_context()              │
 │        emit on stdout:                                               │
@@ -517,7 +536,7 @@ seam each host exposes).
 | Symptom                                                       | Cause                                                                                 | What mega-tron does                                                                                                                                  |
 |---------------------------------------------------------------|---------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `mega-tron: command not found` in Claude Code's hook stderr   | `mega-tron` only in a project venv, not on the user's PATH                            | `install --target claude` resolves the binary via `shutil.which` + interpreter-sibling fallback and stamps the **absolute path** into `settings.json`. |
-| Native catalog still ships full descriptions for every skill  | Default mode (P) is overlay-only — by design — and the user expected token savings    | Opt into Mode A: `export MEGA_CLAUDE_NATIVE_MODE=active`. The next hook fire rewrites `settings.local.json`'s `skillOverrides`.                       |
+| Native catalog still ships full descriptions for every skill  | Default mode (passive) is overlay-only — by design — and the user expected token savings    | Re-run `mega-tron setup --claude-native-mode active` (or `strict` for catalogs > 300 skills). The installer writes the export — and, for strict, the `claude()` wrapper — into the user's shell rc so the level persists. |
 | Stop hook logs "no verdicts captured"                         | Model emitted the prose without the `<skill-used …/>` tag, or omitted `verdict=`      | Silence is treated as no signal — no counter update, better than a noisy one. The CLAUDE.md contract reminds the model on every turn; only emit a tag when there is concrete evidence (file path, test name, command output) to cite. |
 | Two parallel hook blocks (mega-optimus + mega-tron) fire each turn | A legacy `mega-optimus install` was never undone before installing mega-tron 2.x | `install` refuses up front and prints the exact `mega-optimus install --uninstall` + `pip uninstall mega-optimus` remediation. `--force` bypasses for advanced users. |
 | Stop hook surfaces an eval prompt in the user's terminal      | Stop handler emitting `{"decision":"block","reason":...}`                             | Structurally forbidden: the handler always writes empty stdout. Verdicts come from inline `<skill-used …/>` tags in the same final reply.            |

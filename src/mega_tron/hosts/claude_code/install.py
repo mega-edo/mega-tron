@@ -58,6 +58,136 @@ MANAGED_KEY = "_megaTronManaged"
 # "managed-by-us" so re-running setup migrates them onto MANAGED_KEY.
 LEGACY_MANAGED_KEYS = ("_megaOptimusManaged",)
 
+# Shell wrapper sentinels — separate from any other mega-tron block in
+# the same rc file (e.g. codex). Keep the rule "one sentinel pair per
+# managed concern" so --uninstall removes only what it owns.
+CLAUDE_WRAPPER_SENTINEL_START = (
+    "# >>> mega-tron claude wrapper (managed; edit between sentinels at your own risk) >>>"
+)
+CLAUDE_WRAPPER_SENTINEL_END = "# <<< mega-tron claude wrapper <<<"
+
+
+def _render_claude_wrapper_block(*, version: str, mode: str) -> str:
+    """Shell block added to the user's rc file for native-mode active /
+    strict.
+
+    Both modes export ``MEGA_CLAUDE_NATIVE_MODE`` so the hook reads the
+    intended level on every invocation (otherwise the user has to
+    re-export the env var in every new shell). ``strict`` additionally
+    shadows ``claude`` with a function that adds
+    ``--disallowedTools Skill`` — the documented kill switch
+    (https://code.claude.com/docs/en/cli-reference) that removes the
+    Skill tool from the model entirely. ``command claude ...`` bypasses
+    the wrapper for users that need it.
+
+    The function uses ``command claude`` rather than a hardcoded path
+    because the binary location varies (uv tool install, brew, manual)
+    and we want whatever the shell PATH resolves to right now.
+    """
+    assert mode in ("active", "strict"), f"unexpected mode: {mode!r}"
+    lines = [
+        f"# version: {version}",
+        f"# Installed by `mega-tron setup --claude-native-mode {mode}`.",
+        f"export MEGA_CLAUDE_NATIVE_MODE={mode}",
+    ]
+    if mode == "strict":
+        lines.extend(
+            [
+                "# strict: shadow claude() to add the Skill tool kill",
+                "# switch on every invocation. `command claude ...`",
+                "# bypasses the wrapper.",
+                "claude() {",
+                '  command claude --disallowedTools Skill "$@"',
+                "}",
+            ]
+        )
+    body = "\n".join(lines) + "\n"
+    return (
+        f"{CLAUDE_WRAPPER_SENTINEL_START}\n"
+        f"{body.rstrip()}\n"
+        f"{CLAUDE_WRAPPER_SENTINEL_END}\n"
+    )
+
+
+def _install_claude_wrapper(args: argparse.Namespace, *, mode: str) -> None:
+    """Write the native-mode shell block (export + optional wrapper)
+    into the user's rc file.
+
+    Idempotent via the codex installer's ``_replace_block`` helper —
+    re-running setup with the same mode is a no-op; switching modes
+    rewrites the block.
+    """
+    from mega_tron.hosts.codex.install import (
+        _default_rc,
+        _detect_shell,
+        _replace_block,
+    )
+
+    shell = args.shell if args.shell != "auto" else _detect_shell()
+    rc_path = Path(args.rc_file).expanduser() if args.rc_file else _default_rc(shell)
+    rc_path.parent.mkdir(parents=True, exist_ok=True)
+    existing = rc_path.read_text() if rc_path.exists() else ""
+    block = _render_claude_wrapper_block(version=MANAGED_VERSION, mode=mode)
+    updated = _replace_block(
+        existing,
+        block,
+        start_marker=CLAUDE_WRAPPER_SENTINEL_START,
+        end_marker=CLAUDE_WRAPPER_SENTINEL_END,
+    )
+    if updated == existing:
+        print(
+            f"[install --target claude] {mode}-mode block in {rc_path} "
+            "already up to date.",
+            file=sys.stderr,
+        )
+        return
+    rc_path.write_text(updated)
+    wrapper_note = (
+        " thereafter every `claude` call adds `--disallowedTools Skill`."
+        if mode == "strict"
+        else ""
+    )
+    print(
+        f"[install --target claude] wrote {mode}-mode block into {rc_path}. "
+        f"Open a new shell or `source {rc_path}` for it to take effect."
+        f"{wrapper_note}",
+        file=sys.stderr,
+    )
+
+
+def _uninstall_claude_wrapper(args: argparse.Namespace) -> None:
+    """Remove the strict-mode wrapper from the user's rc file.
+
+    Best-effort: missing rc file or missing block is silently fine. The
+    user's other mega-tron blocks (e.g. codex wrapper) are untouched
+    because each lives between its own sentinel pair.
+    """
+    from mega_tron.hosts.codex.install import (
+        _default_rc,
+        _detect_shell,
+        _strip_block,
+    )
+
+    shell = getattr(args, "shell", "auto")
+    shell = shell if shell != "auto" else _detect_shell()
+    rc_file = getattr(args, "rc_file", None)
+    rc_path = Path(rc_file).expanduser() if rc_file else _default_rc(shell)
+    if not rc_path.exists():
+        return
+    existing = rc_path.read_text()
+    stripped = _strip_block(
+        existing,
+        start_marker=CLAUDE_WRAPPER_SENTINEL_START,
+        end_marker=CLAUDE_WRAPPER_SENTINEL_END,
+    )
+    if stripped == existing:
+        return
+    rc_path.write_text(stripped)
+    print(
+        f"[install --target claude] removed strict-mode wrapper from {rc_path}.",
+        file=sys.stderr,
+    )
+
 SETTINGS_PATH = Path.home() / ".claude" / "settings.json"
 CLAUDE_MD_PATH = Path.home() / ".claude" / "CLAUDE.md"
 
@@ -299,6 +429,19 @@ def run_install_claude(args: argparse.Namespace) -> int:
     claude_md_path = CLAUDE_MD_PATH
 
     if getattr(args, "uninstall", False):
+        # Always try wrapper removal — user may have installed strict
+        # previously and is now uninstalling. Idempotent on absence.
+        _uninstall_claude_wrapper(args)
+        # Remove the qa-live marker skill if a prior `mega-tron qa-live`
+        # left it behind. Idempotent — silent on absence.
+        from mega_tron.cli.qa_live import unplant_qa_skill
+
+        if unplant_qa_skill("claude"):
+            print(
+                "[install --target claude] removed qa-live marker skill "
+                "_mega-tron-check from ~/.claude/skills/.",
+                file=sys.stderr,
+            )
         return _uninstall(settings_path, claude_md_path)
 
     hook_exe = getattr(args, "hook_command", None)
@@ -308,19 +451,19 @@ def run_install_claude(args: argparse.Namespace) -> int:
     if getattr(args, "print_only", False):
         # Useful for users who want to vet the JSON before letting us
         # touch their settings file.
-        sys.stdout.write(
-            json.dumps(
-                {
-                    "settings_path": str(settings_path),
-                    "claude_md_path": str(claude_md_path),
-                    "userPromptSubmit_entry": ups_entry,
-                    "stop_entry": stop_entry,
-                    "claude_md_block": render_claude_md_block(),
-                },
-                indent=2,
+        preview: dict = {
+            "settings_path": str(settings_path),
+            "claude_md_path": str(claude_md_path),
+            "userPromptSubmit_entry": ups_entry,
+            "stop_entry": stop_entry,
+            "claude_md_block": render_claude_md_block(),
+        }
+        nm = getattr(args, "claude_native_mode", "passive")
+        if nm in ("active", "strict"):
+            preview["claude_wrapper_block"] = _render_claude_wrapper_block(
+                version=MANAGED_VERSION, mode=nm
             )
-            + "\n"
-        )
+        sys.stdout.write(json.dumps(preview, indent=2) + "\n")
         return 0
 
     # 1. settings.json — merge in both hook entries.
@@ -357,7 +500,21 @@ def run_install_claude(args: argparse.Namespace) -> int:
     # 2. CLAUDE.md — guidance block.
     _install_claude_md(claude_md_path)
 
-    # 3. Warmup — reuse the Codex installer's warmup, it's CLI-agnostic.
+    # 3. Native-mode shell block. passive writes nothing (default
+    #    behaviour is fine without env-var or wrapper). active + strict
+    #    both write an export so MEGA_CLAUDE_NATIVE_MODE persists across
+    #    shells; strict additionally shadows `claude` to add
+    #    `--disallowedTools Skill`.
+    native_mode = getattr(args, "claude_native_mode", "passive")
+    if native_mode in ("active", "strict"):
+        _install_claude_wrapper(args, mode=native_mode)
+    else:
+        # User may be downgrading from active/strict → passive on
+        # re-run; remove any prior block so the rc file matches the
+        # new mode.
+        _uninstall_claude_wrapper(args)
+
+    # 4. Warmup — reuse the Codex installer's warmup, it's CLI-agnostic.
     if not getattr(args, "no_warmup", False):
         from mega_tron.hosts.codex.install import _run_warmup
 

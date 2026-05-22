@@ -267,3 +267,51 @@ def cmd_compact_skills(args: argparse.Namespace) -> int:
         cache.save()
 
     return 0
+
+
+def cmd_qa_live(args: argparse.Namespace) -> int:
+    """End-to-end self-check across every wired host.
+
+    Plants a marker SKILL.md (`_mega-tron-check`) in each detected host's
+    skills root, drives a one-shot non-interactive call (`codex exec` /
+    `claude --print` / `gemini --yolo -p`), and confirms a verdict row
+    landed for the marker skill — proving the full
+    UserPromptSubmit → top-K routing → Stop-hook verdict capture loop
+    is wired correctly end-to-end.
+
+    PASS = verdict captured; PARTIAL = host ran but no tag persisted;
+    NEEDS_LOGIN = auth missing; FAIL = timeout or non-zero exit. Per-host
+    timeout is 180-240s depending on the host.
+
+    Exits 0 if ≥1 host PASSes; 1 otherwise. Designed to be safe to run
+    as the last step of an unattended agent-driven install.
+    """
+    from mega_tron.cli.qa_live import run_qa_live
+    from mega_tron.hosts import detect_hosts
+
+    if args.host:
+        # Honor explicit selection; the user (or agent) may want to
+        # check just the host they just wired even if other hosts are
+        # also installed.
+        requested = [h.strip().lower() for h in args.host.split(",") if h.strip()]
+        valid = {"codex", "claude", "gemini"}
+        unknown = [h for h in requested if h not in valid]
+        if unknown:
+            print(
+                f"[qa-live] unknown host(s): {', '.join(unknown)}. "
+                f"Valid: codex, claude, gemini.",
+                file=sys.stderr,
+            )
+            return 2
+        hosts = requested
+    else:
+        hosts = detect_hosts()
+        if not hosts:
+            print(
+                "[qa-live] no host detected. Install at least one of "
+                "codex / claude / gemini before running qa-live.",
+                file=sys.stderr,
+            )
+            return 1
+
+    return run_qa_live(hosts)

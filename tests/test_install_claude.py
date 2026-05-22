@@ -39,6 +39,12 @@ def _args(**overrides) -> argparse.Namespace:
         no_warmup=True,  # avoid network/disk during tests
         hook_command=None,
         skills_dir=None,
+        # Native-mode wrapper concerns. Default to passive so existing
+        # tests don't accidentally touch the rc file. Tests that want the
+        # wrapper code path pass rc_file= and claude_native_mode=.
+        claude_native_mode="passive",
+        shell="bash",
+        rc_file=None,
     )
     defaults.update(overrides)
     return argparse.Namespace(**defaults)
@@ -249,3 +255,111 @@ def test_claude_md_block_contains_self_eval_contract():
     assert "<skill-used" in block
     assert "Stop hook" in block
     assert MANAGED_VERSION in block
+
+
+# --- Native-mode shell wrapper ----------------------------------------------
+
+
+def test_native_wrapper_passive_writes_no_rc_block(isolated_home, tmp_path):
+    """passive (default) must not touch the rc file at all. The whole
+    appeal of passive is "no shell modification needed"; a regression
+    here would silently change every user's environment on next
+    `setup`."""
+    rc = tmp_path / "rcfile"
+    rc.write_text("# user's own rc content\n")
+    rc_before = rc.read_text()
+    run_install_claude(_args(claude_native_mode="passive", rc_file=str(rc)))
+    assert rc.read_text() == rc_before
+
+
+def test_native_wrapper_active_writes_export_only(isolated_home, tmp_path):
+    """active writes an ``export MEGA_CLAUDE_NATIVE_MODE=active`` block
+    so the per-turn skillOverrides rewrite persists across shells.
+    Crucially, active must NOT shadow ``claude`` — only strict does.
+    """
+    rc = tmp_path / "rcfile"
+    rc.write_text("# pre-existing\n")
+    run_install_claude(_args(claude_native_mode="active", rc_file=str(rc)))
+    content = rc.read_text()
+    assert ">>> mega-tron claude wrapper" in content
+    assert "export MEGA_CLAUDE_NATIVE_MODE=active" in content
+    assert "--disallowedTools Skill" not in content
+    assert "claude()" not in content
+
+
+def test_native_wrapper_strict_writes_function_with_kill_switch(
+    isolated_home, tmp_path
+):
+    """strict adds the ``--disallowedTools Skill`` shadow on top of the
+    export. This is the entire point of strict: every ``claude`` call
+    auto-drops the Skill tool."""
+    rc = tmp_path / "rcfile"
+    rc.write_text("")
+    run_install_claude(_args(claude_native_mode="strict", rc_file=str(rc)))
+    content = rc.read_text()
+    assert "export MEGA_CLAUDE_NATIVE_MODE=strict" in content
+    assert "claude()" in content
+    assert "--disallowedTools Skill" in content
+    assert "command claude" in content
+
+
+def test_native_wrapper_idempotent_on_rerun(isolated_home, tmp_path):
+    """Re-running setup with the same mode must not duplicate the block."""
+    rc = tmp_path / "rcfile"
+    rc.write_text("")
+    run_install_claude(_args(claude_native_mode="strict", rc_file=str(rc)))
+    once = rc.read_text()
+    run_install_claude(_args(claude_native_mode="strict", rc_file=str(rc)))
+    twice = rc.read_text()
+    assert once == twice
+    # Single occurrence of the sentinel pair.
+    assert once.count(">>> mega-tron claude wrapper") == 1
+    assert once.count("<<< mega-tron claude wrapper") == 1
+
+
+def test_native_wrapper_mode_swap_replaces_block(isolated_home, tmp_path):
+    """Switching strict → active on re-run must remove the strict
+    wrapper function and leave the active-mode export. A user who
+    tried strict and wants to back down should not be left with a
+    stale Skill-tool kill switch."""
+    rc = tmp_path / "rcfile"
+    rc.write_text("")
+    run_install_claude(_args(claude_native_mode="strict", rc_file=str(rc)))
+    assert "claude()" in rc.read_text()
+
+    run_install_claude(_args(claude_native_mode="active", rc_file=str(rc)))
+    content = rc.read_text()
+    assert "export MEGA_CLAUDE_NATIVE_MODE=active" in content
+    assert "claude()" not in content
+    assert "--disallowedTools Skill" not in content
+
+
+def test_native_wrapper_mode_swap_to_passive_removes_block(
+    isolated_home, tmp_path
+):
+    """active/strict → passive on re-run wipes the whole mega-tron
+    claude wrapper block, leaving the user's other rc content intact."""
+    rc = tmp_path / "rcfile"
+    rc.write_text("# my custom alias\nalias ll='ls -la'\n")
+    run_install_claude(_args(claude_native_mode="strict", rc_file=str(rc)))
+    assert ">>> mega-tron claude wrapper" in rc.read_text()
+
+    run_install_claude(_args(claude_native_mode="passive", rc_file=str(rc)))
+    content = rc.read_text()
+    assert ">>> mega-tron claude wrapper" not in content
+    assert "alias ll='ls -la'" in content
+
+
+def test_uninstall_removes_wrapper(isolated_home, tmp_path):
+    """`setup --uninstall` must clean up the rc wrapper regardless of
+    which mode installed it. Forgotten cleanup would leave a stale
+    ``--disallowedTools Skill`` shadow lurking for the user."""
+    rc = tmp_path / "rcfile"
+    rc.write_text("# user content\n")
+    run_install_claude(_args(claude_native_mode="strict", rc_file=str(rc)))
+    assert ">>> mega-tron claude wrapper" in rc.read_text()
+
+    run_install_claude(_args(uninstall=True, rc_file=str(rc)))
+    content = rc.read_text()
+    assert ">>> mega-tron claude wrapper" not in content
+    assert "# user content" in content

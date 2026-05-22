@@ -1,0 +1,337 @@
+"""Unit tests for ``mega-tron setup --qa-live``.
+
+The end-to-end QA path is mostly orchestration: plant a skill, call a
+host CLI, snapshot SQLite, spawn a dashboard. We don't drive a real
+host CLI from CI — that would require provider auth and would gate the
+test suite on external services. Instead we verify each seam:
+
+* ``_plant_qa_skill`` writes idempotent skill files.
+* ``_host_recipe`` dispatches the right argv per host and skips when
+  the binary is missing.
+* ``_snapshot_verdict_count`` returns 0 on a missing store, and
+  reflects rows when present.
+* ``run_qa_live`` returns the right exit code in the three terminal
+  states (no hosts wired / all SKIP / one PASS).
+"""
+from __future__ import annotations
+
+import subprocess
+from pathlib import Path
+from unittest.mock import patch
+
+import pytest
+
+from mega_tron.cli import qa_live
+
+
+@pytest.fixture
+def fake_home(tmp_path, monkeypatch):
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    # qa_live captures host root paths at module import time. Rebuild
+    # the lookup against the fake home so the tests don't reach into
+    # the developer's actual ~/.codex etc.
+    monkeypatch.setitem(qa_live._HOST_ROOTS, "codex", tmp_path / ".codex" / "skills")
+    monkeypatch.setitem(qa_live._HOST_ROOTS, "claude", tmp_path / ".claude" / "skills")
+    monkeypatch.setitem(qa_live._HOST_ROOTS, "gemini", tmp_path / ".gemini" / "skills")
+    return tmp_path
+
+
+def test_plant_qa_skill_creates_skill_files(fake_home):
+    (fake_home / ".codex" / "skills").mkdir(parents=True)
+
+    skill_md = qa_live._plant_qa_skill("codex")
+
+    assert skill_md is not None
+    assert skill_md.exists()
+    body = skill_md.read_text()
+    assert "name: _mega-tron-check" in body
+    run_sh = skill_md.parent / "scripts" / "run.sh"
+    assert run_sh.exists()
+    assert "MEGA-TRON-CHECK-OK (codex)" in run_sh.read_text()
+    # Executable bit set so the host's bash can run it directly.
+    assert run_sh.stat().st_mode & 0o111
+
+
+def test_plant_qa_skill_is_idempotent(fake_home):
+    (fake_home / ".claude" / "skills").mkdir(parents=True)
+
+    first = qa_live._plant_qa_skill("claude")
+    second = qa_live._plant_qa_skill("claude")
+
+    assert first == second
+    # Both calls should leave a single skill directory, not duplicates.
+    skill_dir = fake_home / ".claude" / "skills" / "_mega-tron-check"
+    assert sorted(p.name for p in skill_dir.iterdir()) == ["SKILL.md", "scripts"]
+
+
+def test_plant_qa_skill_skips_when_root_missing(fake_home):
+    # No ~/.gemini/skills directory exists — host is considered absent.
+    assert qa_live._plant_qa_skill("gemini") is None
+
+
+def test_unplant_qa_skill_removes_marker(fake_home):
+    """`mega-tron setup --uninstall` calls this. A planted marker
+    skill — and everything under it — must be gone afterwards. The
+    marker has description text that could otherwise drift into top-K
+    rankings on real prompts."""
+    (fake_home / ".codex" / "skills").mkdir(parents=True)
+    qa_live._plant_qa_skill("codex")
+    skill_dir = fake_home / ".codex" / "skills" / "_mega-tron-check"
+    assert skill_dir.exists()
+
+    removed = qa_live.unplant_qa_skill("codex")
+    assert removed is True
+    assert not skill_dir.exists()
+    # Sibling root directory is untouched.
+    assert (fake_home / ".codex" / "skills").exists()
+
+
+def test_unplant_qa_skill_is_idempotent_on_absence(fake_home):
+    """Calling unplant when there's nothing to remove must be a clean
+    no-op — uninstall must never crash because qa-live was never run."""
+    (fake_home / ".claude" / "skills").mkdir(parents=True)
+    assert qa_live.unplant_qa_skill("claude") is False
+    # Missing root entirely also returns False, no crash.
+    assert qa_live.unplant_qa_skill("gemini") is False
+
+
+def test_host_recipe_returns_none_when_binary_missing(monkeypatch):
+    monkeypatch.setattr(qa_live.shutil, "which", lambda name: None)
+    for host in ("codex", "claude", "gemini"):
+        assert qa_live._host_recipe(host, "_mega-tron-check") is None
+
+
+def test_host_recipe_dispatches_per_host(monkeypatch):
+    monkeypatch.setattr(
+        qa_live.shutil, "which", lambda name: f"/fake/bin/{name}"
+    )
+
+    argv_codex, env_codex, t_codex = qa_live._host_recipe("codex", "S")
+    assert argv_codex[0] == "/fake/bin/codex"
+    assert argv_codex[1] == "exec"
+    assert "--skip-git-repo-check" in argv_codex
+    assert env_codex == {}
+    assert t_codex > 0
+
+    argv_claude, env_claude, _ = qa_live._host_recipe("claude", "S")
+    assert argv_claude[0] == "/fake/bin/claude"
+    assert "--print" in argv_claude
+    assert "bypassPermissions" in argv_claude
+
+    argv_gemini, env_gemini, _ = qa_live._host_recipe("gemini", "S")
+    assert argv_gemini[0] == "/fake/bin/gemini"
+    assert "--yolo" in argv_gemini
+    assert env_gemini.get("GEMINI_CLI_TRUST_WORKSPACE") == "true"
+
+
+def test_host_recipe_unknown_host():
+    assert qa_live._host_recipe("hermes", "S") is None
+
+
+def test_snapshot_verdict_count_returns_zero_on_missing_store(monkeypatch, tmp_path):
+    # Force the Store path to a directory that doesn't exist yet so
+    # initialize() either creates it (returns 0 rows) or raises (also 0).
+    fake_store_path = tmp_path / "no-such-dir" / "store.db"
+    with patch("mega_tron.verdicts.store.Store") as MockStore:
+        MockStore.side_effect = OSError("nope")
+        assert qa_live._snapshot_verdict_count("codex") == 0
+    # And on a clean store with no matching rows, it must be 0.
+    assert qa_live._snapshot_verdict_count("codex") == 0
+
+
+def test_snapshot_verdict_count_reads_actual_rows(monkeypatch, tmp_path):
+    """End-to-end: write a real row via record_verdict() and verify the
+    snapshot picks it up under the right host name (codex stays codex)
+    and ignores foreign host filters (claude won't match)."""
+    db_path = tmp_path / "store.db"
+
+    from mega_tron.verdicts.store import Store
+
+    store = Store(path=db_path)
+    store.initialize()
+    wrote = store.record_verdict(
+        skill_name="_mega-tron-check",
+        host="codex",
+        session_id="qa-snapshot-test",
+        verdict="HELPFUL",
+        reason="test row used by qa-live snapshot test (long enough to pass quality gate)",
+    )
+    assert wrote, "record_verdict should have persisted the row"
+
+    # Patch the Store() default-path resolution so qa_live's snapshot
+    # opens our temp DB instead of the user's real one.
+    monkeypatch.setattr(
+        "mega_tron.verdicts.store.Store",
+        lambda path=None: store if path is None else Store(path=path),
+    )
+    assert qa_live._snapshot_verdict_count("codex") == 1
+    # Different host name on the same skill should not match.
+    assert qa_live._snapshot_verdict_count("claude") == 0
+
+
+def test_run_qa_live_returns_1_when_no_hosts_wired(capsys):
+    rc = qa_live.run_qa_live([])
+    assert rc == 1
+    err = capsys.readouterr().err
+    assert "no hosts wired" in err
+
+
+def test_run_qa_live_returns_1_when_no_skills_roots(fake_home, monkeypatch, capsys):
+    # Pretend the host binaries exist on PATH (so we exercise the
+    # "skills root missing" branch, not the "binary missing" branch).
+    monkeypatch.setattr(qa_live.shutil, "which", lambda name: f"/fake/bin/{name}")
+    rc = qa_live.run_qa_live(["codex", "claude"])
+    assert rc == 1
+    err = capsys.readouterr().err
+    # Two hosts × SKIP per host, then the summary line.
+    assert err.count("SKIP") >= 2
+    assert "no usable host detected" in err
+
+
+def test_run_qa_live_pass_path_spawns_dashboard(fake_home, monkeypatch, capsys):
+    """Happy path: one host CLI returns rc=0, verdict count jumps,
+    dashboard is launched detached."""
+    (fake_home / ".codex" / "skills").mkdir(parents=True)
+
+    # Pretend `codex` exists on PATH so the recipe builds.
+    monkeypatch.setattr(
+        qa_live.shutil, "which", lambda name: f"/fake/bin/{name}"
+    )
+
+    # Stub the subprocess.run that drives the host CLI: pretend it
+    # succeeded. We mimic the side-effect of the host's Stop hook by
+    # bumping the SQLite count between before/after.
+    counts = {"codex": 0}
+
+    def fake_snapshot(host: str) -> int:
+        return counts.get(host, 0)
+
+    def fake_subprocess_run(*args, **kwargs):
+        # After the host "call" completes, simulate the stop hook
+        # writing a row to SQLite.
+        counts["codex"] = 1
+        return subprocess.CompletedProcess(args[0], 0, stdout="", stderr="")
+
+    monkeypatch.setattr(qa_live, "_snapshot_verdict_count", fake_snapshot)
+    monkeypatch.setattr(qa_live.subprocess, "run", fake_subprocess_run)
+
+    # Capture the dashboard spawn so we don't actually open an HTTP port.
+    dashboard_calls = []
+
+    def fake_popen(argv, **kwargs):
+        dashboard_calls.append((argv, kwargs))
+
+        class _Proc:
+            pid = 99999
+
+        return _Proc()
+
+    monkeypatch.setattr(qa_live.subprocess, "Popen", fake_popen)
+    monkeypatch.setattr(qa_live.time, "sleep", lambda s: None)
+    # Block webbrowser.open too.
+    import webbrowser
+
+    monkeypatch.setattr(webbrowser, "open", lambda url: None)
+
+    rc = qa_live.run_qa_live(["codex"])
+    assert rc == 0
+    err = capsys.readouterr().err
+    assert "PASS" in err
+    assert "1/1 host" in err
+    assert "dashboard launched" in err.lower()
+    assert dashboard_calls, "expected dashboard subprocess to be spawned"
+    argv = dashboard_calls[0][0]
+    assert "dashboard" in argv
+    assert "--no-open" in argv
+
+
+def test_run_qa_live_partial_when_host_runs_but_no_verdict(
+    fake_home, monkeypatch, capsys
+):
+    """Host CLI returns rc=0 but verdict count stays flat — likely the
+    model didn't emit a tag, or the tracker dropped it. We must mark
+    PARTIAL and NOT launch the dashboard."""
+    (fake_home / ".claude" / "skills").mkdir(parents=True)
+
+    monkeypatch.setattr(qa_live.shutil, "which", lambda name: f"/fake/bin/{name}")
+    monkeypatch.setattr(qa_live, "_snapshot_verdict_count", lambda h: 0)
+    monkeypatch.setattr(
+        qa_live.subprocess,
+        "run",
+        lambda *a, **kw: subprocess.CompletedProcess(a[0], 0, stdout="", stderr=""),
+    )
+    popen_calls = []
+    monkeypatch.setattr(
+        qa_live.subprocess,
+        "Popen",
+        lambda *a, **kw: popen_calls.append(a) or (_ for _ in ()).throw(
+            AssertionError("dashboard should NOT spawn on all-PARTIAL")
+        ),
+    )
+    monkeypatch.setattr(qa_live.time, "sleep", lambda s: None)
+
+    rc = qa_live.run_qa_live(["claude"])
+    assert rc == 1
+    err = capsys.readouterr().err
+    assert "PARTIAL" in err
+    assert "0/1 host" in err
+    assert not popen_calls
+
+
+def test_run_qa_live_skip_when_binary_missing(fake_home, monkeypatch, capsys):
+    """A wired host whose CLI vanished from PATH must surface as SKIP,
+    not crash the pipeline."""
+    (fake_home / ".gemini" / "skills").mkdir(parents=True)
+    monkeypatch.setattr(qa_live.shutil, "which", lambda name: None)
+
+    rc = qa_live.run_qa_live(["gemini"])
+    assert rc == 1
+    err = capsys.readouterr().err
+    assert "SKIP" in err
+    assert "not on PATH" in err
+
+
+def test_looks_like_auth_failure_recognises_common_messages():
+    assert qa_live._looks_like_auth_failure("Error: 401 Unauthorized", None)
+    assert qa_live._looks_like_auth_failure(None, "please run `codex login` first")
+    assert qa_live._looks_like_auth_failure("invalid api_key", "")
+    assert qa_live._looks_like_auth_failure("rate limit exceeded", None)
+    # False on a non-auth bug
+    assert not qa_live._looks_like_auth_failure(
+        "Traceback (most recent call last): ... ZeroDivisionError", None
+    )
+
+
+def test_run_qa_live_needs_login_routes_to_login_hint(
+    fake_home, monkeypatch, capsys
+):
+    """If the host CLI returns an auth-shaped failure, we must NOT just
+    print 'FAIL rc=...'; we must call out NEEDS_LOGIN and surface the
+    per-host login command."""
+    (fake_home / ".claude" / "skills").mkdir(parents=True)
+    monkeypatch.setattr(qa_live.shutil, "which", lambda name: f"/fake/bin/{name}")
+    monkeypatch.setattr(qa_live, "_snapshot_verdict_count", lambda h: 0)
+    monkeypatch.setattr(
+        qa_live.subprocess,
+        "run",
+        lambda *a, **kw: subprocess.CompletedProcess(
+            a[0], 1, stdout="", stderr="Error: 401 Unauthorized — please run claude login"
+        ),
+    )
+    # Dashboard must NOT spawn when no host PASS-ed.
+    popen_called = []
+    monkeypatch.setattr(
+        qa_live.subprocess,
+        "Popen",
+        lambda *a, **kw: popen_called.append(a) or (_ for _ in ()).throw(
+            AssertionError("dashboard should NOT spawn when only NEEDS_LOGIN")
+        ),
+    )
+    monkeypatch.setattr(qa_live.time, "sleep", lambda s: None)
+
+    rc = qa_live.run_qa_live(["claude"])
+    assert rc == 1
+    err = capsys.readouterr().err
+    assert "NEEDS_LOGIN" in err
+    assert "claude login" in err
+    assert not popen_called

@@ -175,6 +175,56 @@ def test_hook_mode_a_writes_settings_local(tmp_path, skills, monkeypatch):
         )
 
 
+def test_hook_strict_mode_behaves_like_active(tmp_path, skills, monkeypatch):
+    """``MEGA_CLAUDE_NATIVE_MODE=strict`` triggers the same per-turn
+    skillOverrides write as ``active``. The only thing strict adds on
+    top is the install-time shell wrapper — that's tested separately.
+    Hook-layer behaviour must be identical so the two modes share the
+    same routing semantics at runtime.
+    """
+    runtime = tmp_path / "xdg"
+    runtime.mkdir()
+    settings_local = tmp_path / ".claude" / "settings.local.json"
+    monkeypatch.setenv("XDG_RUNTIME_DIR", str(runtime))
+    monkeypatch.setenv("MEGA_MODE", "semantic")
+    monkeypatch.setenv("MEGA_DAEMON", "0")
+    monkeypatch.setenv("MEGA_QUIET", "1")
+    monkeypatch.setenv("MEGA_CLAUDE_NATIVE_MODE", "strict")
+    monkeypatch.setattr(
+        "mega_tron.hosts.claude_code.skill_overrides.SETTINGS_LOCAL_PATH",
+        settings_local,
+    )
+
+    from mega_tron.hosts.claude_code.hook import cmd_claude_hook
+
+    args = argparse.Namespace(
+        skills_dir=str(skills),
+        top_k=5,
+        prepend_k=3,
+        cache_path=str(tmp_path / "cache.npz"),
+    )
+    payload = {
+        "hook_event_name": "UserPromptSubmit",
+        "prompt": "validate HMAC webhook",
+        "session_id": f"mode-strict-{uuid.uuid4()}",
+        "cwd": "/tmp",
+        "transcript_path": "/tmp/fake.jsonl",
+    }
+    stdout = io.StringIO()
+    stderr = io.StringIO()
+    with patch("sys.stdin", io.StringIO(json.dumps(payload))):
+        with redirect_stdout(stdout), redirect_stderr(stderr):
+            rc = cmd_claude_hook(args)
+    assert rc == 0
+    assert settings_local.exists(), (
+        "strict must write skillOverrides just like active"
+    )
+    settings_data = json.loads(settings_local.read_text())
+    overrides = settings_data["skillOverrides"]
+    assert overrides
+    assert all(v == "name-only" for v in overrides.values())
+
+
 def test_hook_default_passive_mode_does_not_touch_settings_local(
     tmp_path, skills, monkeypatch
 ):

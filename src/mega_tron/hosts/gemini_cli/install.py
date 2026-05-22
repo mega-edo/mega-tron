@@ -294,6 +294,16 @@ def run_install_gemini(args: argparse.Namespace) -> int:
     gemini_md_path = GEMINI_MD_PATH
 
     if getattr(args, "uninstall", False):
+        # Remove the qa-live marker skill if a prior `mega-tron qa-live`
+        # left it behind. Idempotent — silent on absence.
+        from mega_tron.cli.qa_live import unplant_qa_skill
+
+        if unplant_qa_skill("gemini"):
+            print(
+                "[install --target gemini] removed qa-live marker skill "
+                "_mega-tron-check from ~/.gemini/skills/.",
+                file=sys.stderr,
+            )
         return _uninstall(settings_path, gemini_md_path)
 
     hook_exe = getattr(args, "hook_command", None)
