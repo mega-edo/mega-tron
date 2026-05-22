@@ -409,6 +409,54 @@ def test_partial_diagnostic_branches_on_transcript(fake_home, monkeypatch):
     assert "AGENTS.md" in detail
 
 
+def test_partial_diagnostic_ignores_contract_example_in_user_message(
+    fake_home,
+):
+    """Regression test for the false-EMITTED diagnosis reported on
+    GitHub: a Codex transcript whose USER message embeds AGENTS.md
+    (which itself contains a literal `<skill-used .../>` example)
+    must NOT be mis-read as 'model EMITTED the tag'. The model in
+    that report didn't tag — the substring matched the AGENTS.md
+    contract example.
+    """
+    sessions = fake_home / ".codex" / "sessions" / "2026" / "05" / "22"
+    sessions.mkdir(parents=True)
+    transcript = sessions / "rollout-user-example-only.jsonl"
+    # User role carries the AGENTS.md contract — *includes* a literal
+    # `<skill-used name="..." verdict="..." reason="..."/>` example.
+    # Assistant role replies with the script stdout, no trailing tag.
+    transcript.write_text(
+        '{"payload":{"type":"message","role":"user","content":[{"type":"input_text",'
+        '"text":"AGENTS.md says: Tag form: '
+        '<skill-used name=\\"<name>\\" verdict=\\"HELPFUL|HARMFUL|NEUTRAL\\" reason=\\"...\\"/>"}]}}\n'
+        '{"payload":{"type":"message","role":"assistant","content":[{"type":"output_text",'
+        '"text":"MEGA-TRON-CHECK-OK (codex)"}]}}\n',
+        encoding="utf-8",
+    )
+    detail = qa_live._diagnose_partial("codex")
+    assert "did NOT emit" in detail, (
+        f"user-role contract example must not be mistaken for the model "
+        f"emitting the tag; got: {detail!r}"
+    )
+    assert "EMITTED" not in detail
+
+
+def test_qa_prompt_template_spells_out_required_tag():
+    """The marker prompt must name the skill explicitly inside the
+    required tag shape, so Codex / Gemini don't skip the trailer on a
+    short prompt. The previous wording ('emit the inline self-eval
+    skill-used tag per the contract') was the cause of repeated
+    PARTIAL results across hosts."""
+    rendered = qa_live._QA_PROMPT_TEMPLATE.format(skill="_mega-tron-check")
+    assert "_mega-tron-check" in rendered
+    assert 'name="_mega-tron-check"' in rendered
+    assert "REQUIRED" in rendered
+    assert "verdict=" in rendered
+    # The "mandatory" wording is what nudges the model to actually
+    # include the trailer even on a one-line stdout reply.
+    assert "mandatory" in rendered
+
+
 def test_run_qa_live_partial_surfaces_diagnosis(fake_home, monkeypatch, capsys):
     """When PARTIAL fires, the printed detail must come from
     _diagnose_partial, not the old generic 'host ran but no verdict'

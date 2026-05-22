@@ -137,13 +137,13 @@ Gemini. On a slow network those budgets can still be tight — set
 times out on the first try.
 
 **Plan for one retry.** Even on a healthy install, the first qa-live
-often produces a `PARTIAL` (model forgot to emit the `<skill-used>`
-tag on a short prompt) or a `FAIL` (cold-load exceeded the budget).
-A second `mega-tron qa-live` clears these in the overwhelming majority
-of cases. Tell the user up front: *"if the first run isn't all-PASS,
-that's expected — I'll run it once more."* The marker skill
-(`_mega-tron-check`) is harmless, planted idempotently, and removed on
-`--uninstall`.
+can produce a `FAIL` (cold-load exceeded the budget) or — less often
+since the marker prompt now spells out the exact tag shape — a
+`PARTIAL`. A second `mega-tron qa-live` clears these in the
+overwhelming majority of cases. Tell the user up front: *"if the
+first run isn't all-PASS, that's expected — I'll run it once more."*
+The marker skill (`_mega-tron-check`) is harmless, planted
+idempotently, and removed on `--uninstall`.
 
 If the user has not logged into any host yet, recommend **no** and
 tell them to run `mega-tron qa-live` themselves once they have.
@@ -289,7 +289,7 @@ When status is `PARTIAL`, the detail tells you which one fired:
 |---|---|---|
 | `host wrote no transcript` | The host's Stop / AfterAgent hook isn't firing at all. `setup`'s hook wiring didn't land or the user later edited it out. | Re-run `mega-tron setup`. If still missing, inspect `~/.codex/hooks.json` / `~/.claude/settings.json` Stop block / `~/.gemini/settings.json` AfterAgent block. |
 | `model EMITTED the tag … but the tracker rejected it` | Wire format bug on our side — the transcript has `<skill-used>` but `mega-tron` couldn't parse it into SQLite. | Re-run once. If it persists, the detail prints the exact transcript path — attach that file to a GitHub issue. |
-| `model did NOT emit a <skill-used> tag` | The model just skipped the contract on a short prompt. Very common on first try, especially for Codex. | Re-run `mega-tron qa-live`. The contract is in AGENTS.md / CLAUDE.md / GEMINI.md so the second turn almost always tags. If it persists after two retries, verify the guidance file with `grep -c 'mega-tron' ~/.codex/AGENTS.md` (should be ≥ 2). |
+| `model did NOT emit a <skill-used> tag` | The model skipped the contract trailer. Less common after the marker prompt was tightened to spell out the exact tag; when it still happens, one retry usually clears it. | Re-run `mega-tron qa-live`. If it persists after two retries, verify the guidance file with `grep -c 'mega-tron' ~/.codex/AGENTS.md` (should be ≥ 2). |
 
 ### Standard retry policy (agents)
 

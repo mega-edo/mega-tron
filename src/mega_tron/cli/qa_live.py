@@ -33,10 +33,22 @@ QA_SKILL_NAME = "_mega-tron-check"
 # Prompt is deliberately blunt + names the skill explicitly so the model
 # doesn't need to "discover" it from semantic ranking. The qa-live path
 # is a wiring smoke test, not a routing-quality test.
+#
+# The trailer is spelled out — name + verdict + reason form, exact tag
+# shape — because the original short version ("emit the skill-used tag
+# per the contract") was being skipped by Codex / Gemini on the marker
+# turn often enough to be the dominant cause of false PARTIAL results.
+# A short marker prompt doesn't carry enough context for the model to
+# remember a contract from the system prompt; making the trailer part
+# of the instruction itself fixes that.
 _QA_PROMPT_TEMPLATE = (
-    "Run the {skill} skill's scripts/run.sh and report its stdout exactly. "
-    "Then emit the inline self-evaluation skill-used tag at the end of your "
-    "reply per the contract."
+    "Run the {skill} skill's scripts/run.sh and report its stdout exactly.\n"
+    "\n"
+    "REQUIRED: end your reply with EXACTLY ONE line in this form, on its own line:\n"
+    '  <skill-used name="{skill}" verdict="HELPFUL" reason="<one sentence about '
+    "what scripts/run.sh did>\"/>\n"
+    "\n"
+    "This tag is mandatory — the mega-tron self-check fails without it."
 )
 
 
@@ -272,14 +284,18 @@ def _diagnose_partial(host: str) -> str:
     Outcomes:
       - transcript file missing: "host wrote no transcript" — wiring
         issue (hook not firing, or host CLI crashed before stop).
-      - transcript present, tag found: tracker rejected the tag — bug
-        on our side, point at the transcript so the user can attach
-        it to an issue.
-      - transcript present, no tag: model just didn't emit the tag.
-        First-pass mitigation is to re-run; the contract surfaces
-        more reliably on the second turn (the AGENTS.md / CLAUDE.md
-        block is already in the system prompt, but a short prompt
-        sometimes skips the trailer).
+      - assistant text contains the tag: tracker rejected what the
+        model actually emitted — bug on our side.
+      - assistant text does NOT contain the tag: model skipped the
+        contract trailer on this short marker prompt. Retry usually
+        clears it.
+
+    Critically, we only inspect *assistant-role* text. The transcript
+    blob also contains the host's system / user messages (AGENTS.md,
+    CLAUDE.md, GEMINI.md guidance) which themselves include literal
+    `<skill-used name="..." verdict="..."/>` *example* text. Substring-
+    matching the whole file would treat that example as proof the model
+    emitted the tag and misdiagnose every PARTIAL as "tracker bug".
     """
     tp = _newest_transcript_for(host)
     if tp is None:
@@ -290,10 +306,17 @@ def _diagnose_partial(host: str) -> str:
             "`cat ~/.gemini/settings.json | grep -A2 AfterAgent` (gemini)."
         )
     try:
-        blob = tp.read_text(encoding="utf-8", errors="replace")
-    except OSError:
-        return f"could not read transcript {tp}; re-run qa-live once."
-    if "<skill-used" in blob:
+        from mega_tron.tracker import extract_last_assistant_text
+
+        assistant_text = extract_last_assistant_text(tp)
+    except Exception:  # noqa: BLE001
+        # Defensive: if the tracker can't parse the transcript shape,
+        # fall back to "could not read" rather than crashing qa-live.
+        return (
+            f"could not parse {tp.name} to extract assistant text; "
+            "re-run qa-live once."
+        )
+    if "<skill-used" in (assistant_text or ""):
         return (
             f"model EMITTED the tag in {tp.name} but the tracker rejected it. "
             "This is a mega-tron bug — please re-run once, and if it persists "
