@@ -40,6 +40,33 @@ _QA_PROMPT_TEMPLATE = (
 )
 
 
+# Default per-host call budgets in seconds. Tuned for a *cold* first run:
+# embedder model download (130 MB – 570 MB), the host CLI's own cold-
+# start, and one full provider round-trip can together breach the
+# original 180 s ceiling on a fresh laptop. The user can override the
+# floor via MEGA_QA_TIMEOUT_S — useful for slow links or when chaining
+# qa-live behind a `setup` that just downloaded the embedder fresh.
+_DEFAULT_TIMEOUTS_S: dict[str, int] = {
+    "codex": 300,
+    "claude": 300,
+    "gemini": 360,
+}
+
+
+def _timeout_for(host: str) -> int:
+    base = _DEFAULT_TIMEOUTS_S.get(host, 300)
+    override = os.environ.get("MEGA_QA_TIMEOUT_S", "").strip()
+    if not override:
+        return base
+    try:
+        # The override is a floor, not a cap: it only widens. Anything
+        # narrower than the per-host default is ignored so a misguided
+        # `MEGA_QA_TIMEOUT_S=30` doesn't turn every host into FAIL.
+        return max(base, int(override))
+    except ValueError:
+        return base
+
+
 # Per-host invocation recipes. Each entry returns (argv, env_overrides,
 # timeout_s). Missing binary, missing host root, or auth failure all
 # surface as a non-zero return code or FileNotFoundError — caller maps
@@ -50,7 +77,7 @@ def _host_recipe(host: str, skill_name: str) -> Tuple[list[str], dict[str, str],
         bin_path = shutil.which("codex")
         if not bin_path:
             return None
-        return ([bin_path, "exec", "--skip-git-repo-check", prompt], {}, 180)
+        return ([bin_path, "exec", "--skip-git-repo-check", prompt], {}, _timeout_for("codex"))
     if host == "claude":
         bin_path = shutil.which("claude")
         if not bin_path:
@@ -58,7 +85,7 @@ def _host_recipe(host: str, skill_name: str) -> Tuple[list[str], dict[str, str],
         return (
             [bin_path, "--print", "--permission-mode", "bypassPermissions", prompt],
             {},
-            180,
+            _timeout_for("claude"),
         )
     if host == "gemini":
         bin_path = shutil.which("gemini")
@@ -67,7 +94,7 @@ def _host_recipe(host: str, skill_name: str) -> Tuple[list[str], dict[str, str],
         return (
             [bin_path, "--yolo", "--skip-trust", "-p", prompt],
             {"GEMINI_CLI_TRUST_WORKSPACE": "true"},
-            240,
+            _timeout_for("gemini"),
         )
     return None
 
@@ -205,6 +232,88 @@ def _plant_qa_skill(host: str) -> Path | None:
     return skill_md
 
 
+def _newest_transcript_for(host: str) -> Path | None:
+    """Return the most recent transcript file for ``host``, or None.
+
+    Used for post-call diagnostics: when a host call returns CALLED but
+    no verdict landed (PARTIAL), we want to tell the user *whether the
+    model emitted the tag at all*. The two cases need different fixes
+    — see ``_diagnose_partial`` for the branch logic.
+    """
+    home = Path.home()
+    candidates: list[Path] = []
+    try:
+        if host == "codex":
+            sessions = home / ".codex" / "sessions"
+            if sessions.exists():
+                candidates = list(sessions.rglob("*.jsonl"))
+        elif host == "claude":
+            projects = home / ".claude" / "projects"
+            if projects.exists():
+                candidates = list(projects.rglob("*.jsonl"))
+        elif host == "gemini":
+            chats = home / ".gemini" / "tmp" / "mega-tron" / "chats"
+            if chats.exists():
+                candidates = list(chats.glob("*.jsonl"))
+    except OSError:
+        return None
+    if not candidates:
+        return None
+    try:
+        return max(candidates, key=lambda p: p.stat().st_mtime)
+    except (OSError, ValueError):
+        return None
+
+
+def _diagnose_partial(host: str) -> str:
+    """Build an actionable PARTIAL hint by inspecting the host's
+    newest transcript.
+
+    Outcomes:
+      - transcript file missing: "host wrote no transcript" — wiring
+        issue (hook not firing, or host CLI crashed before stop).
+      - transcript present, tag found: tracker rejected the tag — bug
+        on our side, point at the transcript so the user can attach
+        it to an issue.
+      - transcript present, no tag: model just didn't emit the tag.
+        First-pass mitigation is to re-run; the contract surfaces
+        more reliably on the second turn (the AGENTS.md / CLAUDE.md
+        block is already in the system prompt, but a short prompt
+        sometimes skips the trailer).
+    """
+    tp = _newest_transcript_for(host)
+    if tp is None:
+        return (
+            "host wrote no transcript — likely the hook isn't firing. "
+            "Verify with `cat ~/.codex/hooks.json | head` (codex) / "
+            "`cat ~/.claude/settings.json | grep -A2 Stop` (claude) / "
+            "`cat ~/.gemini/settings.json | grep -A2 AfterAgent` (gemini)."
+        )
+    try:
+        blob = tp.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return f"could not read transcript {tp}; re-run qa-live once."
+    if "<skill-used" in blob:
+        return (
+            f"model EMITTED the tag in {tp.name} but the tracker rejected it. "
+            "This is a mega-tron bug — please re-run once, and if it persists "
+            f"file an issue with {tp} attached."
+        )
+    return (
+        f"model did NOT emit a <skill-used> tag in {tp.name}. "
+        "Usually transient — re-run qa-live once. If it persists, confirm "
+        "the host's guidance file has the mega-tron sentinel block: "
+        f"`grep -c 'mega-tron' ~/{_GUIDANCE_FILES.get(host, 'AGENTS.md')}`."
+    )
+
+
+_GUIDANCE_FILES: dict[str, str] = {
+    "codex": ".codex/AGENTS.md",
+    "claude": ".claude/CLAUDE.md",
+    "gemini": ".gemini/GEMINI.md",
+}
+
+
 def _snapshot_verdict_count(host: str) -> int:
     """Return current count of QA-skill verdicts for ``host`` in SQLite.
 
@@ -257,7 +366,13 @@ def _run_host_call(host: str, skill_name: str) -> tuple[str, str, float]:
     except subprocess.TimeoutExpired:
         return (
             "FAIL",
-            f"host call timed out after {timeout_s}s",
+            (
+                f"host call timed out after {timeout_s}s. First call "
+                "cold-loads the embedder + the host CLI itself; on a "
+                "fresh laptop this can exceed the default. Try: "
+                "`mega-tron daemon serve &` to pre-warm the router, "
+                "or set MEGA_QA_TIMEOUT_S=600 and re-run qa-live."
+            ),
             time.monotonic() - started,
         )
     except Exception as e:  # noqa: BLE001
@@ -323,6 +438,16 @@ def run_qa_live(wired_hosts: list[str]) -> int:
         f"{len(wired_hosts)} host(s)...",
         file=sys.stderr,
     )
+    # Cold-start expectation: the first qa-live after a fresh `setup`
+    # is the slowest one. We surface this up front so a single timeout
+    # isn't mistaken for a broken install — the runbook is "re-run
+    # once", not "file a bug".
+    print(
+        "[check] First call is slowest: the router daemon, the embedder "
+        "model, and the host CLI all cold-load. Per-host budget is "
+        "5–6 min by default; widen via MEGA_QA_TIMEOUT_S=<seconds>.",
+        file=sys.stderr,
+    )
 
     # 1. Plant QA skills idempotently. A wired host is one mega-tron
     #    just registered hooks for — meaning the user has the host's
@@ -368,8 +493,8 @@ def run_qa_live(wired_hosts: list[str]) -> int:
         results[host] = _run_host_call(host, QA_SKILL_NAME)
 
     # 4. Verify verdict propagation. CALLED + verdict landed = PASS;
-    #    CALLED but no verdict = PARTIAL (host ran but tag wasn't
-    #    captured — likely tracker / regex bug or model didn't tag).
+    #    CALLED but no verdict = PARTIAL — inspect the transcript to
+    #    figure out *why* (model didn't tag vs tracker dropped it).
     after: dict[str, int] = {h: _snapshot_verdict_count(h) for h in planted}
     final: dict[str, tuple[str, str, float]] = {}
     for host in planted:
@@ -379,11 +504,8 @@ def run_qa_live(wired_hosts: list[str]) -> int:
             if delta > 0:
                 final[host] = ("PASS", f"verdict captured ({delta} new row)", elapsed)
             else:
-                final[host] = (
-                    "PARTIAL",
-                    "host ran but no verdict reached SQLite",
-                    elapsed,
-                )
+                hint = _diagnose_partial(host)
+                final[host] = ("PARTIAL", hint, elapsed)
         else:
             final[host] = (status, detail, elapsed)
 
@@ -417,13 +539,19 @@ def run_qa_live(wired_hosts: list[str]) -> int:
                     file=sys.stderr,
                 )
             print(
-                "[check] After logging in, re-run `mega-tron setup --qa-live` "
-                "(no need to re-do `uv tool install`).",
+                "[check] After logging in, re-run `mega-tron qa-live` "
+                "(no need to re-do `uv tool install` or `setup`).",
                 file=sys.stderr,
             )
         else:
+            # Most zero-PASS-no-login cases are cold-start timeouts or
+            # the model skipping the tag on the first turn. Both are
+            # routinely fixed by one retry.
             print(
-                "[check] no host PASSed; skipping dashboard launch.",
+                "[check] no host PASSed; skipping dashboard launch. "
+                "Most first-run failures clear on a second attempt — try "
+                "`mega-tron qa-live` once more. If a host stays PARTIAL "
+                "or FAIL after the retry, follow the per-host hint above.",
                 file=sys.stderr,
             )
         return 1

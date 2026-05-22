@@ -335,3 +335,118 @@ def test_run_qa_live_needs_login_routes_to_login_hint(
     assert "NEEDS_LOGIN" in err
     assert "claude login" in err
     assert not popen_called
+
+
+# ----------------------------------------------------------------------
+# Cold-start tuning — timeouts, env override, preamble, diagnostics
+# ----------------------------------------------------------------------
+
+
+def test_timeout_for_uses_per_host_default(monkeypatch):
+    """The raw defaults: codex/claude 300, gemini 360 (gemini lives on
+    a slower OAuth path)."""
+    monkeypatch.delenv("MEGA_QA_TIMEOUT_S", raising=False)
+    assert qa_live._timeout_for("codex") == 300
+    assert qa_live._timeout_for("claude") == 300
+    assert qa_live._timeout_for("gemini") == 360
+
+
+def test_timeout_for_respects_env_override(monkeypatch):
+    """Env var widens but never narrows — `MEGA_QA_TIMEOUT_S=60` on
+    codex must NOT shrink the budget below the 300s default."""
+    monkeypatch.setenv("MEGA_QA_TIMEOUT_S", "600")
+    assert qa_live._timeout_for("codex") == 600
+    assert qa_live._timeout_for("gemini") == 600
+    monkeypatch.setenv("MEGA_QA_TIMEOUT_S", "60")  # below floor
+    assert qa_live._timeout_for("codex") == 300  # floor preserved
+    monkeypatch.setenv("MEGA_QA_TIMEOUT_S", "garbage")
+    assert qa_live._timeout_for("claude") == 300  # parse fail → default
+
+
+def test_run_qa_live_prints_cold_start_preamble(
+    fake_home, monkeypatch, capsys
+):
+    """The first line after the verifying-... banner must explain why
+    the first call is slow, so a single timeout isn't read as a broken
+    install."""
+    monkeypatch.setattr(qa_live.shutil, "which", lambda name: None)
+    qa_live.run_qa_live(["codex"])
+    err = capsys.readouterr().err
+    assert "First call is slowest" in err
+    assert "MEGA_QA_TIMEOUT_S" in err
+
+
+def test_partial_diagnostic_branches_on_transcript(fake_home, monkeypatch):
+    """The PARTIAL detail must distinguish 'tag present, tracker dropped
+    it' from 'model never emitted the tag'."""
+    # No transcript at all → wiring hint.
+    detail = qa_live._diagnose_partial("codex")
+    assert "no transcript" in detail.lower()
+
+    # Plant a fake transcript WITH a <skill-used> tag.
+    sessions = fake_home / ".codex" / "sessions" / "2026" / "05" / "22"
+    sessions.mkdir(parents=True)
+    transcript = sessions / "rollout-tagged.jsonl"
+    transcript.write_text(
+        '{"payload":{"type":"message","role":"assistant",'
+        '"content":[{"type":"output_text","text":"hi '
+        '<skill-used name=\\"x\\" verdict=\\"HELPFUL\\" reason=\\"r\\"/>"}]}}\n',
+        encoding="utf-8",
+    )
+    detail = qa_live._diagnose_partial("codex")
+    assert "EMITTED" in detail
+    assert "rollout-tagged.jsonl" in detail
+
+    # Replace with a transcript WITHOUT the tag.
+    transcript.write_text(
+        '{"payload":{"type":"message","role":"assistant",'
+        '"content":[{"type":"output_text","text":"no tag here"}]}}\n',
+        encoding="utf-8",
+    )
+    detail = qa_live._diagnose_partial("codex")
+    assert "did NOT emit" in detail
+    # Points the user at the host's guidance file.
+    assert "AGENTS.md" in detail
+
+
+def test_run_qa_live_partial_surfaces_diagnosis(fake_home, monkeypatch, capsys):
+    """When PARTIAL fires, the printed detail must come from
+    _diagnose_partial, not the old generic 'host ran but no verdict'
+    string — so the user can act on the real cause."""
+    (fake_home / ".claude" / "skills").mkdir(parents=True)
+    # Plant a Claude transcript that contains the tag — pretends the
+    # model did the right thing but the tracker still dropped it.
+    project = fake_home / ".claude" / "projects" / "-tmp-x"
+    project.mkdir(parents=True)
+    transcript = project / "session.jsonl"
+    transcript.write_text(
+        '{"type":"assistant","message":{"role":"assistant",'
+        '"content":[{"type":"text",'
+        '"text":"out <skill-used name=\\"x\\" verdict=\\"HELPFUL\\" reason=\\"r\\"/>"}]}}\n',
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(qa_live.shutil, "which", lambda name: f"/fake/bin/{name}")
+    monkeypatch.setattr(qa_live, "_snapshot_verdict_count", lambda h: 0)
+    monkeypatch.setattr(
+        qa_live.subprocess,
+        "run",
+        lambda *a, **kw: subprocess.CompletedProcess(a[0], 0, stdout="", stderr=""),
+    )
+    monkeypatch.setattr(
+        qa_live.subprocess,
+        "Popen",
+        lambda *a, **kw: (_ for _ in ()).throw(
+            AssertionError("dashboard should NOT spawn on PARTIAL")
+        ),
+    )
+    monkeypatch.setattr(qa_live.time, "sleep", lambda s: None)
+
+    rc = qa_live.run_qa_live(["claude"])
+    assert rc == 1
+    err = capsys.readouterr().err
+    assert "PARTIAL" in err
+    # The diagnostic, not the legacy generic message:
+    assert "EMITTED the tag" in err
+    # Retry hint surfaces in the no-PASS summary.
+    assert "second attempt" in err or "once more" in err

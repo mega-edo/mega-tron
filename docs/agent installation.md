@@ -121,14 +121,32 @@ to `setup`. Whatever the user picks, `--uninstall` later reverses it.
 Yes/no. Recommend **yes** if the user has at least one host CLI logged
 in and ready (i.e. they've already used `codex` / `claude` / `gemini`
 at least once in this account). qa-live drives one real call per host
-(~3 minutes total worst case) and confirms the
-UserPromptSubmit → top-K routing → Stop-hook verdict-capture loop
-works end-to-end.
+and confirms the UserPromptSubmit → top-K routing → Stop-hook
+verdict-capture loop works end-to-end.
 
-If the user has not logged into any host yet, recommend **no** and tell
-them to run `mega-tron qa-live` themselves once they have. The check
-plants a marker skill (`_mega-tron-check`) which is harmless and removed
-on `--uninstall`.
+**Be realistic about wall-clock cost.** The *first* qa-live after a
+fresh `setup` is the slowest one on every machine:
+
+1. The embedder model (130 MB – 570 MB) downloads on first hook fire.
+2. The router daemon cold-loads it into RAM (5–30 s once on disk).
+3. Each host CLI does its own cold-start + first provider round-trip.
+
+Per-host budget is **5 min** for Codex / Claude and **6 min** for
+Gemini. On a slow network those budgets can still be tight — set
+`MEGA_QA_TIMEOUT_S=600` (or higher) before re-running if any host
+times out on the first try.
+
+**Plan for one retry.** Even on a healthy install, the first qa-live
+often produces a `PARTIAL` (model forgot to emit the `<skill-used>`
+tag on a short prompt) or a `FAIL` (cold-load exceeded the budget).
+A second `mega-tron qa-live` clears these in the overwhelming majority
+of cases. Tell the user up front: *"if the first run isn't all-PASS,
+that's expected — I'll run it once more."* The marker skill
+(`_mega-tron-check`) is harmless, planted idempotently, and removed on
+`--uninstall`.
+
+If the user has not logged into any host yet, recommend **no** and
+tell them to run `mega-tron qa-live` themselves once they have.
 
 ---
 
@@ -247,23 +265,42 @@ the exact remediation command setup prints (`mega-optimus install
 mega-tron qa-live
 ```
 
-Auto-detects every installed host and runs one call per host. Per-host
-result codes:
+Auto-detects every installed host and runs one call per host. Exit
+code is 0 if at least one host `PASS`-es, 1 otherwise. To re-test
+just one host later: `mega-tron qa-live --host claude`.
 
-- `PASS` — verdict row was inserted, full loop works.
-- `PARTIAL` — host ran but no `<skill-used>` tag persisted; usually
-  means the model didn't emit the tag (rare — guidance file should
-  have prompted it). Re-run once; if it persists, check the host's
-  guidance file (AGENTS.md / CLAUDE.md / GEMINI.md) actually contains
-  the mega-tron sentinel block.
-- `NEEDS_LOGIN` — host CLI returned an auth error. User has to
-  `claude /login` / `codex login` / `gemini auth login` themselves and
-  re-run qa-live. Don't try to log in for them.
-- `FAIL` — timeout (180-240 s) or non-zero exit. Re-run once; if it
-  persists, report the host's stderr to the user.
+### Per-host result codes — what they mean and what to do
 
-`qa-live` exits 0 if at least one host PASSes, 1 otherwise. To check
-just one host: `mega-tron qa-live --host claude`.
+The runtime prints a one-line summary per host plus a free-text
+detail. Map them to the agent's next action with this table:
+
+| Status | Meaning | Your next action |
+|---|---|---|
+| `PASS` | Verdict row inserted; full loop works. | Nothing — report and move on. |
+| `PARTIAL` | Host ran cleanly (rc=0) but no `<skill-used>` tag persisted to SQLite. The runtime inspects the newest host transcript and tells you *why* in the detail string — see the next table. | Decide from the detail, then re-run **once**. |
+| `NEEDS_LOGIN` | Host CLI returned an auth-shaped failure (401 / "please login" / api_key / quota / rate-limit). | Surface the per-host login command (`claude /login`, `codex login`, `gemini auth login` — the runtime already prints the right one). Do **not** try to log in for the user. Tell them to log in and re-run `mega-tron qa-live`. |
+| `FAIL` | Timeout or non-zero exit that doesn't look like auth. | First glance: timeout? Set `MEGA_QA_TIMEOUT_S=600` and re-run once. Persistent non-timeout failure? Report stderr to the user verbatim. |
+
+### PARTIAL detail — three sub-cases
+
+When status is `PARTIAL`, the detail tells you which one fired:
+
+| Detail substring | Root cause | Fix |
+|---|---|---|
+| `host wrote no transcript` | The host's Stop / AfterAgent hook isn't firing at all. `setup`'s hook wiring didn't land or the user later edited it out. | Re-run `mega-tron setup`. If still missing, inspect `~/.codex/hooks.json` / `~/.claude/settings.json` Stop block / `~/.gemini/settings.json` AfterAgent block. |
+| `model EMITTED the tag … but the tracker rejected it` | Wire format bug on our side — the transcript has `<skill-used>` but `mega-tron` couldn't parse it into SQLite. | Re-run once. If it persists, the detail prints the exact transcript path — attach that file to a GitHub issue. |
+| `model did NOT emit a <skill-used> tag` | The model just skipped the contract on a short prompt. Very common on first try, especially for Codex. | Re-run `mega-tron qa-live`. The contract is in AGENTS.md / CLAUDE.md / GEMINI.md so the second turn almost always tags. If it persists after two retries, verify the guidance file with `grep -c 'mega-tron' ~/.codex/AGENTS.md` (should be ≥ 2). |
+
+### Standard retry policy (agents)
+
+The first qa-live run after a fresh install is **expected to be
+imperfect** — cold embedder loads, cold host CLI, model occasionally
+skipping the trailer. Your standard procedure:
+
+1. Run `mega-tron qa-live`.
+2. If any host is not `PASS` and not `NEEDS_LOGIN`, run `mega-tron qa-live` **once more**.
+3. If a host is still `PARTIAL` or `FAIL` after that retry, use the tables above to pick the exact next step. Don't escalate to "broken install" until you've actually exhausted them.
+4. `NEEDS_LOGIN` does **not** retry; surface the login command and stop.
 
 > Heads-up: when qa-live PASSes for at least one host, it
 > **automatically spawns the dashboard in the background and opens
@@ -325,8 +362,11 @@ Tell them:
 |---|---|---|
 | `mega-tron: command not found` after install | `~/.local/bin` not on PATH | Open a new shell. If still missing, source the shell rc explicitly. |
 | Setup prints "legacy mega-optimus conflict" | Old install of mega-optimus | Run `mega-optimus install --uninstall`, then `pip uninstall mega-optimus`, then retry. |
-| qa-live: NEEDS_LOGIN for a host | Host CLI not authenticated | User must log into that host (`claude /login` etc.) and re-run qa-live. |
-| qa-live: PARTIAL for Claude | Mode A not applied yet — fresh install hasn't fired the hook even once | Re-run qa-live; the first call also plants the `skillOverrides`. |
+| qa-live: `NEEDS_LOGIN` for a host | Host CLI not authenticated | User must log into that host (`claude /login`, `codex login`, `gemini auth login`) and re-run qa-live. Don't retry without login first. |
+| qa-live: `FAIL` with "timed out after Ns" | First call cold-loads embedder (130 MB – 570 MB) + host CLI. Default 5–6 min budget can still be tight on slow links / large catalogs. | `mega-tron daemon serve &` to pre-warm the router, **and/or** `MEGA_QA_TIMEOUT_S=600 mega-tron qa-live`. |
+| qa-live: `PARTIAL` "model did NOT emit a `<skill-used>` tag" | Model skipped the contract on the first short prompt. Common on first try. | Re-run `mega-tron qa-live` once. If it persists, `grep -c 'mega-tron' ~/.codex/AGENTS.md` (or the equivalent CLAUDE.md / GEMINI.md) must be ≥ 2. |
+| qa-live: `PARTIAL` "model EMITTED the tag but the tracker rejected it" | Wire format bug on our side. | Re-run once. If persistent, attach the transcript path the detail prints to a GitHub issue. |
+| qa-live: `PARTIAL` "host wrote no transcript" | Stop / AfterAgent hook didn't fire — wiring broken. | Re-run `mega-tron setup`. Verify with `cat ~/.codex/hooks.json` (codex), `grep -A2 '"Stop"' ~/.claude/settings.json` (claude), `grep -A2 AfterAgent ~/.gemini/settings.json` (gemini). |
 | Hook runs but no skills surface | Embedder model still downloading | First post-install turn may take 30 s – 3 min; subsequent turns are fast. |
 | Want to remove everything | — | `mega-tron setup --uninstall` reverses every change in this guide. |
 
@@ -338,6 +378,7 @@ Tell them:
 | `MEGA_CLAUDE_NATIVE_MODE` | Runtime | `active` → per-turn rewrite of Claude's `skillOverrides` to name-only the non-top-K skills. `strict` → same as active but combined with a shell wrapper (installed by `setup`) that adds `--disallowedTools Skill` to every `claude` invocation. Default (unset / anything else) is passive. |
 | `MEGA_GEMINI_MODE` | Runtime | `passive` → skip the per-turn `skills.disabled` rewrite (Gemini's analog of Mode A). Default is active. |
 | `MEGA_DAEMON` | Runtime | `0` → never spawn the warm daemon; every hook fire pays the cold-cache penalty. Default is auto-spawn. |
+| `MEGA_QA_TIMEOUT_S` | qa-live | Floor for the per-host call budget. Defaults: 300 s codex/claude, 360 s gemini. Override widens but never narrows (so `MEGA_QA_TIMEOUT_S=60` is ignored). Use `600` or higher on slow networks or when the embedder is still downloading. |
 
 Full per-host architecture detail is in
 [`docs/mega-tron routing.md`](mega-tron%20routing.md). Native-host
