@@ -106,7 +106,9 @@ def render_inline_self_eval_contract() -> str:
     )
 
 
-def render_install_tagging_guide(*, hook_name: str) -> str:
+def render_install_tagging_guide(
+    *, hook_name: str, mega_tron_bin: str = "mega-tron"
+) -> str:
     """Persistent tagging guide planted into the host memory file at install.
 
     Used by:
@@ -117,6 +119,16 @@ def render_install_tagging_guide(*, hook_name: str) -> str:
     Args:
         hook_name: Which hook reads the tags on this host — used only in
             the closing sentence so the doc names the correct event.
+        mega_tron_bin: Absolute path to the mega-tron binary, as it
+            should appear in the rendered guide. Stamped at install
+            time via :func:`mega_tron.cli.path_setup.resolve_bin_path`
+            so the model invokes mega-tron via its absolute path —
+            host-spawned subshells routinely run with a minimal PATH
+            that doesn't include ``~/.local/bin``, which would
+            otherwise make ``mega-tron search ...`` fail with
+            ``command not found``. Default ``mega-tron`` preserved for
+            tests and ad-hoc callers; the install path always passes
+            the resolved absolute path.
 
     Returned text is the body of the "Tagging contract" paragraph; the
     caller chooses how to embed it (markdown section, AGENTS.md prose,
@@ -164,8 +176,8 @@ def render_install_tagging_guide(*, hook_name: str) -> str:
         "helped or hurt; it is never a place to narrate your own "
         "reasoning quality.\n"
         "\n"
-        "**\"No match\" turns.** When you called `mega-tron search` and "
-        "decided no surfaced skill applies, you do NOT need to emit a "
+        f"**\"No match\" turns.** When you called `{mega_tron_bin} "
+        "search` and decided no surfaced skill applies, you do NOT need to emit a "
         "tag. The call itself is already logged to the routes table; "
         "the absence of a tag is itself signal that the top-K did not "
         "help, and the router learns from that. Force-tagging a NEUTRAL "

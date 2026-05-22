@@ -98,6 +98,39 @@ def resolve_bin_dir() -> Path | None:
     return None
 
 
+def resolve_bin_path() -> str:
+    """Return the absolute path to the mega-tron binary, as it should
+    appear inside install-time managed memory blocks (CLAUDE.md /
+    AGENTS.md / GEMINI.md).
+
+    Resolution order:
+      1. :func:`resolve_bin_dir` joined with ``mega-tron`` — preferred
+         since it follows the running process's own provenance.
+      2. ``shutil.which("mega-tron")`` — fallback when resolve_bin_dir
+         can't pin it down (test harnesses calling the API directly).
+      3. The literal string ``mega-tron`` — last-resort fallback when
+         we genuinely cannot locate ourselves. This degrades to the
+         old PATH-dependent behaviour rather than blocking install.
+
+    Why we need this: when a host CLI (Claude Code, Codex, Gemini)
+    forks the model's Bash subprocess, that subshell may not source
+    the user's interactive rc and so misses ``~/.local/bin`` on PATH.
+    The model then runs ``mega-tron search ...`` and gets
+    ``command not found``. Stamping the absolute path into the
+    managed memory blocks removes the PATH dependency entirely —
+    the model sees the full path and invokes it directly.
+    """
+    bin_dir = resolve_bin_dir()
+    if bin_dir is not None:
+        candidate = bin_dir / "mega-tron"
+        if candidate.exists():
+            return str(candidate)
+    via_which = shutil.which("mega-tron")
+    if via_which:
+        return via_which
+    return "mega-tron"
+
+
 def _path_contains(bin_dir: Path, path_env: str) -> bool:
     """Is ``bin_dir`` already on ``$PATH``? Resolves symlinks on both
     sides so ``/Users/x/.local/bin`` matches even if ``$PATH`` has the

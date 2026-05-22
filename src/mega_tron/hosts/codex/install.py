@@ -81,27 +81,49 @@ LEGACY_HOOK_MANAGED_KEYS = ("_mega_optimus_managed",)
 # the guidance lives here, the per-turn routing prefix lives in the hook.
 # The tagging-contract paragraph is the single source of truth in
 # :mod:`mega_tron.self_eval_contract`.
-AGENTS_BLOCK_BODY = (
-    "## Skill routing (mega-tron)\n"
-    "\n"
-    "**You MUST call `mega-tron search \"<short task description>\"` at "
-    "the start of every turn that needs a skill — by default this is "
-    "every turn.** Skip the call ONLY when the user's prompt is purely "
-    "conversational (no code, no tool invocation, no library, no "
-    "system / API reference). If in doubt, call it.\n"
-    "\n"
-    "Read what search prints (name + skill_dir + description for the "
-    "top-K; add `--output bodies` to dump each pick's full SKILL.md). "
-    "If a surfaced skill semantically applies to the user's prompt, "
-    "act on its SKILL.md instructions. If none applies, say so in one "
-    "line — *\"no surfaced skill applies — using general knowledge\"* "
-    "— and proceed with your own approach. \"No match\" is a valid, "
-    "common outcome at the routing system's measured coverage; do not "
-    "force-fit an unrelated skill.\n"
-    "\n"
-    + render_install_tagging_guide(hook_name="Stop")
-    + "\n"
-)
+#
+# Rendered at install time (not import time) so the absolute mega-tron
+# binary path is captured fresh on every install. Host CLIs frequently
+# fork the model's Bash subprocess with a minimal PATH that lacks
+# ``~/.local/bin``; stamping the absolute path here removes the PATH
+# dependency entirely — ``command not found`` on ``mega-tron search``
+# can no longer happen because the rendered guidance names the full
+# path the model can invoke directly.
+def _render_agents_block_body() -> str:
+    from mega_tron.cli.path_setup import resolve_bin_path
+
+    mega_tron_bin = resolve_bin_path()
+    return (
+        "## Skill routing (mega-tron)\n"
+        "\n"
+        f"**You MUST call `{mega_tron_bin} search \"<short task "
+        "description>\"` at the start of every turn that needs a "
+        "skill — by default this is every turn.** Skip the call ONLY "
+        "when the user's prompt is purely conversational (no code, "
+        "no tool invocation, no library, no system / API reference). "
+        "If in doubt, call it.\n"
+        "\n"
+        "Read what search prints (name + skill_dir + description for the "
+        "top-K; add `--output bodies` to dump each pick's full SKILL.md). "
+        "If a surfaced skill semantically applies to the user's prompt, "
+        "act on its SKILL.md instructions. If none applies, say so in one "
+        "line — *\"no surfaced skill applies — using general knowledge\"* "
+        "— and proceed with your own approach. \"No match\" is a valid, "
+        "common outcome at the routing system's measured coverage; do not "
+        "force-fit an unrelated skill.\n"
+        "\n"
+        + render_install_tagging_guide(
+            hook_name="Stop", mega_tron_bin=mega_tron_bin
+        )
+        + "\n"
+    )
+
+
+# Back-compat: some tests still reference AGENTS_BLOCK_BODY as a module
+# attribute. Compute it lazily so tests that import this module without
+# running install see *some* value — but the install path always calls
+# the function fresh, which is what stamps the real absolute path.
+AGENTS_BLOCK_BODY = _render_agents_block_body()
 
 
 def _detect_shell() -> str:
@@ -181,12 +203,19 @@ def _strip_block(
 
 
 def render_agents_block() -> str:
-    """Render the managed AGENTS.md block (search-CLI + skill-used tag + eval rule)."""
+    """Render the managed AGENTS.md block (search-CLI + skill-used tag + eval rule).
+
+    Re-renders the body on every call so the absolute mega-tron path
+    is captured at install time, not import time — important when the
+    installed binary path changes (e.g. uv tool reinstall to a new
+    venv directory).
+    """
     header = (
         f"<!-- mega-tron v{HOOK_MANAGED_VERSION} —"
         " re-run `mega-tron install` to update; `--uninstall` to remove. -->\n"
     )
-    return f"{AGENTS_SENTINEL_START}\n{header}{AGENTS_BLOCK_BODY.rstrip()}\n{AGENTS_SENTINEL_END}\n"
+    body = _render_agents_block_body()
+    return f"{AGENTS_SENTINEL_START}\n{header}{body.rstrip()}\n{AGENTS_SENTINEL_END}\n"
 
 
 def _install_agents_md(path_override: str | None) -> None:

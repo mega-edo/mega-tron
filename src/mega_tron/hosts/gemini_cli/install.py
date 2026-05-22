@@ -75,27 +75,43 @@ GEMINI_SENTINEL_END = "<!-- <<< mega-tron <<< -->"
 
 # Tagging-contract paragraph is the single source of truth in
 # :mod:`mega_tron.self_eval_contract`.
-GEMINI_BLOCK_BODY = (
-    "## Skill routing (mega-tron)\n"
-    "\n"
-    "**You MUST call `mega-tron search \"<short task description>\"` at "
-    "the start of every turn that needs a skill — by default this is "
-    "every turn.** Skip the call ONLY when the user's prompt is purely "
-    "conversational (no code, no tool invocation, no library, no "
-    "system / API reference). If in doubt, call it.\n"
-    "\n"
-    "Read what search prints (name + skill_dir + description for the "
-    "top-K; add `--output bodies` to dump each pick's full SKILL.md). "
-    "If a surfaced skill semantically applies to the user's prompt, "
-    "activate it via the `activate_skill` tool. If none applies, say "
-    "so in one line — *\"no surfaced skill applies — using general "
-    "knowledge\"* — and proceed with your own approach. \"No match\" is "
-    "a valid, common outcome at the routing system's measured coverage; "
-    "do not force-fit an unrelated skill.\n"
-    "\n"
-    + render_install_tagging_guide(hook_name="AfterAgent")
-    + "\n"
-)
+#
+# Rendered at install time (not import time) so the absolute mega-tron
+# binary path is captured fresh on every install. See the matching
+# rationale in :mod:`mega_tron.hosts.codex.install._render_agents_block_body`.
+def _render_gemini_block_body() -> str:
+    from mega_tron.cli.path_setup import resolve_bin_path
+
+    mega_tron_bin = resolve_bin_path()
+    return (
+        "## Skill routing (mega-tron)\n"
+        "\n"
+        f"**You MUST call `{mega_tron_bin} search \"<short task "
+        "description>\"` at the start of every turn that needs a "
+        "skill — by default this is every turn.** Skip the call ONLY "
+        "when the user's prompt is purely conversational (no code, "
+        "no tool invocation, no library, no system / API reference). "
+        "If in doubt, call it.\n"
+        "\n"
+        "Read what search prints (name + skill_dir + description for the "
+        "top-K; add `--output bodies` to dump each pick's full SKILL.md). "
+        "If a surfaced skill semantically applies to the user's prompt, "
+        "activate it via the `activate_skill` tool. If none applies, say "
+        "so in one line — *\"no surfaced skill applies — using general "
+        "knowledge\"* — and proceed with your own approach. \"No match\" is "
+        "a valid, common outcome at the routing system's measured coverage; "
+        "do not force-fit an unrelated skill.\n"
+        "\n"
+        + render_install_tagging_guide(
+            hook_name="AfterAgent", mega_tron_bin=mega_tron_bin
+        )
+        + "\n"
+    )
+
+
+# Back-compat: tests reference GEMINI_BLOCK_BODY as a module attribute.
+# Install path always calls the function fresh for the real path stamp.
+GEMINI_BLOCK_BODY = _render_gemini_block_body()
 
 
 MANAGED_EVENTS = ("BeforeAgent", "AfterAgent")
@@ -269,13 +285,19 @@ def _strip_managed_hooks(existing: dict) -> dict:
 
 
 def render_gemini_md_block() -> str:
+    """Render the managed GEMINI.md block.
+
+    Re-renders the body on every call so the absolute mega-tron path
+    is captured at install time, not import time.
+    """
     header = (
         f"<!-- mega-tron v{MANAGED_VERSION} —"
         " re-run `mega-tron install --target gemini` to update;"
         " `--uninstall` to remove. -->\n"
     )
+    body = _render_gemini_block_body()
     return (
-        f"{GEMINI_SENTINEL_START}\n{header}{GEMINI_BLOCK_BODY.rstrip()}\n"
+        f"{GEMINI_SENTINEL_START}\n{header}{body.rstrip()}\n"
         f"{GEMINI_SENTINEL_END}\n"
     )
 

@@ -239,3 +239,61 @@ def test_memory_block_does_not_enumerate_trigger_categories(block_body):
         f"memory block looks like it re-introduced the trigger "
         f"enum (matched: {[t for t in enum_terms if t in text]})"
     )
+
+
+# ---------- Memory blocks: absolute-path stamp --------------- #
+#
+# Host CLIs (Claude Code, Codex, Gemini) routinely fork the model's
+# Bash subprocess with a minimal PATH that lacks ``~/.local/bin``,
+# so a bare ``mega-tron search`` would fail with ``command not
+# found``. The fix is to stamp the absolute path at install time —
+# the tests below pin that the rendered memory blocks contain it.
+
+import re
+
+
+@pytest.mark.parametrize(
+    "block_body",
+    [_claude_block_body, _agents_block_body, _gemini_block_body],
+    ids=["claude", "codex", "gemini"],
+)
+def test_memory_block_stamps_absolute_mega_tron_path(block_body):
+    """The 'mega-tron search' invocation must appear with an absolute
+    path so a model subshell with minimal PATH can run it directly."""
+    text = block_body()
+    # Look for `<absolute_path>/mega-tron search` — at least one occurrence
+    # in each block (host-specific MUST line). The contract guide adds a
+    # second occurrence inside the "No match" paragraph.
+    matches = re.findall(r"`(/[^\s`]+/mega-tron) search`", text)
+    assert matches, (
+        f"no absolute mega-tron path found in the memory block; "
+        f"saw only bare 'mega-tron' invocations which fail under "
+        f"minimal-PATH subshells. block tail:\n...{text[-400:]}"
+    )
+    # All occurrences must point at the same binary — install never
+    # mixes a host-specific path here.
+    assert len(set(matches)) == 1, (
+        f"multiple distinct mega-tron paths stamped: {set(matches)}"
+    )
+
+
+@pytest.mark.parametrize(
+    "block_body",
+    [_claude_block_body, _agents_block_body, _gemini_block_body],
+    ids=["claude", "codex", "gemini"],
+)
+def test_memory_block_does_not_use_bare_mega_tron(block_body):
+    """The literal bare token ``mega-tron search`` (no path prefix) must
+    not appear as an *invocation* the model is asked to run. It's fine
+    to mention the name ``mega-tron`` in prose, but every place that
+    instructs the model to RUN search must use the absolute form."""
+    text = block_body()
+    # Match `mega-tron search` only when it's the start of a code span
+    # (backtick-delimited) — that's the runnable form. Skip bare prose
+    # mentions like "mega-tron's Stop hook drops...".
+    runnable_bare = re.findall(r"`mega-tron search", text)
+    assert not runnable_bare, (
+        "memory block still contains a bare `mega-tron search` "
+        "invocation that would fail under minimal-PATH subshells. "
+        "Install must stamp the absolute path."
+    )
