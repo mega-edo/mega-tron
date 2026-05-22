@@ -17,7 +17,9 @@
   </p>
 
   <p>
-    🤖 <strong>Easiest path</strong>: just ask your agent. Tell Claude / Codex / Cursor / Copilot: <em><strong>install or update mega-tron for me following https://github.com/mega-edo/mega-tron/blob/main/docs/agent%20installation.md</strong></em>
+    🤖 <strong>Easiest path: just ask your agent.</strong> Tell Claude / Codex / Cursor / Copilot:
+    <br>
+    <code>install or update mega-tron for me following https://github.com/mega-edo/mega-tron/blob/main/docs/agent%20installation.md</code>
   </p>
 
   <p>
