@@ -1024,15 +1024,20 @@ def test_context_savings_no_hosts_installed(env):
     assert out["installed_host_count"] == 0
     assert out["per_host"] == {}
     assert out["vanilla_sum_tokens_per_turn"] == 0
-    # No routes logged yet → fallback to the benchmark constant.
-    assert out["mega_tron_per_turn"] == api.MEGA_TRON_BENCHMARK_TOKENS
+    # Empty catalog → reference curve passes through (0, 0). The
+    # mega_tron_per_turn is 0 here, which is honest: with no skills the
+    # router never injects anything. The UI falls back to its empty
+    # state in that case (no hero bars to compare).
+    assert out["mega_tron_per_turn"] == 0
     assert out["mega_tron_is_measured"] is False
     assert out["mega_tron_turn_count"] == 0
     assert out["warm_up_threshold"] == 20
     assert out["multiplier"] == 0
     assert out["claude_mode"] == "passive"
     assert out["shared_skill_count"] == 0
-    assert "benchmark" in out["mega_tron_baseline_source"].lower()
+    # Reference is the bge-m3 default family at pool=0 — not extrapolated.
+    assert out["mega_tron_embedder_family"] == "bge-m3"
+    assert out["mega_tron_reference_is_extrapolated"] is False
 
 
 def test_context_savings_single_host_codex_only(env):
@@ -1372,10 +1377,60 @@ def test_context_savings_multiplier_floored_not_rounded(env, monkeypatch):
     assert out["multiplier"] >= 3
 
 
+def test_interpolate_reference_tokens_curve():
+    """The reference curve passes through the published benchmark
+    anchors and extrapolates by maintaining the last segment's slope.
+    """
+    from mega_tron.dashboard.api import _interpolate_reference_tokens
+
+    # bge-m3 anchors from results.md: (0,0), (59,112), (183,145), (500,208).
+    for n, expected in [(0, 0), (59, 112), (183, 145), (500, 208)]:
+        ref, extrap = _interpolate_reference_tokens("bge-m3", n)
+        assert ref == expected, f"pool={n} expected {expected}, got {ref}"
+        assert extrap is False, f"pool={n} should be in-range"
+
+    # In-between values land on the line between anchors. At pool=29
+    # (halfway from 0 to 59) we expect ~56 tok for bge-m3.
+    ref, extrap = _interpolate_reference_tokens("bge-m3", 29)
+    assert 50 <= ref <= 60
+    assert extrap is False
+
+    # Above the last anchor → extrapolated, slope of the last segment
+    # (183→500: 63 tok over 317 skills = ~0.2 tok/skill) applied.
+    ref, extrap = _interpolate_reference_tokens("bge-m3", 1000)
+    assert extrap is True
+    assert ref > 208  # strictly larger than the last measured point
+
+    # Unknown family falls back to bge-m3 silently.
+    ref_unknown, _ = _interpolate_reference_tokens("voyage-3", 100)
+    ref_bge, _ = _interpolate_reference_tokens("bge-m3", 100)
+    assert ref_unknown == ref_bge
+
+
+def test_classify_embedder_family():
+    """The classifier maps HuggingFace IDs to one of three families;
+    unknown IDs fall back to bge-m3 (the install-time default)."""
+    from mega_tron.dashboard.api import _classify_embedder
+
+    assert _classify_embedder("BAAI/bge-m3") == "bge-m3"
+    assert _classify_embedder("BAAI/bge-small-en-v1.5") == "bge-small"
+    assert _classify_embedder("ThakiCloud/SKILLRET-Embedding-0.6B") == "skillret"
+    # Unknown → default bge-m3.
+    assert _classify_embedder("voyage-3") == "bge-m3"
+    assert _classify_embedder("") == "bge-m3"
+
+
 def test_context_savings_warming_up_below_threshold(env):
     """Fewer than WARM_UP_THRESHOLD routes → endpoint must keep the
-    benchmark fallback and flag the warming-up state for the UI."""
+    benchmark interpolation fallback and flag the warming-up state."""
     home, store = env
+    # Need at least one skill on disk so the reference curve evaluates
+    # at a non-zero pool size; otherwise the empty catalog case applies.
+    _write_skill(
+        home / ".codex" / "skills" / "single" / "SKILL.md",
+        name="single",
+        description="One skill so the reference curve is non-zero.",
+    )
     for i in range(api.WARM_UP_THRESHOLD - 1):
         store.record_route(
             session_id=f"sess-{i}",
@@ -1389,8 +1444,11 @@ def test_context_savings_warming_up_below_threshold(env):
     out = api.context_savings()
     assert out["mega_tron_is_measured"] is False
     assert out["mega_tron_turn_count"] == api.WARM_UP_THRESHOLD - 1
-    assert out["mega_tron_per_turn"] == api.MEGA_TRON_BENCHMARK_TOKENS
-    assert "benchmark" in out["mega_tron_baseline_source"].lower()
+    # Reference value is interpolated from the benchmark curve, not
+    # the legacy static constant — but it must be a positive number
+    # since the catalog is non-empty and the curve passes through (0,0).
+    assert out["mega_tron_per_turn"] > 0
+    assert "reference value" in out["mega_tron_baseline_source"].lower()
 
 
 def test_context_savings_measured_above_threshold(env):

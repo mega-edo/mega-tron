@@ -381,28 +381,107 @@ def orphans() -> list[dict[str, Any]]:
 # --------------------------------------------------------------------------- #
 
 
-# mega-tron typical per-turn skill-context cost. Used as a transparent
-# fallback BEFORE the user's own routes table has enough samples — the
-# `routes` table starts empty and fills in 1-by-1 as host hooks run.
+# mega-tron typical per-turn skill-context cost is *not* a single
+# constant — it depends on the user's embedder family AND their catalog
+# size. We interpolate from the three published benchmark measurements
+# in benchmarks/routing/results.md:
 #
-# Pulled from benchmarks/routing/results.md. We use the bge-small@pool=59
-# measurement on purpose: it's the highest reference value across the
-# three default embedders' smallest published pool. Picking the high
-# end gives a *conservative* multiplier today (we'd rather under-claim
-# savings here than have the number drop when the user crosses
-# WARM_UP_THRESHOLD and we switch to their measured median) — for most
-# real catalogs the measured median lands lower, so the multiplier
-# only ever grows when we transition off this fallback.
-MEGA_TRON_BENCHMARK_TOKENS = 312
-MEGA_TRON_BENCHMARK_SOURCE = (
-    "Reference value: ~312 tok/session (conservative upper bound from the "
-    "published benchmark). Your sample median takes over after 20 sessions "
-    "are logged."
-)
-# Kept under the old name as well for backwards-compat with any test
-# fixture that still imports the constant. New code should use
-# MEGA_TRON_BENCHMARK_TOKENS.
+#   embedder family    pool=59   pool=183   pool=500
+#   skillret           106       124        157
+#   bge-m3 (default)   112       145        208
+#   bge-small          312       400        527
+#
+# A piecewise linear curve through (0, 0) → (59, X1) → (183, X2) →
+# (500, X3) covers the in-benchmark range. Above pool=500 we maintain
+# the slope of the last measured segment (slope between pool=183 and
+# pool=500) as a transparent extrapolation. The endpoint marks any
+# extrapolated reference with is_extrapolated=True so the UI can warn
+# the user that the number is leaving the measured range.
+_BENCHMARK_POINTS: dict[str, list[tuple[int, int]]] = {
+    "skillret":  [(0, 0), (59, 106), (183, 124), (500, 157)],
+    "bge-m3":    [(0, 0), (59, 112), (183, 145), (500, 208)],
+    "bge-small": [(0, 0), (59, 312), (183, 400), (500, 527)],
+}
+# Default family when we can't classify the user's embedder. bge-m3 is
+# the install-time default and the safest middle estimate.
+_DEFAULT_EMBEDDER_FAMILY = "bge-m3"
+
+# Kept as a static fallback for callers that haven't been updated to
+# the (family, pool_size) interpolation API. Matches bge-m3 @ pool=500
+# — the upper end of the default embedder's measured range.
+MEGA_TRON_BENCHMARK_TOKENS = 208
 MEGA_TRON_BASELINE_TOKENS = MEGA_TRON_BENCHMARK_TOKENS
+
+
+def _classify_embedder(model_id: str) -> str:
+    """Map a HuggingFace model id to one of the benchmark families.
+
+    The classifier is deliberately loose — it just looks for distinctive
+    substrings — because there are several published checkpoints per
+    family (e.g. ``BAAI/bge-m3``, ``BAAI/bge-m3-unsupervised``). Anything
+    we can't classify falls back to ``_DEFAULT_EMBEDDER_FAMILY`` so the
+    user still gets a reference number, just from the bge-m3 curve.
+    """
+    if not model_id:
+        return _DEFAULT_EMBEDDER_FAMILY
+    m = model_id.lower()
+    if "skillret" in m:
+        return "skillret"
+    if "bge-m3" in m:
+        return "bge-m3"
+    if "bge-small" in m:
+        return "bge-small"
+    return _DEFAULT_EMBEDDER_FAMILY
+
+
+def _detect_embedder_model() -> str:
+    """Resolve the embedder model id the same way Router does at fire
+    time: ``MEGA_EMBEDDER_MODEL`` env override → ``config.toml`` →
+    :data:`DEFAULT_EMBEDDER_MODEL`. Errors fall back silently to the
+    default; the worst case is the reference value lands in the wrong
+    family bucket, which the "extrapolated" label already softens.
+    """
+    import os
+    env = os.environ.get("MEGA_EMBEDDER_MODEL", "").strip()
+    if env:
+        return env
+    try:
+        from mega_tron.config import DEFAULT_EMBEDDER_MODEL, Config
+        cfg = Config.load()
+        return cfg.embedder_model or DEFAULT_EMBEDDER_MODEL
+    except Exception:
+        from mega_tron.config import DEFAULT_EMBEDDER_MODEL
+        return DEFAULT_EMBEDDER_MODEL
+
+
+def _interpolate_reference_tokens(
+    family: str, pool_size: int
+) -> tuple[int, bool]:
+    """Return ``(tokens_per_session, is_extrapolated)`` for the given
+    embedder family + catalog size.
+
+    Piecewise linear over the family's anchor points. Below 0 is clamped
+    to 0. Above the last measured point the slope of the final segment
+    is reused (transparent extrapolation) and ``is_extrapolated`` flips
+    to True.
+    """
+    points = _BENCHMARK_POINTS.get(family, _BENCHMARK_POINTS[_DEFAULT_EMBEDDER_FAMILY])
+    n = max(0, int(pool_size))
+
+    # In-range linear interpolation.
+    for (x1, y1), (x2, y2) in zip(points, points[1:]):
+        if x1 <= n <= x2:
+            if x2 == x1:
+                return int(y1), False
+            t = (n - x1) / (x2 - x1)
+            return int(round(y1 + t * (y2 - y1))), False
+
+    # Above the last measured point: extrapolate by maintaining the
+    # slope of the last segment.
+    (x_last_1, y_last_1), (x_last, y_last) = points[-2], points[-1]
+    slope = (y_last - y_last_1) / (x_last - x_last_1)
+    extrapolated = int(round(y_last + slope * (n - x_last)))
+    return max(0, extrapolated), True
 
 # Below this many recorded sessions the median is too unstable (one
 # outlier shifts it 10+%). Above it, we trust the user's median.
@@ -739,6 +818,23 @@ def context_savings() -> dict[str, Any]:
         turn_count >= WARM_UP_THRESHOLD and measured_median is not None
     )
 
+    # Reference value is *not* a single constant — it depends on the
+    # user's embedder family AND their catalog size. We interpolate
+    # from the published benchmark measurements (see _BENCHMARK_POINTS
+    # at the top of this module). The user's "catalog size" for the
+    # mega-tron simulator is the largest pool any installed host sees
+    # (private ∪ shared deduped) — same number the simulator runs
+    # against in the per-host loop above.
+    embedder_id = _detect_embedder_model()
+    embedder_family = _classify_embedder(embedder_id)
+    user_pool_size = max(
+        (h["skill_count"] for h in per_host.values()),
+        default=len(shared_pool),
+    )
+    ref_tokens, is_extrapolated = _interpolate_reference_tokens(
+        embedder_family, user_pool_size
+    )
+
     if is_measured:
         mega_tron_per_turn = int(measured_median)
         p50 = stats.get("p50_tok") or measured_median
@@ -748,8 +844,22 @@ def context_savings() -> dict[str, Any]:
             f"(p50 {p50} · p90 {p90})."
         )
     else:
-        mega_tron_per_turn = MEGA_TRON_BENCHMARK_TOKENS
-        mega_tron_source = MEGA_TRON_BENCHMARK_SOURCE
+        mega_tron_per_turn = ref_tokens
+        if is_extrapolated:
+            mega_tron_source = (
+                f"Reference value: ~{ref_tokens} tok/session "
+                f"(extrapolated for {embedder_family} at {user_pool_size:,} "
+                f"skills — beyond the benchmark's 500-skill measurement "
+                f"ceiling). Your sample median takes over after "
+                f"{WARM_UP_THRESHOLD} sessions are logged."
+            )
+        else:
+            mega_tron_source = (
+                f"Reference value: ~{ref_tokens} tok/session (interpolated "
+                f"from the {embedder_family} benchmark curve at "
+                f"{user_pool_size:,} skills). Your sample median takes over "
+                f"after {WARM_UP_THRESHOLD} sessions are logged."
+            )
 
     multiplier = (
         vanilla_sum // mega_tron_per_turn
@@ -780,6 +890,11 @@ def context_savings() -> dict[str, Any]:
         "mega_tron_is_measured": is_measured,
         "mega_tron_turn_count": turn_count,
         "warm_up_threshold": WARM_UP_THRESHOLD,
+        # New: embedder + extrapolation provenance so the UI can warn
+        # the user when the reference is leaving the measured range.
+        "mega_tron_embedder_id": embedder_id,
+        "mega_tron_embedder_family": embedder_family,
+        "mega_tron_reference_is_extrapolated": is_extrapolated,
     }
 
 
