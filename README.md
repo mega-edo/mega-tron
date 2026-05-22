@@ -74,21 +74,13 @@ mega-tron rebuilds the catalog layer above each host so all three properties fli
 
 ## 🏃 Try it
 
-🤖 **Easiest path: just ask your agent.** Tell Claude / Codex / Cursor / Copilot:
+🤖 Tell Claude / Codex / Cursor / Copilot:
 
-```bash
+```
 install or update mega-tron for me following https://github.com/mega-edo/mega-tron/blob/main/docs/agent%20installation.md
 ```
 
-Or, do it yourself in two commands:
-
-```bash
-uv tool install mega-tron && ~/.local/bin/mega-tron setup
-```
-
-Then open a new terminal. The next turn in any host ships with the right skills in context — and never with skills that have silently broken on you. (Why two commands? See [Install](#-install) below.)
-
-Two commands, three hosts. Token usage drops 18–30× on the very next turn without changing how you use any CLI. Full benchmark table and installation details below.
+The agent handles the three install-time choices (embedder profile, Claude native-mode level, post-install qa-live) and asks you at each step. Token usage on your next host turn drops 18–30× without changing how you call any CLI. Prefer to drive it yourself? See [Install](#-install) below.
 
 ## 🎯 What mega-tron actually does
 
@@ -163,79 +155,46 @@ Solid lines = MEGA Tron. Dashed = semantic search only. Same router, same questi
 
 Requires Python ≥ 3.11 and [`uv`](https://docs.astral.sh/uv/).
 
-### Recommended: let your agent install (or update) it
-
 Open Codex / Claude Code / Gemini and paste:
 
-> **Read [`docs/agent installation.md`](docs/agent%20installation.md) from the mega-tron repo and install or update mega-tron on my machine following that procedure.**
+> Read [`docs/agent installation.md`](docs/agent%20installation.md) from the mega-tron repo and install or update mega-tron on my machine following that procedure.
 
-The doc is a step-by-step procedure written *for the agent*. It picks the right embedder profile based on the language you've been speaking, picks the right Claude Code native-mode (passive / active / strict) based on your skill count, runs the post-install end-to-end check, and asks you at every decision point instead of choosing silently. If you already have mega-tron installed, the same procedure detects that and refreshes the binary first — so re-running it after a new release is the supported upgrade path, not a separate flow.
-
-This is the path most users want — installation involves three host-specific choices and an embedder model download, and an agent following a written procedure will get those right faster than you can read this README.
-
-### Manual install (if you'd rather drive it yourself)
-
-```bash
-uv tool install mega-tron
-```
-```bash
-~/.local/bin/mega-tron setup
-```
-
-Open a new terminal afterwards so the PATH update takes effect — then `mega-tron`, the `codex` shell wrapper, and the host CLIs all resolve cleanly.
-
-> [!NOTE]
-> Step 1 installs the *binary*. Step 2 wires the binary into your environment (PATH + Codex / Claude / Gemini hooks + cache warmup). They're separate because `uv tool install` doesn't get to run scripts on your machine, and editing hooks across three CLIs needs explicit consent.
-
-`mega-tron setup` accepts `--profile {multilingual,en-quality,en-fast}` and `--claude-native-mode {passive,active,strict}`; without these flags it picks safe defaults (multilingual / passive) — see [`docs/agent installation.md`](docs/agent%20installation.md) for what each one means and when to pick which.
-
-### From a git clone
-
-```bash
-git clone https://github.com/mega-edo/mega-tron && cd mega-tron
-```
-```bash
-sh install.sh
-```
-
-`install.sh` runs the two commands above in one shot, plus auto-installs `uv` itself if you don't have it.
-
-### Then use any host normally
-
-```bash
-codex                                    # interactive REPL — routed via UserPromptSubmit hook
-codex exec "Implement HMAC-SHA256 webhook signature verification"   # one-shot — routed via shell wrapper
-claude                                   # same router, same skill pool
-gemini                                   # same router, same skill pool
-```
-
-Both `codex` (interactive REPL) and `codex exec` (one-shot non-interactive) are routed — they take different paths (`UserPromptSubmit` hook for the REPL, shell `codex()` wrapper for `exec`) but reach the same top-K injection. Claude Code and Gemini CLI each use a single hook that covers both their interactive and non-interactive modes.
-
-> [!TIP]
-> `mega-tron setup` is idempotent — safe to re-run any time you add a new host or want to refresh the wiring. `mega-tron install` is kept as an alias. First-run cost: ~1–3 minutes for the embedder model download (130 MB – 570 MB depending on the profile you pick — see [Picking an embedder](#picking-an-embedder)) plus one-time embedding of every discovered skill. Subsequent runs reuse the cache and finish in seconds.
+That covers fresh installs, updates, the three setup choices (embedder profile / Claude native-mode / post-install qa-live), and the end-to-end smoke test — the agent asks you at every decision point instead of choosing silently. It's the path most users want; installation involves three host-specific choices an agent following a written procedure will get right faster than you can read this section.
 
 <details>
-<summary>What <code>mega-tron setup</code> does, all idempotent</summary>
+<summary>Prefer to drive it yourself?</summary>
 
-- **Embedder profile** — on a fresh install (TTY only) prompts you to pick one of three pre-tuned profiles: English-quality (SkillRet-0.6B), English-fast (bge-small-en), or multilingual (bge-m3, the default). Override with `--profile {en-quality,en-fast,multilingual}` for non-interactive installs (CI, scripts, `MEGA_QUIET=1`). Skipped on re-runs once you've picked once. See [§Picking an embedder](#picking-an-embedder) for the numbers behind each option.
-- **PATH** — adds `~/.local/bin` to your shell config (`~/.zshenv` for zsh, `~/.bashrc` for bash, fish conf.d for fish) inside a sentinel-bracketed block so hook subprocesses can resolve `mega-tron` even from non-interactive shells.
-- **Hosts** — registers the right hook entries in `~/.codex/hooks.json`, `~/.claude/settings.json`, `~/.gemini/settings.json` and writes the persistent guidance block into each host's `AGENTS.md` / `CLAUDE.md` / `GEMINI.md`.
-- **Codex shell wrapper** — drops a `codex()` function into `~/.zshrc` / `~/.bashrc` so `codex exec` non-interactive calls also route through the top-K stager.
-- **Cache warmup** — downloads the embedder model (if absent) and embeds every discovered skill into `~/.cache/mega-tron/<model>.npz` so the very first session starts hot.
+```bash
+git clone https://github.com/mega-edo/mega-tron && cd mega-tron && sh install.sh
+```
 
-Target options: `mega-tron setup --target codex | claude | gemini | auto | all`. `--uninstall` reverses each cleanly — sentinel-bracketed install blocks, managed hook entries, the PATH block, and any `skillOverrides` we own are stripped; user-owned settings preserved.
+`install.sh` auto-installs `uv` if missing, runs `uv tool install --from . mega-tron`, then `mega-tron setup`. Open a new terminal afterwards so the PATH update takes effect.
+
+**To update:** `git pull && uv tool install --force --reinstall --from . mega-tron`, then `mega-tron setup` (idempotent — refreshes any sentinel block whose version key changed). Confirm the new code landed with `mega-tron compact-skills --help`; if that returns "unknown command" the upgrade didn't actually replace the venv.
+
+mega-tron is **not on PyPI yet** — install / update both go through this git path until a release lands.
+
+For flag-level control (`--profile`, `--claude-native-mode`, `--target`, `--uninstall`), see [`docs/agent installation.md`](docs/agent%20installation.md).
 
 </details>
 
-### Updating
+<details>
+<summary>What <code>mega-tron setup</code> does</summary>
 
-```bash
-uv tool upgrade mega-tron     # PyPI install
-# or, from a git clone:
-git pull && uv tool install --force --reinstall --from . mega-tron
-```
+All steps are idempotent — re-running setup refreshes sentinel-fenced blocks in place.
 
-Both replace the underlying venv, so the warm router daemon dies with it — your next host session pays one cold embedder load (~5–30s) and respawns the daemon in the background. Re-run `mega-tron setup` only if you want to re-warm the cache upfront or refresh hook wiring after a major version.
+- **Embedder profile** — on a fresh install (TTY only) prompts you to pick one of three pre-tuned profiles: English-quality (SkillRet-0.6B), English-fast (bge-small-en), or multilingual (bge-m3, the default). Override with `--profile {en-quality,en-fast,multilingual}` for non-interactive installs. Skipped on re-runs once you've picked once. See [§Picking an embedder](#picking-an-embedder) for the numbers behind each option.
+- **PATH** — adds `~/.local/bin` to your shell config (`~/.zshenv` for zsh, `~/.bashrc` for bash, fish conf.d for fish) inside a sentinel-bracketed block so hook subprocesses can resolve `mega-tron` even from non-interactive shells.
+- **Hosts** — registers the right hook entries in `~/.codex/hooks.json`, `~/.claude/settings.json`, `~/.gemini/settings.json` and writes the persistent guidance block into each host's `AGENTS.md` / `CLAUDE.md` / `GEMINI.md`.
+- **Codex shell wrapper** — drops a `codex()` function into `~/.zshrc` / `~/.bashrc` so `codex exec` non-interactive calls also route through the top-K stager.
+- **Claude native-mode wrapper** — for `--claude-native-mode active`/`strict`, exports `MEGA_CLAUDE_NATIVE_MODE` (and for strict, shadows `claude` to add `--disallowedTools Skill`) inside a separate sentinel block.
+- **Cache warmup** — downloads the embedder model (if absent) and embeds every discovered skill into `~/.cache/mega-tron/<model>.npz` so the very first session starts hot.
+
+Targets: `mega-tron setup --target codex | claude | gemini | auto | all`. `--uninstall` reverses each cleanly — sentinel blocks, managed hook entries, the PATH block, and any `skillOverrides` we own are stripped; user-owned settings preserved.
+
+After install, just use the host CLIs normally (`codex` / `claude` / `gemini`) — same commands you already run, now routed through mega-tron.
+
+</details>
 
 ### Optional dependencies
 
