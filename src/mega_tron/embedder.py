@@ -134,23 +134,86 @@ class SentenceTransformerEmbedder:
         if query_prefix is None:
             query_prefix = KNOWN_QUERY_PREFIXES.get(model_id, "")
         self.query_prefix = query_prefix
-        try:
-            self._model = SentenceTransformer(
-                model_id,
-                device=self.device,
-                trust_remote_code=trust_remote_code,
-            )
-        except TypeError:
-            # Older sentence-transformers builds don't accept
-            # ``trust_remote_code``; fall back so older environments
-            # still load the standard BGE / e5 / all-MiniLM models.
-            self._model = SentenceTransformer(model_id, device=self.device)
+        # Offline-first load order: try ``local_files_only=True`` first so
+        # that the model is loaded from the on-disk HuggingFace cache
+        # without any network reach. Only fall back to the online load
+        # path when the cache genuinely doesn't have the model (first-
+        # install case). This is the fix for the codex-sandbox failure
+        # mode where ``mega-tron search`` was invoked under a network-
+        # restricted shell — the model is already cached from setup, so
+        # there's no reason for every CLI call to round-trip to
+        # ``huggingface.co`` and crash.
+        #
+        # ``HF_HUB_OFFLINE=1`` is honored implicitly by the HF Hub
+        # library; users who set it explicitly force the strict path
+        # and skip the online fallback below.
+        offline_env = os.environ.get("HF_HUB_OFFLINE") in {"1", "true", "TRUE"}
+        self._model = self._load_model(
+            model_id,
+            trust_remote_code=trust_remote_code,
+            strict_offline=offline_env,
+        )
         try:
             dim = self._model.get_sentence_embedding_dimension()
         except AttributeError:
             dim = getattr(self._model, "get_embedding_dimension", lambda: 0)()
         self.dim = int(dim or 0)
         self._fingerprint: str | None = None
+
+    def _load_model(
+        self,
+        model_id: str,
+        *,
+        trust_remote_code: bool,
+        strict_offline: bool,
+    ):
+        """Load the SentenceTransformer model, offline-first.
+
+        Tries the local HF cache first (``local_files_only=True``) so a
+        cached model loads without any network reach. Falls back to the
+        online path only when the cache genuinely lacks the model — that
+        is, on the user's first install, before ``mega-tron setup`` has
+        downloaded the embedder.
+
+        ``strict_offline=True`` (set when ``HF_HUB_OFFLINE`` is in the
+        environment) skips the online fallback entirely, so a missing
+        cache surfaces as a real error instead of a silent network
+        attempt that the user has already declared unwanted.
+        """
+        from sentence_transformers import SentenceTransformer
+
+        def _try_load(*, local_only: bool):
+            kwargs = {"device": self.device}
+            if trust_remote_code:
+                kwargs["trust_remote_code"] = True
+            if local_only:
+                kwargs["local_files_only"] = True
+            try:
+                return SentenceTransformer(model_id, **kwargs)
+            except TypeError:
+                # Older sentence-transformers builds don't accept
+                # ``trust_remote_code`` (and may not accept
+                # ``local_files_only`` either). Retry with the minimal
+                # signature so the standard BGE / e5 / all-MiniLM
+                # models still load on older environments. We can't
+                # enforce offline-only on those builds, but the cached
+                # model still loads from disk on the next attempt
+                # because HF Hub's download path consults the local
+                # cache before going to the network anyway.
+                return SentenceTransformer(model_id, device=self.device)
+
+        # 1. Strict offline first — works whenever the model is cached.
+        try:
+            return _try_load(local_only=True)
+        except Exception:
+            if strict_offline:
+                # User explicitly asked for offline-only; propagate the
+                # error rather than silently reaching out to HF.
+                raise
+            # Fall through to the online path: cache genuinely missing.
+
+        # 2. Online fallback — first-install path.
+        return _try_load(local_only=False)
 
     @property
     def fingerprint(self) -> str:
