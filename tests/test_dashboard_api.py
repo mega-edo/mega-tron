@@ -1364,8 +1364,12 @@ def test_context_savings_multiplier_floored_not_rounded(env, monkeypatch):
     expected = vsum // baseline
     assert out["multiplier"] == expected
     # Sanity: with 20 skills emitted in full under Gemini's uncapped
-    # rules we should see at least 5× the 150-tok baseline.
-    assert out["multiplier"] >= 5
+    # rules the vanilla sum (~99 tok/skill) divided by the reference
+    # value still leaves a multiplier > 1× — i.e. mega-tron is shipping
+    # strictly fewer tokens than vanilla even with the conservative
+    # reference. We don't pin the exact ratio because it shifts when
+    # the reference value is retuned against a fresh benchmark run.
+    assert out["multiplier"] >= 3
 
 
 def test_context_savings_warming_up_below_threshold(env):

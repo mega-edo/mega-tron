@@ -384,19 +384,19 @@ def orphans() -> list[dict[str, Any]]:
 # mega-tron typical per-turn skill-context cost. Used as a transparent
 # fallback BEFORE the user's own routes table has enough samples — the
 # `routes` table starts empty and fills in 1-by-1 as host hooks run.
-# Pulled from benchmarks/routing/results.md:
 #
-#   pool 59 / SkillRet  : 106 tok/turn
-#   pool 183 / SkillRet : 124 tok/turn
-#   pool 500 / SkillRet : 157 tok/turn
-#
-# 150 is the round-number mid of that range. Once the user's own
-# routes table crosses ``WARM_UP_THRESHOLD``, the dashboard switches to
-# the user's measured median over the trailing 30 days.
-MEGA_TRON_BENCHMARK_TOKENS = 150
+# Pulled from benchmarks/routing/results.md. We use the bge-small@pool=59
+# measurement on purpose: it's the highest reference value across the
+# three default embedders' smallest published pool. Picking the high
+# end gives a *conservative* multiplier today (we'd rather under-claim
+# savings here than have the number drop when the user crosses
+# WARM_UP_THRESHOLD and we switch to their measured median) — for most
+# real catalogs the measured median lands lower, so the multiplier
+# only ever grows when we transition off this fallback.
+MEGA_TRON_BENCHMARK_TOKENS = 312
 MEGA_TRON_BENCHMARK_SOURCE = (
-    "Reference value: ~150 tok/session (population median from the published "
-    "200-query benchmark). Your sample median takes over after 20 sessions "
+    "Reference value: ~312 tok/session (conservative upper bound from the "
+    "published benchmark). Your sample median takes over after 20 sessions "
     "are logged."
 )
 # Kept under the old name as well for backwards-compat with any test
