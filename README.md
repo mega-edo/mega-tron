@@ -17,7 +17,7 @@
   </p>
 
   <p>
-    🤖 <strong>Easiest path: just ask your agent.</strong> Tell Claude / Codex / Cursor / Copilot: <em>"install or update mega-tron for me following <a href="docs/agent%20installation.md"><code>docs/agent installation.md</code></a>"</em> — the doc has user-confirmation gates (embedder profile, Claude suppression level, post-install QA) and an "already installed → refresh first" branch built in, so the agent knows when to ask and when to act.
+    🤖 <strong>Easiest path</strong>: just ask your agent. Tell Claude / Codex / Cursor / Copilot: <em><strong>install or update mega-tron for me following https://github.com/mega-edo/mega-tron/blob/main/docs/agent%20installation.md</strong></em>
   </p>
 
   <p>
