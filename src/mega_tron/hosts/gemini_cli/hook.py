@@ -229,6 +229,15 @@ def cmd_gemini_hook(args: argparse.Namespace) -> int:
     # in-process fallback below consumes the full union.
     from mega_tron import daemon as daemon_mod
 
+    # Eager spawn — see claude_code/hook.py for rationale. Especially
+    # important on Gemini because its 60s hook timeout is the tightest
+    # of the three hosts: if the daemon crashes mid-startup, the next
+    # Gemini turn must retry the spawn or the user stays on cold-path
+    # forever (and may even hit the timeout). Fire-and-forget — adds
+    # microseconds to a warm hook.
+    if not daemon_mod.daemon_disabled() and not daemon_mod.is_running():
+        daemon_mod.spawn_detached()
+
     daemon_op = "agentic_rank" if _agentic_enabled() else "rank"
     daemon_response = None
     if not daemon_mod.daemon_disabled():
@@ -297,20 +306,18 @@ def cmd_gemini_hook(args: argparse.Namespace) -> int:
         return _emit_additional_context(chosen_ctx.rstrip())
 
     if not daemon_mod.daemon_disabled() and not daemon_mod.is_running():
-        # Tell the user what's happening so a slow first call (embedder
-        # cold-load + skill embedding sync, typically 5-30s on a cold
-        # cache) isn't mistaken for the 60-second Gemini hook timeout.
-        # The daemon spawns in the background; the next session will be
-        # fast.
+        # User-facing notice only — the actual spawn already fired at
+        # the top of the daemon-first block. This branch just lets the
+        # user know the current turn is paying the cold-load cost
+        # (which is what makes Gemini's 60s timeout tight).
         if not os.environ.get("MEGA_QUIET"):
             print(
                 "[mega-tron gemini-hook] router daemon not running — this "
                 "turn pays the embedder cold-load (~5-30s on first call). "
-                "Spawning daemon in background so the next session routes "
-                "in ~50ms.",
+                "Daemon was spawned in the background and will be ready "
+                "for the next session.",
                 file=sys.stderr,
             )
-        daemon_mod.spawn_detached()
 
     from mega_tron.cache import Cache
     from mega_tron.prepender import build_gemini_hook_context

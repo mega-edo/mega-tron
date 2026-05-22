@@ -285,6 +285,12 @@ def cmd_hook(args: argparse.Namespace) -> int:
     # in-process fallback below consumes the full union.
     from mega_tron import daemon as daemon_mod
 
+    # Eager spawn — see claude_code/hook.py for rationale. Fire-and-forget
+    # subprocess so a daemon that crashed mid-startup on the previous turn
+    # gets retried instead of leaving the user on cold-path forever.
+    if not daemon_mod.daemon_disabled() and not daemon_mod.is_running():
+        daemon_mod.spawn_detached()
+
     daemon_op = "agentic_rank" if _agentic_enabled() else "rank"
     daemon_response = None
     if not daemon_mod.daemon_disabled():
@@ -304,20 +310,18 @@ def cmd_hook(args: argparse.Namespace) -> int:
             return _emit_empty()
         return _emit_additional_context(ctx)
 
-    # Daemon miss — fall back to in-process and lazy-spawn for next turn.
+    # Daemon miss — fall back to in-process. Eager spawn already happened
+    # at the top of the daemon-first block; just surface the cold-load
+    # notice when the user actually pays it.
     if not daemon_mod.daemon_disabled() and not daemon_mod.is_running():
-        # Tell the user what's happening so a slow first call (embedder
-        # cold-load + skill embedding sync, typically 5-30s on a cold
-        # cache) isn't mistaken for a timeout. The daemon spawns in the
-        # background; the next session will be fast.
         if not os.environ.get("MEGA_QUIET"):
             print(
                 "[mega-tron] router daemon not running — this turn pays "
-                "the embedder cold-load (~5-30s on first call). Spawning "
-                "daemon in background so the next session routes in ~50ms.",
+                "the embedder cold-load (~5-30s on first call). Daemon "
+                "was spawned in the background and will be ready for the "
+                "next session.",
                 file=sys.stderr,
             )
-        daemon_mod.spawn_detached()
 
     from mega_tron.cache import Cache
     from mega_tron.prepender import build_hook_context

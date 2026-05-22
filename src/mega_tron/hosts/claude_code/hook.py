@@ -244,6 +244,18 @@ def cmd_claude_hook(args: argparse.Namespace) -> int:
     # separately.
     from mega_tron import daemon as daemon_mod
 
+    # Eager spawn — fire-and-forget. If the daemon is not running we kick
+    # off ``spawn_detached`` *before* trying client_query, so the spawn
+    # attempt happens on every cold hook fire (not just on cache miss).
+    # ``spawn_detached`` itself returns immediately (subprocess.Popen +
+    # setsid) so this adds microseconds to a warm hook and zero to one
+    # spawn syscall to a cold hook — but it guarantees the daemon gets
+    # a fresh startup attempt on *every* host invocation, so a daemon
+    # that crashed mid-startup last time will be retried next time
+    # instead of leaving the user stuck on cold-path forever.
+    if not daemon_mod.daemon_disabled() and not daemon_mod.is_running():
+        daemon_mod.spawn_detached()
+
     daemon_op = "agentic_rank" if _agentic_enabled() else "rank"
     daemon_response = None
     if not daemon_mod.daemon_disabled():
@@ -291,19 +303,18 @@ def cmd_claude_hook(args: argparse.Namespace) -> int:
         return _emit_additional_context(ctx)
 
     if not daemon_mod.daemon_disabled() and not daemon_mod.is_running():
-        # Tell the user what's happening so a slow first call (embedder
-        # cold-load + skill embedding sync, typically 5-30s on a cold
-        # cache) isn't mistaken for a hang. Daemon spawns in the
-        # background; the next session will be fast.
+        # User-facing notice only — the actual spawn already fired at
+        # the top of the daemon-first block above. We re-check
+        # is_running() here so this notice only prints when the eager
+        # spawn happened (cache miss after a cold daemon).
         if not os.environ.get("MEGA_QUIET"):
             print(
                 "[mega-tron claude-hook] router daemon not running — this "
                 "turn pays the embedder cold-load (~5-30s on first call). "
-                "Spawning daemon in background so the next session routes "
-                "in ~50ms.",
+                "Daemon was spawned in the background and will be ready "
+                "for the next session.",
                 file=sys.stderr,
             )
-        daemon_mod.spawn_detached()
 
     from mega_tron.cache import Cache
     from mega_tron.prepender import build_claude_hook_context
