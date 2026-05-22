@@ -28,6 +28,32 @@ from mega_tron.router import RankedSkill
 from mega_tron.self_eval_contract import render_inline_self_eval_contract
 
 
+def _no_match_context() -> str:
+    """Hook injection for turns where the router returned zero matches.
+
+    Without this, the three ``build_*_hook_context`` functions return
+    "" on an empty ranking — i.e. the model gets no mega-tron guidance
+    at all for that turn. The model's long context still contains the
+    Skills blocks from earlier turns of the same conversation, so
+    "no inject" is silently read as "use whatever names you remember
+    from previous turns" — which is the dominant origin of the
+    hallucinated ``<skill-used name="..."/>`` tag pattern observed in
+    real transcripts.
+
+    An explicit one-block injection — *"emit zero tags"* — fixes that
+    by replacing the silence with a positive instruction the model
+    can't pattern-match against a stale prior block.
+    """
+    return (
+        "## Skills (selected for this turn by mega-tron)\n"
+        "\n"
+        "(none — no surfaced skill applied; emit zero "
+        "`<skill-used>` tags for this turn. Silence is the correct "
+        "signal that the top-K missed; do not substitute names from "
+        "earlier turns of this conversation.)\n"
+    )
+
+
 def build_prefix(
     ranked: list[RankedSkill],
     k: int = 3,
@@ -88,7 +114,7 @@ def build_hook_context(
     description natively, so the bare candidate line is enough).
     """
     if not ranked:
-        return ""
+        return _no_match_context()
     top = ranked[:k]
     names = ", ".join(rs.skill.name for rs in top)
     lines: list[str] = [
@@ -184,7 +210,7 @@ def build_gemini_hook_context(
       the model has everything it needs without a follow-up tool call.
     """
     if not ranked:
-        return ""
+        return _no_match_context()
     top = ranked[:k]
     names = ", ".join(f"`{rs.skill.name}`" for rs in top)
     lines: list[str] = [
@@ -275,7 +301,7 @@ def build_claude_hook_context(
       ``~/.claude/skills`` root (e.g. user-registered ``extra_dirs``).
     """
     if not ranked:
-        return ""
+        return _no_match_context()
     top = ranked[:k]
     slash_names = ", ".join(f"/{rs.skill.name}" for rs in top)
     lines: list[str] = [

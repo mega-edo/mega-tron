@@ -3,7 +3,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from mega_tron.prepender import build_hook_context, build_prefix
+from mega_tron.prepender import (
+    build_claude_hook_context,
+    build_gemini_hook_context,
+    build_hook_context,
+    build_prefix,
+)
 from mega_tron.router import RankedSkill, Skill
 
 
@@ -69,8 +74,43 @@ def test_build_prefix_custom_template():
 # --- build_hook_context -------------------------------------------------------
 
 
+def _assert_no_match_block(out: str) -> None:
+    """Shared assertion for the three hook contexts' zero-match path.
+
+    The block must (a) name itself as the catalog block so the model
+    pattern-matches it against the same header it sees on populated
+    turns, (b) explicitly tell the model to emit zero tags, and (c)
+    name the failure mode it's preventing (stale names from earlier
+    turns) so the instruction sticks even under attention pressure.
+    """
+    assert out != ""
+    assert "## Skills (selected for this turn by mega-tron)" in out
+    assert "(none" in out
+    assert "emit zero" in out
+    assert "`<skill-used>`" in out
+    assert "earlier turns" in out
+
+
 def test_build_hook_context_empty():
-    assert build_hook_context([]) == ""
+    """Zero-match turn must inject an explicit "emit zero tags"
+    instruction rather than returning an empty string. Empty injection
+    silently lets the model fall back on Skills blocks from earlier
+    turns of the same conversation, which is the dominant origin of
+    hallucinated `<skill-used>` tag names."""
+    _assert_no_match_block(build_hook_context([]))
+
+
+def test_build_claude_hook_context_empty():
+    """Claude variant must emit the same zero-match guard. The three
+    hook contexts share one ``_no_match_context`` helper, so this is a
+    contract test against drift if anyone ever inlines the empty
+    branch in just one of them."""
+    _assert_no_match_block(build_claude_hook_context([]))
+
+
+def test_build_gemini_hook_context_empty():
+    """Gemini variant must emit the same zero-match guard."""
+    _assert_no_match_block(build_gemini_hook_context([]))
 
 
 def test_build_hook_context_includes_candidates_and_meta_block():
