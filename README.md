@@ -17,7 +17,7 @@
   </p>
 
   <p>
-    🤖 <strong>If you are an AI assistant installing mega-tron for a user</strong>, follow <a href="docs/agent%20installation.md"><code>docs/agent installation.md</code></a> — it has explicit user-confirmation gates (embedder profile, Claude suppression level, post-install QA) so you know when to ask and when to act.
+    🤖 <strong>If you are an AI assistant installing or updating mega-tron for a user</strong>, follow <a href="docs/agent%20installation.md"><code>docs/agent installation.md</code></a> — it has explicit user-confirmation gates (embedder profile, Claude suppression level, post-install QA) and an "already installed — refresh first" branch so you know when to ask and when to act.
   </p>
 
   <p>
@@ -79,8 +79,6 @@ uv tool install mega-tron && ~/.local/bin/mega-tron setup
 Then open a new terminal. The next turn in any host ships with the right skills in context — and never with skills that have silently broken on you. (Why two commands? See [Install](#-install) below.)
 
 Two commands, three hosts. Token usage drops 18–30× on the very next turn without changing how you use any CLI. Full benchmark table and installation details below.
-
-> 🤖 **Letting an AI agent install this for you?** Point it at [`docs/agent installation.md`](docs/agent%20installation.md) — a step-by-step procedure with explicit user-confirmation points (embedder profile, Claude Code suppression level, post-install QA), so the agent knows when to ask and when to act.
 
 ## 🎯 What mega-tron actually does
 
@@ -155,13 +153,13 @@ Solid lines = MEGA Tron. Dashed = semantic search only. Same router, same questi
 
 Requires Python ≥ 3.11 and [`uv`](https://docs.astral.sh/uv/).
 
-### Recommended: let your agent install it
+### Recommended: let your agent install (or update) it
 
 Open Codex / Claude Code / Gemini and paste:
 
-> **Read [`docs/agent installation.md`](docs/agent%20installation.md) from the mega-tron repo and install mega-tron on my machine following that procedure.**
+> **Read [`docs/agent installation.md`](docs/agent%20installation.md) from the mega-tron repo and install or update mega-tron on my machine following that procedure.**
 
-The doc is a step-by-step procedure written *for the agent*. It picks the right embedder profile based on the language you've been speaking, picks the right Claude Code native-mode (passive / active / strict) based on your skill count, runs the post-install end-to-end check, and asks you at every decision point instead of choosing silently. If you already have mega-tron installed, the procedure also covers refreshing the binary first so you actually get this release's features.
+The doc is a step-by-step procedure written *for the agent*. It picks the right embedder profile based on the language you've been speaking, picks the right Claude Code native-mode (passive / active / strict) based on your skill count, runs the post-install end-to-end check, and asks you at every decision point instead of choosing silently. If you already have mega-tron installed, the same procedure detects that and refreshes the binary first — so re-running it after a new release is the supported upgrade path, not a separate flow.
 
 This is the path most users want — installation involves three host-specific choices and an embedder model download, and an agent following a written procedure will get those right faster than you can read this README.
 

@@ -202,6 +202,22 @@ All three must print real help text. If any of them returns
 `unknown command` / empty, the upgrade didn't land — re-run the
 install command, this time with `--force` if you weren't using it.
 
+In addition, verify the **dashboard route logging** is present —
+this method is what feeds the Context Savings tab's measured median,
+and is silently absent on older builds (the three help-text checks
+above do not cover it):
+
+```bash
+"$(uv tool dir)/mega-tron/bin/python" -c \
+  "from mega_tron.verdicts.store import Store; \
+   assert hasattr(Store, 'record_route') and hasattr(Store, 'route_stats'), \
+   'stale build — re-run the install command with --force --reinstall'"
+```
+
+The line must exit silently (no `AssertionError`). If it fails, the
+binary on disk predates the routing telemetry: re-run the install
+with `--force --reinstall` so uv blows away the old wheel.
+
 Then continue to Step 4. `mega-tron setup` is idempotent, so re-running
 it on an already-wired host just refreshes the managed blocks to the
 new version's content (sentinel keys are version-tagged for exactly
