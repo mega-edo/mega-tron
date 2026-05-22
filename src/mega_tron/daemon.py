@@ -536,6 +536,15 @@ def spawn_detached() -> int | None:
 
     Returns the child PID on success, or ``None`` if we can't spawn. The hook
     calls this on a cache MISS so the next turn lands on a warm daemon.
+
+    The spawned daemon runs **without an idle timeout** — once warm it stays
+    resident until the user reboots, stops it explicitly, or kills the
+    process. The 30-minute idle exit that the CLI's `daemon serve` argparse
+    default applies is the wrong behaviour for an auto-spawned daemon: when
+    it fires, the *next* host turn pays the 20–30s embedder cold-load
+    again, which on Gemini exceeds the host's 60s BeforeAgent hook timeout
+    and silently drops the verdict for that session. Pinning the lifetime
+    here keeps the router warm for the full uptime of the user's machine.
     """
     if daemon_disabled():
         return None
@@ -546,7 +555,10 @@ def spawn_detached() -> int | None:
         # do the same but Python warns about thread safety. subprocess+start_new_session
         # is the modern equivalent.
         proc = subprocess.Popen(
-            [sys.executable, "-m", "mega_tron.cli", "daemon", "serve"],
+            [
+                sys.executable, "-m", "mega_tron.cli",
+                "daemon", "serve", "--idle-timeout", "0",
+            ],
             stdin=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,

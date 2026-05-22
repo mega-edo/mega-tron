@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import os
 import sys
+import time
 from pathlib import Path
 
 # ---- Legacy sentinel detection ----
@@ -377,17 +378,31 @@ def cmd_install(args: argparse.Namespace) -> int:
 
 
 def _warm_daemon_on_setup() -> None:
-    """Detached daemon spawn at the end of a successful setup.
+    """Spawn the daemon AND force its embedder cold-load to finish before
+    setup returns.
+
+    Why synchronous: ``spawn_detached`` only opens the AF_UNIX socket —
+    the embedder + skill embeddings still cold-load lazily on the first
+    rank request. On Gemini that first request comes from the
+    BeforeAgent hook, which has a hard **60-second timeout**. A 130–570
+    MB embedder cold-load routinely exceeds 60 s on a fresh laptop, so
+    the hook times out, no route row is logged for that session, and
+    the AfterAgent Stop hook then can't admit the verdict (no routed
+    catalog to gate on → legacy fallback → claimed_use reject → no
+    SQLite row). Codex / Claude have looser timeouts so they limp
+    through; Gemini doesn't.
+
+    Pre-warming the embedder once at setup time costs the user the
+    same 20–30 s they'd otherwise pay on their first turn, but in a
+    place where they're already waiting on `setup` to finish. After
+    this returns, every host's first turn routes in ~50 ms.
 
     Skipped when:
       - ``MEGA_DAEMON=0`` (user explicitly disabled the daemon path)
       - A daemon is already running on the per-UID socket
-      - ``MEGA_QUIET`` (no stderr line) — but spawn still happens
-      - ``spawn_detached`` returns ``None`` (e.g. some sandboxed CI
-        environment) — silently skip; first hook fire will lazy-spawn
-
-    The spawn is fire-and-forget — we never wait for the daemon to
-    accept its first request. Setup returns within the same second.
+      - ``spawn_detached`` returns ``None`` (sandboxed CI etc.)
+      - The warm-up rank call fails for any reason — non-fatal,
+        first hook fire will pay the cold-load instead.
     """
     try:
         from mega_tron import daemon as daemon_mod
@@ -418,13 +433,84 @@ def _warm_daemon_on_setup() -> None:
 
     if pid is None:
         return
-    if not os.environ.get("MEGA_QUIET"):
+
+    quiet = bool(os.environ.get("MEGA_QUIET"))
+    if not quiet:
         print(
-            f"[setup] router daemon warmed up in background (pid {pid}); "
-            "your first host session will route in ~50ms instead of "
-            "paying the embedder cold-load.",
+            f"[setup] router daemon spawned (pid {pid}); pre-warming "
+            "embedder so the first host turn doesn't pay the 60s "
+            "Gemini-hook timeout window for the cold-load...",
             file=sys.stderr,
         )
+
+    # Force the embedder cold-load by sending one real rank request.
+    # Pick the first skill root we can find — Router needs a valid
+    # skills_dir on the wire even though the prompt itself is generic.
+    # cache_path MUST be passed; daemon's Cache.__init__ calls
+    # ``with_suffix`` on it and an empty path crashes the worker.
+    try:
+        from mega_tron.config import discover_skill_dirs
+
+        dirs = discover_skill_dirs()
+        skills_dir = str(dirs[0]) if dirs else str(Path.home() / ".codex" / "skills")
+    except Exception:  # noqa: BLE001
+        skills_dir = str(Path.home() / ".codex" / "skills")
+
+    try:
+        from mega_tron.config import Config
+
+        model_id = Config.load().embedder_model
+        slug = model_id.replace("/", "_")
+        cache_path = str(Path.home() / ".cache" / "mega-tron" / f"{slug}.npz")
+    except Exception:  # noqa: BLE001
+        cache_path = str(Path.home() / ".cache" / "mega-tron" / "default.npz")
+
+    # Wait briefly for the socket to appear — spawn_detached returns
+    # before the child has bound the AF_UNIX path. 2 s ceiling matches
+    # the daemon's own startup grace.
+    socket_path = daemon_mod.default_socket_path()
+    deadline = time.monotonic() + 2.0
+    while not socket_path.exists() and time.monotonic() < deadline:
+        time.sleep(0.05)
+
+    started = time.monotonic()
+    # response_timeout_s widened to 120s: cold loading bge-m3 (570 MB)
+    # plus embedding a 2,975-skill catalog routinely takes 30–90 s on a
+    # cold cache; the default 30s on client_query would race the
+    # embedder. setup itself is allowed to be slow — that's the whole
+    # point of doing this work here instead of inside a 60s host hook.
+    response = daemon_mod.client_query(
+        {
+            "op": "rank",
+            "prompt": "mega-tron setup warmup probe",
+            "skills_dir": skills_dir,
+            "cache_path": cache_path,
+            "top_k": 1,
+            "prepend_k": 1,
+        },
+        response_timeout_s=120.0,
+    )
+    elapsed = time.monotonic() - started
+
+    if response and response.get("ok"):
+        if not quiet:
+            print(
+                f"[setup] embedder warmed up in {elapsed:.1f}s; first "
+                "host turn now routes in ~50ms.",
+                file=sys.stderr,
+            )
+    else:
+        # Warm-up didn't complete (timeout, fresh embedder still
+        # downloading, etc.). Non-fatal — the first hook fire will
+        # finish the cold-load, just at the cost of the first turn.
+        if not quiet:
+            print(
+                f"[setup] embedder warm-up didn't finish in {elapsed:.1f}s "
+                "(model may still be downloading); your first host turn "
+                "will pay the cold-load. Re-run `mega-tron qa-live` once "
+                "the model is on disk.",
+                file=sys.stderr,
+            )
 
 
 def _install_targets(hosts: list[str], args: argparse.Namespace) -> int:

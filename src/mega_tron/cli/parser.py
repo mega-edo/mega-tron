@@ -526,7 +526,13 @@ def main(argv: list[str] | None = None) -> int:
         "--idle-timeout",
         type=float,
         default=1800.0,
-        help="Exit after this many idle seconds (default: 1800).",
+        help=(
+            "Exit after this many idle seconds. Pass 0 (or any non-"
+            "positive value) to run until the machine reboots or the "
+            "daemon is stopped explicitly. Default: 1800 (30 min) for "
+            "manual `daemon serve` runs; the auto-spawn path used by "
+            "hooks pins it to 0."
+        ),
     )
     daemon_sub.add_parser("status", help="Print whether a daemon is running.").add_argument(
         "--socket", default=None

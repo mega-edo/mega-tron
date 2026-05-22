@@ -296,3 +296,76 @@ def test_wisdom_ignite_op_rejects_empty_prompt(daemon_in_thread):
     assert resp is not None
     assert resp["ok"] is False
     assert "empty prompt" in resp["error"]
+
+
+def test_spawn_detached_passes_no_idle_flag(monkeypatch):
+    """The auto-spawn path must launch the daemon with `--idle-timeout 0`
+    so the router doesn't quietly exit after 30 idle minutes and force
+    the next host turn to repay the embedder cold-load — which on
+    Gemini exceeds the 60s BeforeAgent hook timeout and silently
+    drops that turn's verdict.
+    """
+    import subprocess
+
+    from mega_tron import daemon as daemon_mod
+
+    captured = {}
+
+    class _FakePopen:
+        def __init__(self, argv, **kwargs):
+            captured["argv"] = argv
+            captured["kwargs"] = kwargs
+            self.pid = 12345
+
+    monkeypatch.setattr(subprocess, "Popen", _FakePopen)
+    monkeypatch.setattr(daemon_mod, "daemon_disabled", lambda: False)
+
+    pid = daemon_mod.spawn_detached()
+    assert pid == 12345
+    argv = captured["argv"]
+    assert "daemon" in argv and "serve" in argv
+    # The critical assertion: the flag is present AND its value is "0".
+    # Pinning both pieces so a future copy-edit can't silently revert.
+    assert "--idle-timeout" in argv
+    idle_idx = argv.index("--idle-timeout")
+    assert argv[idle_idx + 1] == "0", (
+        f"auto-spawn must pin --idle-timeout to 0 (forever); got {argv[idle_idx + 1]!r}"
+    )
+
+
+def test_cmd_daemon_translates_zero_idle_to_none(monkeypatch):
+    """`mega-tron daemon serve --idle-timeout 0` must reach
+    `daemon.serve` with `idle_timeout_s=None` (the underlying "never
+    exit on idle" sentinel). Negative values are treated the same way
+    to keep the surface intuitive — anything <=0 means forever.
+    """
+    import argparse
+
+    from mega_tron import daemon as daemon_mod
+    from mega_tron.cli.daemon import cmd_daemon
+
+    captured = {}
+
+    def _fake_serve(socket_path=None, idle_timeout_s=None):
+        captured["socket_path"] = socket_path
+        captured["idle_timeout_s"] = idle_timeout_s
+        return 0
+
+    monkeypatch.setattr(daemon_mod, "serve", _fake_serve)
+
+    for raw in (0, 0.0, -1, -1800):
+        captured.clear()
+        ns = argparse.Namespace(daemon_op="serve", socket=None, idle_timeout=raw)
+        rc = cmd_daemon(ns)
+        assert rc == 0
+        assert captured["idle_timeout_s"] is None, (
+            f"idle_timeout={raw!r} should disable the idle clock entirely, "
+            f"but cmd_daemon passed {captured['idle_timeout_s']!r}"
+        )
+
+    # Positive values still pass through unchanged (manual `daemon serve`
+    # users may want a bounded run).
+    captured.clear()
+    ns = argparse.Namespace(daemon_op="serve", socket=None, idle_timeout=60.0)
+    cmd_daemon(ns)
+    assert captured["idle_timeout_s"] == 60.0

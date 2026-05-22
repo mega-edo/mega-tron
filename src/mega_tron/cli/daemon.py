@@ -18,9 +18,18 @@ def cmd_daemon(args: argparse.Namespace) -> int:
 
     op = args.daemon_op
     if op == "serve":
+        # `--idle-timeout 0` is the canonical "no idle exit" sentinel:
+        # the daemon runs until the machine reboots or it's explicitly
+        # stopped. `daemon.serve(idle_timeout_s=None)` is the underlying
+        # primitive that disables the idle clock. We translate <=0 into
+        # None here so the wire flag is intuitive (0 = forever) and
+        # spawn_detached can pass it without knowing about the internal
+        # representation.
+        idle = args.idle_timeout
+        idle_s = None if (idle is not None and idle <= 0) else idle
         return daemon_mod.serve(
             socket_path=(Path(args.socket) if args.socket else None),
-            idle_timeout_s=args.idle_timeout,
+            idle_timeout_s=idle_s,
         )
     if op == "status":
         path = Path(args.socket) if args.socket else daemon_mod.default_socket_path()
