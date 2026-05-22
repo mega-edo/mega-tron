@@ -562,6 +562,130 @@ class Store:
 
         return self._run_with_retry(_txn)
 
+    def record_route(
+        self,
+        *,
+        session_id: str | None,
+        host: str,
+        query_hash: str,
+        picked_names: list[str],
+        total_tok: int,
+        k: int,
+        k_reason: str,
+        occurred_at: datetime | str | None = None,
+    ) -> bool:
+        """Best-effort INSERT into the ``routes`` analytics table.
+
+        Called by host hooks right after :meth:`Router.rank` returns.
+        Never raises — analytics misses must not block routing — so the
+        caller gets ``True`` on a successful write and ``False`` on any
+        failure (DB locked beyond retry, schema mismatch, etc.).
+
+        The schema's ``extras_json`` column carries ``{total_tok, k,
+        k_reason}``: these were the analytics signals we wanted without
+        bloating the column count and forcing a migration. The
+        dashboard's :func:`route_stats` reader pulls them back with
+        SQLite's ``json_extract``.
+        """
+        try:
+            self.initialize()
+            timestamp = _normalize_timestamp(occurred_at)
+            extras_json = json.dumps(
+                {
+                    "total_tok": int(total_tok),
+                    "k": int(k),
+                    "k_reason": k_reason,
+                },
+                sort_keys=True,
+            )
+            names_json = json.dumps(list(picked_names))
+
+            def _txn(conn: sqlite3.Connection) -> bool:
+                conn.execute(
+                    """
+                    INSERT INTO routes (
+                        session_id, host, query_hash,
+                        picked_names_json, routed_at, extras_json
+                    ) VALUES (?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        session_id,
+                        host,
+                        query_hash,
+                        names_json,
+                        timestamp,
+                        extras_json,
+                    ),
+                )
+                return True
+
+            return self._run_with_retry(_txn)
+        except Exception:
+            # Logging is best-effort. Never break the hook on a
+            # routes-table write failure.
+            return False
+
+    def route_stats(self, *, days: int = 30) -> dict[str, Any]:
+        """Aggregate the trailing-window of routed turns into the
+        median + p50 + p90 of ``total_tok``.
+
+        Returns ``{turn_count, median_tok, p50_tok, p90_tok}``. When no
+        routes were recorded in the window, ``turn_count`` is 0 and
+        the percentile fields are ``None`` — the caller decides how to
+        fall back (the dashboard switches to a benchmark constant
+        below the warm-up threshold).
+        """
+        self.initialize()
+
+        def _txn(conn: sqlite3.Connection) -> list[int]:
+            cur = conn.execute(
+                """
+                SELECT CAST(json_extract(extras_json, '$.total_tok') AS INTEGER)
+                FROM routes
+                WHERE routed_at >= datetime('now', :since)
+                  AND json_extract(extras_json, '$.total_tok') IS NOT NULL
+                """,
+                {"since": f"-{int(days)} days"},
+            )
+            return [row[0] for row in cur.fetchall() if row[0] is not None]
+
+        try:
+            samples = self._run_with_retry(_txn)
+        except Exception:
+            samples = []
+
+        if not samples:
+            return {
+                "turn_count": 0,
+                "median_tok": None,
+                "p50_tok": None,
+                "p90_tok": None,
+            }
+
+        # Small N (≤ ~6 K rows for a heavy user over 30 days) so a
+        # pure-Python sort + index lookup is fine. statistics.median
+        # handles the even/odd split; statistics.quantiles asks for
+        # n=10 + slice for p90, but we already have the sorted array
+        # so doing it by hand is clearer.
+        samples.sort()
+        n = len(samples)
+        median = samples[n // 2] if n % 2 else (samples[n // 2 - 1] + samples[n // 2]) // 2
+        # p50 == median for our needs; we still report both so the UI
+        # can show "p50 / p90" without recomputing.
+        p50 = median
+        # Nearest-rank p90 (https://en.wikipedia.org/wiki/Percentile
+        # §"Nearest-rank method"): rank = ⌈0.9 N⌉, 1-indexed. Convert
+        # to 0-indexed and clamp into [0, n-1].
+        import math
+        p90_rank = max(1, math.ceil(0.9 * n))
+        p90 = samples[min(n - 1, p90_rank - 1)]
+        return {
+            "turn_count": n,
+            "median_tok": int(median),
+            "p50_tok": int(p50),
+            "p90_tok": int(p90),
+        }
+
     def record_verdicts(self, items: Iterable[dict[str, Any]]) -> int:
         """Bulk-write convenience wrapper. Returns the number of rows
         that were actually inserted (UNIQUE-constraint drops and

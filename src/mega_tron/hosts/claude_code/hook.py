@@ -134,17 +134,37 @@ def _emit_additional_context(additional_context: str) -> int:
 
 
 def _native_mode() -> str:
-    """Return ``"active"`` or ``"passive"`` based on ``MEGA_CLAUDE_NATIVE_MODE``.
+    """Return ``"strict"``, ``"active"``, or ``"passive"`` based on
+    ``MEGA_CLAUDE_NATIVE_MODE``.
+
+    Three escalating levels of native-catalog suppression:
 
     - ``passive`` (default): leave ``skillOverrides`` alone. Native catalog
       shows all installed skill descriptions; we overlay the top-K via
       ``additionalContext``. Two catalogs coexist; the model picks.
     - ``active``: rewrite ``~/.claude/settings.local.json`` ``skillOverrides``
       each turn so non-top-K skills become ``"name-only"`` in the native
-      catalog. Router fully owns description visibility.
+      catalog. Router owns description visibility; ``/skillname`` slash
+      invocation still works for every skill (the Skill tool is alive).
+    - ``strict``: same per-turn ``skillOverrides`` rewrite as ``active``
+      *plus* a Claude shell wrapper that adds ``--disallowedTools Skill``
+      to every ``claude`` invocation. The native catalog and the Skill
+      tool both disappear; only mega-tron's ``additionalContext`` block
+      surfaces skills. Maximum token saving; minimum fallback for routing
+      misses. ``setup`` installs the wrapper into the user's shell rc
+      when the user picks this level — see
+      :func:`mega_tron.hosts.claude_code.install._install_claude_wrapper`.
+
+    The hook treats ``active`` and ``strict`` the same way (both trigger
+    the same ``apply_mode_a`` write); the difference between them is
+    install-time only (the shell wrapper).
     """
     val = os.environ.get("MEGA_CLAUDE_NATIVE_MODE", "").strip().lower()
-    return "active" if val == "active" else "passive"
+    if val == "strict":
+        return "strict"
+    if val == "active":
+        return "active"
+    return "passive"
 
 
 def _apply_native_mode_a(
@@ -245,9 +265,11 @@ def cmd_claude_hook(args: argparse.Namespace) -> int:
         ctx = daemon_response.get("additional_context") or ""
         if not ctx.strip():
             return _emit_empty()
-        # Mode A: daemon already returned top-K names — apply skillOverrides
-        # downgrade against the full skill pool.
-        if _native_mode() == "active":
+        # Mode A (active/strict): daemon already returned top-K names —
+        # apply skillOverrides downgrade against the full skill pool.
+        # strict adds the shell wrapper on top (install-time concern;
+        # the per-turn skillOverrides write is identical).
+        if _native_mode() in ("active", "strict"):
             try:
                 from mega_tron.hosts.claude_code.skill_overrides import apply_mode_a
                 from mega_tron.router import load_skills
@@ -326,11 +348,24 @@ def cmd_claude_hook(args: argparse.Namespace) -> int:
         print(f"[mega-tron claude-hook] rank failed: {e}", file=sys.stderr)
         return _emit_empty()
 
+    # Best-effort route log (Phase 2: dashboard measurement). Logging
+    # the empty/dropped case is fine — the Context Savings tab uses the
+    # distribution including zero-K turns. Errors here MUST NOT affect
+    # routing.
+    try:
+        _log_route_claude(prompt, ranked, router, session_id=session_id)
+    except Exception:  # noqa: BLE001
+        pass
+
     if not ranked:
         return _emit_empty()
 
-    # Mode A: shrink the native catalog to just our top-K before emitting.
-    if _native_mode() == "active":
+    # Mode A (active/strict): shrink the native catalog to just our top-K
+    # before emitting. strict additionally relies on a shell wrapper —
+    # installed by `mega-tron setup --claude-native-mode strict` — that
+    # adds `--disallowedTools Skill` on every `claude` invocation, but
+    # the per-turn skillOverrides rewrite is the same.
+    if _native_mode() in ("active", "strict"):
         _apply_native_mode_a(ranked[: args.prepend_k], skills_dirs)
 
     ctx = build_claude_hook_context(ranked, k=args.prepend_k)
@@ -338,3 +373,31 @@ def cmd_claude_hook(args: argparse.Namespace) -> int:
         return _emit_empty()
 
     return _emit_additional_context(ctx.rstrip())
+
+
+def _log_route_claude(prompt, ranked, router, *, session_id) -> None:
+    """Write one row to the ``routes`` analytics table for a Claude turn.
+
+    See ``mega_tron.hosts.codex.hook._log_route`` for the rationale —
+    we keep these tiny helpers per-host so each hook stays self-contained,
+    even though the body is mechanical. The host name is the long
+    convention ``"claude_code"`` so it lines up with the verdict-host
+    column already in the store.
+    """
+    import hashlib
+
+    from mega_tron.config import store_path
+    from mega_tron.verdicts.store import Store
+
+    k, k_reason = router.last_dynamic or (len(ranked), "manual")
+    total_tok = sum(r.skill.desc_tok for r in ranked)
+    qhash = hashlib.sha256(prompt.encode("utf-8")).hexdigest()[:16]
+    Store(path=store_path()).record_route(
+        session_id=session_id,
+        host="claude_code",
+        query_hash=qhash,
+        picked_names=[r.skill.name for r in ranked],
+        total_tok=total_tok,
+        k=k,
+        k_reason=k_reason,
+    )

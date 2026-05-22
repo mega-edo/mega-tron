@@ -51,6 +51,15 @@ def cmd_search(args: argparse.Namespace) -> int:
         prefilter=semantic_prefilter,
         agentic=agentic,
     )
+
+    # Best-effort route log (Phase 2: dashboard measurement). The CLI
+    # has no session_id so we log session_id=None — analytics readers
+    # see those as "headless" turns. Errors MUST NOT affect the CLI.
+    try:
+        _log_route_cli(args.task, ranked, router)
+    except Exception:  # noqa: BLE001
+        pass
+
     if not ranked:
         print(f"[search] no matching skill for {args.task!r}", file=sys.stderr)
         return 1
@@ -179,3 +188,31 @@ def _emit_stage(ranked, args: argparse.Namespace) -> int:
     else:
         sys.stdout.write(build_prefix(ranked, k=args.prepend_k))
     return 0
+
+
+def _log_route_cli(query: str, ranked, router) -> None:
+    """Write one row to the ``routes`` analytics table for a CLI rank.
+
+    The CLI runs without a session_id (no host wrapping the call), so
+    we log ``session_id=None`` — analytics readers see those as
+    "headless" turns. Lifts the same ``(K, k_reason, total_tok)`` the
+    host hooks log so the median/p90 calculations include CLI usage
+    on the same footing.
+    """
+    import hashlib
+
+    from mega_tron.config import store_path
+    from mega_tron.verdicts.store import Store
+
+    k, k_reason = router.last_dynamic or (len(ranked), "manual")
+    total_tok = sum(r.skill.desc_tok for r in ranked)
+    qhash = hashlib.sha256(query.encode("utf-8")).hexdigest()[:16]
+    Store(path=store_path()).record_route(
+        session_id=None,
+        host="cli",
+        query_hash=qhash,
+        picked_names=[r.skill.name for r in ranked],
+        total_tok=total_tok,
+        k=k,
+        k_reason=k_reason,
+    )

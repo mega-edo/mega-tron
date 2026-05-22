@@ -355,6 +355,13 @@ def cmd_gemini_hook(args: argparse.Namespace) -> int:
         print(f"[mega-tron gemini-hook] rank failed: {e}", file=sys.stderr)
         return _emit_empty()
 
+    # Best-effort route log (Phase 2: dashboard measurement). Errors
+    # here MUST NOT affect routing.
+    try:
+        _log_route_gemini(prompt, ranked, router, session_id=session_id)
+    except Exception:  # noqa: BLE001
+        pass
+
     if not ranked:
         return _emit_empty()
 
@@ -367,6 +374,27 @@ def cmd_gemini_hook(args: argparse.Namespace) -> int:
         return _emit_empty()
 
     return _emit_additional_context(ctx.rstrip())
+
+
+def _log_route_gemini(prompt, ranked, router, *, session_id) -> None:
+    """Write one row to the ``routes`` analytics table for a Gemini turn."""
+    import hashlib
+
+    from mega_tron.config import store_path
+    from mega_tron.verdicts.store import Store
+
+    k, k_reason = router.last_dynamic or (len(ranked), "manual")
+    total_tok = sum(r.skill.desc_tok for r in ranked)
+    qhash = hashlib.sha256(prompt.encode("utf-8")).hexdigest()[:16]
+    Store(path=store_path()).record_route(
+        session_id=session_id,
+        host="gemini_cli",
+        query_hash=qhash,
+        picked_names=[r.skill.name for r in ranked],
+        total_tok=total_tok,
+        k=k,
+        k_reason=k_reason,
+    )
 
 
 __all__ = ["cmd_gemini_hook"]

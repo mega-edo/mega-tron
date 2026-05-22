@@ -358,6 +358,16 @@ def cmd_hook(args: argparse.Namespace) -> int:
         print(f"[mega-tron hook] rank failed: {e}", file=sys.stderr)
         return _emit_empty()
 
+    # Best-effort analytics log: record this routing decision so the
+    # Context Savings dashboard can show the user's measured per-turn
+    # token cost. Failures here MUST NOT affect routing — the try/except
+    # in the Store method already swallows DB issues, but we wrap again
+    # in case the import path itself blows up.
+    try:
+        _log_route(prompt, ranked, router, session_id=session_id, host="codex")
+    except Exception:  # noqa: BLE001
+        pass
+
     if not ranked:
         return _emit_empty()
 
@@ -366,3 +376,39 @@ def cmd_hook(args: argparse.Namespace) -> int:
         return _emit_empty()
 
     return _emit_additional_context(ctx.rstrip())
+
+
+def _log_route(
+    prompt: str,
+    ranked,
+    router,
+    *,
+    session_id,
+    host: str,
+) -> None:
+    """Write one row to the ``routes`` analytics table.
+
+    Pulls ``(K, k_reason)`` from ``router.last_dynamic`` (set by the
+    most recent rank call) and the total injected token count from
+    the sum of ``rs.skill.desc_tok`` over the ranked list. The query
+    text itself isn't stored — only a SHA-256 prefix — so analytics
+    can group identical queries without retaining user content.
+    """
+    import hashlib
+
+    from mega_tron.config import store_path
+    from mega_tron.verdicts.store import Store
+
+    k, k_reason = router.last_dynamic or (len(ranked), "manual")
+    total_tok = sum(r.skill.desc_tok for r in ranked)
+    qhash = hashlib.sha256(prompt.encode("utf-8")).hexdigest()[:16]
+    store = Store(path=store_path())
+    store.record_route(
+        session_id=session_id,
+        host=host,
+        query_hash=qhash,
+        picked_names=[r.skill.name for r in ranked],
+        total_tok=total_tok,
+        k=k,
+        k_reason=k_reason,
+    )
