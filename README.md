@@ -20,6 +20,7 @@
     <a href="#-install">Install</a> ·
     <a href="#-three-problems-that-compound-with-more-skills">Why</a> ·
     <a href="#-does-it-actually-work--measured">Benchmark</a> ·
+    <a href="#-see-what-your-skills-are-actually-doing">Dashboard</a> ·
     <a href="#-the-architecture-unify--optimize--evolve">Architecture</a> ·
     <a href="#-cli">CLI</a> ·
     <a href="https://megacode.ai"><strong>megacode.ai ↗</strong></a>
@@ -75,12 +76,35 @@ Then open a new terminal. The next turn in any host ships with the right skills 
 
 Two commands, three hosts. Token usage drops 18–30× on the very next turn without changing how you use any CLI. Full benchmark table and installation details below.
 
-## 🎯 After MEGA Tron
+> 🤖 **Letting an AI agent install this for you?** Point it at [`docs/agent installation.md`](docs/agent%20installation.md) — a step-by-step procedure with explicit user-confirmation points (embedder profile, Claude Code suppression level, post-install QA), so the agent knows when to ask and when to act.
 
-- **The right skills for *this* prompt**, ranked semantically against what you actually typed — not by alphabet, not by past usage frequency.
-- **~600 tokens per turn** for skill context, no matter how the pool grows. `hi` ships `hi`-sized context.
-- **One edit, three hosts.** Fix a bug in `webhook-signer` and Codex, Claude, and Gemini (and Antigravity, when it lands) all see it on the next turn.
-- **Skills that broke last week stop showing up this week** — MEGA Tron is the only layer that records *whether a skill actually helped*. Three consecutive failures auto-retires it; a `HELPFUL` in any host lifts the same skill's rank in every host on the next turn.
+## 🎯 What mega-tron actually does
+
+Mega-tron is a local layer that sits above Codex, Claude Code, and Gemini CLI and fixes four things:
+
+1. **Router — per-turn semantic top-K.** Your prompt gets embedded, ranked against every skill in your pool, and only the relevant ones ship. Flat ~600 tokens/turn whether you have 30 skills or 500. In [benchmarks](#-does-it-actually-work--measured): 0.96 coverage at ~100 tokens vs. native hosts' 0.71–0.75 at 1,200–3,500 tokens.
+
+2. **Observability — every skill use captured as a verdict** (HELPFUL / HARMFUL / NEUTRAL) with the prompt context, source host, and reason. The [built-in dashboard](#-see-what-your-skills-are-actually-doing) surfaces which skills are pulling their weight, which silently broke after last week's API update, and how performance trends across hosts — so you have a feedback signal instead of guessing from "the answer felt weird."
+
+3. **Unified pool — one master copy of each skill** under `$XDG_DATA_HOME/mega-tron/pool/`, symlinked into every host. Edit `webhook-signer` once and Codex, Claude, and Gemini all see the fix on the next turn. No more three drifting islands.
+
+4. **Self-improvement — a Stop-hook reads the transcript** at session end, the model self-grades the skills it used, and verdicts feed back into ranking. A skill that fails three sessions in a row auto-archives; a `HELPFUL` in Claude lifts the same skill's rank when Codex hits a similar prompt next week. Cold-start skills are protected — no evidence means pure cosine, never penalized.
+
+## 🔭 See what your skills are actually doing
+
+`mega-tron dashboard` opens a local web UI that un-blackboxes the verdict economy: every `HELPFUL` / `HARMFUL` / `NEUTRAL` the three CLIs recorded automatically, plus the verdicts you add by hand. Edit, relabel, or delete any of them and the change feeds back into routing on the very next turn.
+
+![mega-tron skill observability](docs/mega-tron-skill-observability.gif)
+
+- **Skills overview** — total catalog size, host distribution, the skills active in the last 30 days, and the net-most-helpful list. Quick read on what your install is actually doing.
+- **Human-in-the-loop** — every recorded verdict, filterable by title / description / host, with a per-skill detail pane for relabeling and adding your own verdicts. Your manual verdicts carry the same weight in ranking as the host-recorded ones.
+
+```bash
+mega-tron dashboard               # opens http://127.0.0.1:7531 in your browser
+mega-tron dashboard --port 8080   # custom port
+```
+
+Read-only by default for the host-recorded verdicts; explicit click-to-edit for everything. All data stays in the local SQLite store — no network calls, no telemetry.
 
 ## 📊 Does it actually work? 
 
@@ -127,7 +151,17 @@ Solid lines = MEGA Tron. Dashed = semantic search only. Same router, same questi
 
 Requires Python ≥ 3.11 and [`uv`](https://docs.astral.sh/uv/).
 
-### Two commands
+### Recommended: let your agent install it
+
+Open Codex / Claude Code / Gemini and paste:
+
+> **Read [`docs/agent installation.md`](docs/agent%20installation.md) from the mega-tron repo and install mega-tron on my machine following that procedure.**
+
+The doc is a step-by-step procedure written *for the agent*. It picks the right embedder profile based on the language you've been speaking, picks the right Claude Code native-mode (passive / active / strict) based on your skill count, runs the post-install end-to-end check, and asks you at every decision point instead of choosing silently. If you already have mega-tron installed, the procedure also covers refreshing the binary first so you actually get this release's features.
+
+This is the path most users want — installation involves three host-specific choices and an embedder model download, and an agent following a written procedure will get those right faster than you can read this README.
+
+### Manual install (if you'd rather drive it yourself)
 
 ```bash
 uv tool install mega-tron
@@ -140,6 +174,8 @@ Open a new terminal afterwards so the PATH update takes effect — then `mega-tr
 
 > [!NOTE]
 > Step 1 installs the *binary*. Step 2 wires the binary into your environment (PATH + Codex / Claude / Gemini hooks + cache warmup). They're separate because `uv tool install` doesn't get to run scripts on your machine, and editing hooks across three CLIs needs explicit consent.
+
+`mega-tron setup` accepts `--profile {multilingual,en-quality,en-fast}` and `--claude-native-mode {passive,active,strict}`; without these flags it picks safe defaults (multilingual / passive) — see [`docs/agent installation.md`](docs/agent%20installation.md) for what each one means and when to pick which.
 
 ### From a git clone
 
@@ -426,6 +462,7 @@ mega-tron search-verdicts "rate limit"                        # FTS5 full-text o
 mega-tron compact-embeddings                                  # cluster near-duplicate verdicts
 mega-tron compact-skills                                      # dry-run: cluster near-duplicate SKILL.md files
 mega-tron compact-skills --apply                              # persist suppressions; --reset to lift
+mega-tron qa-live                                             # end-to-end check: plant a marker skill, drive each wired host once, confirm verdicts land
 
 # Config
 mega-tron dirs list / add / remove
