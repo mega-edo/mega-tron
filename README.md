@@ -11,8 +11,8 @@
   <p>
     <a href="./LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="License"></a>
     <a href="https://github.com/mega-edo/mega-tron"><img src="https://img.shields.io/badge/Hosts-Codex%20%C2%B7%20Claude%20%C2%B7%20Gemini-7C3AED" alt="Hosts"></a>
-    <a href="#-does-it-actually-work--measured"><img src="https://img.shields.io/badge/Coverage-0.892%20%40%20pool%20500-success" alt="Coverage"></a>
-    <a href="#-does-it-actually-work--measured"><img src="https://img.shields.io/badge/Tokens%2Fturn-~150%20vs%20~30k-orange" alt="Tokens/turn"></a>
+    <a href="#-does-it-actually-work"><img src="https://img.shields.io/badge/Coverage-0.892%20%40%20pool%20500-success" alt="Coverage"></a>
+    <a href="#-does-it-actually-work"><img src="https://img.shields.io/badge/Tokens%2Fturn-~150%20vs%20~30k-orange" alt="Tokens/turn"></a>
     <a href="#-install"><img src="https://img.shields.io/badge/Python-3.11%2B-blue" alt="Python 3.11+"></a>
   </p>
 
@@ -25,7 +25,7 @@
   <p>
     <a href="#-install">Install</a> ·
     <a href="#-three-problems-that-compound-with-more-skills">Why</a> ·
-    <a href="#-does-it-actually-work--measured">Benchmark</a> ·
+    <a href="#-does-it-actually-work">Benchmark</a> ·
     <a href="#-see-what-your-skills-are-actually-doing">Dashboard</a> ·
     <a href="#-the-architecture-unify--optimize--evolve">Architecture</a> ·
     <a href="#-cli">CLI</a> ·
@@ -94,7 +94,7 @@ Two commands, three hosts. Token usage drops 18–30× on the very next turn wit
 
 Mega-tron is a local layer that sits above Codex, Claude Code, and Gemini CLI and fixes four things:
 
-1. **Router — per-turn semantic top-K.** Your prompt gets embedded, ranked against every skill in your pool, and only the relevant ones ship. Flat ~600 tokens/turn whether you have 30 skills or 500. In [benchmarks](#-does-it-actually-work--measured): 0.96 coverage at ~100 tokens vs. native hosts' 0.71–0.75 at 1,200–3,500 tokens.
+1. **Router — per-turn semantic top-K.** Your prompt gets embedded, ranked against every skill in your pool, and only the relevant ones ship. Flat ~600 tokens/turn whether you have 30 skills or 500. In [benchmarks](#-does-it-actually-work): 0.96 coverage at ~100 tokens vs. native hosts' 0.71–0.75 at 1,200–3,500 tokens.
 
 2. **Observability — every skill use captured as a verdict** (HELPFUL / HARMFUL / NEUTRAL) with the prompt context, source host, and reason. The [built-in dashboard](#-see-what-your-skills-are-actually-doing) surfaces which skills are pulling their weight, which silently broke after last week's API update, and how performance trends across hosts — so you have a feedback signal instead of guessing from "the answer felt weird."
 
