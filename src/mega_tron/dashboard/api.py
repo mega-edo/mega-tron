@@ -266,21 +266,28 @@ def overview(*, days: int = 30) -> dict[str, Any]:
     total = 0
     used = 0
     net_harmful = 0
+    # ``on_disk_names`` is used to decide "is this verdict-bearing skill
+    # still installed on disk?" — orphan detection. Hermes and the codex
+    # ``.system`` bundle ARE on disk; they're only hidden from the
+    # headline ``total``. Keep their names in this set so prior verdicts
+    # against them don't get flagged as orphans on every page load.
     on_disk_names: set[str] = set()
     unknown_on_disk = 0
     hidden_count = 0
     for _name, _dir, _md, meta, host in _iter_skills(roots):
-        if host in _HIDDEN_HOSTS:
-            hidden_count += 1
-            continue
-        # The codex ``.system`` bundle is classified as host="codex"
-        # by infer_host_from_skill_dir, so we need an extra check on
-        # the path itself to keep it out of the user-facing inventory.
-        if "/.codex/skills/.system/" in str(_md):
+        on_disk_names.add(_name)
+        is_hidden = (
+            host in _HIDDEN_HOSTS
+            # The codex ``.system`` bundle is classified as host="codex"
+            # by infer_host_from_skill_dir, so we need an extra check
+            # on the path itself to keep it out of the user-facing
+            # inventory.
+            or "/.codex/skills/.system/" in str(_md)
+        )
+        if is_hidden:
             hidden_count += 1
             continue
         total += 1
-        on_disk_names.add(_name)
         sql = sql_by_skill.get(_name)
         helpful, harmful, _neutral = _merge_counts(meta, sql)
         used_here = _is_used(meta, sql)
