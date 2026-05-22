@@ -869,25 +869,25 @@ def context_savings() -> dict[str, Any]:
         p50 = stats.get("p50_tok") or measured_median
         p90 = stats.get("p90_tok") or measured_median
         mega_tron_source = (
-            f"Sample median over {turn_count} sessions in the last 30 days "
+            f"Sample median over {turn_count} invocations in the last 30 days "
             f"(p50 {p50} · p90 {p90})."
         )
     else:
         mega_tron_per_turn = ref_tokens
         if is_extrapolated:
             mega_tron_source = (
-                f"Reference value: ~{ref_tokens} tok/session "
+                f"Reference value: ~{ref_tokens} tok/invocation "
                 f"(extrapolated for {embedder_family} at {user_pool_size:,} "
                 f"skills — beyond the benchmark's 500-skill measurement "
                 f"ceiling). Your sample median takes over after "
-                f"{WARM_UP_THRESHOLD} sessions are logged."
+                f"{WARM_UP_THRESHOLD} invocations are logged."
             )
         else:
             mega_tron_source = (
-                f"Reference value: ~{ref_tokens} tok/session (interpolated "
+                f"Reference value: ~{ref_tokens} tok/invocation (interpolated "
                 f"from the {embedder_family} benchmark curve at "
                 f"{user_pool_size:,} skills). Your sample median takes over "
-                f"after {WARM_UP_THRESHOLD} sessions are logged."
+                f"after {WARM_UP_THRESHOLD} invocations are logged."
             )
 
     multiplier = (

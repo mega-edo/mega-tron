@@ -298,21 +298,21 @@ function _csHostInstalledCountPhrase(n) {
 }
 
 // mega-tron row badge — switches between "warming up · 7/20" and
-// "measured · 47 sessions" based on how many route rows the store has.
-// Below the warm-up threshold the median is too noisy to trust, so
-// the UI labels it as in-progress while still showing the reference
-// value next to it. A "session" = one mega-tron hook fire (the
+// "measured · 47 invocations" based on how many route rows the store
+// has. Below the warm-up threshold the median is too noisy to trust,
+// so the UI labels it as in-progress while still showing the reference
+// value next to it. An "invocation" = one mega-tron hook fire (the
 // host's first prompt of a session). Subsequent turns in the same
 // session reuse the already-injected catalog and don't re-rank, so
 // they're not separate measurement points.
 function _csMegaTronBadge(cs) {
   if (cs.mega_tron_is_measured) {
     const n = cs.mega_tron_turn_count || 0;
-    return `<span class="cs-multiplier">measured · ${n} sessions</span>`;
+    return `<span class="cs-multiplier">measured · ${n} invocations</span>`;
   }
   const n = cs.mega_tron_turn_count || 0;
   const t = cs.warm_up_threshold || 20;
-  return `<span class="cs-warming">warming up · ${n}/${t} sessions</span>`;
+  return `<span class="cs-warming">warming up · ${n}/${t} invocations</span>`;
 }
 
 function renderContextSavings() {
@@ -375,17 +375,17 @@ function renderContextSavings() {
         "Vanilla: each installed host's native catalog at your current " +
         "skill count, summed (every host treats ~/.agents/skills as part " +
         "of its catalog too). mega-tron: your own sample median over the " +
-        "last 30 days of sessions. Catalog overhead only — doesn't count " +
+        "last 30 days of invocations. Catalog overhead only — doesn't count " +
         "your prompt itself."
       )
       : (
         "Vanilla: each installed host's native catalog at your current " +
         "skill count, summed (every host treats ~/.agents/skills as part " +
-        "of its catalog too). mega-tron: reference value (~150 tok/session " +
+        "of its catalog too). mega-tron: reference value (~150 tok/invocation " +
         "from the published benchmark) — switches to your own sample median " +
-        "after you log " + (cs.warm_up_threshold || 20) + " sessions. " +
-        "Each session = one mega-tron hook fire (the host's first prompt of " +
-        "the session)."
+        "after you log " + (cs.warm_up_threshold || 20) + " invocations. " +
+        "Each invocation = one mega-tron hook fire (the host's first prompt " +
+        "of a session)."
       )
   );
 
@@ -417,12 +417,12 @@ function renderContextSavings() {
       </div>
       <div class="cs-hero-takeaway">
         ${multiplier > 0
-          ? `mega-tron ships <strong>${multiplier.toLocaleString()}× fewer tokens</strong> per session ${
+          ? `mega-tron ships <strong>${multiplier.toLocaleString()}× fewer tokens</strong> per invocation ${
               cs.mega_tron_is_measured
-                ? `<span class="cs-takeaway-note">(sample median over ${cs.mega_tron_turn_count} sessions)</span>`
-                : `<span class="cs-takeaway-note">(reference value — switches to your sample median after ${cs.warm_up_threshold || 20} sessions)</span>`
+                ? `<span class="cs-takeaway-note">(sample median over ${cs.mega_tron_turn_count} invocations)</span>`
+                : `<span class="cs-takeaway-note">(reference value — switches to your sample median after ${cs.warm_up_threshold || 20} invocations)</span>`
             }.`
-          : `mega-tron reference ~${megaTron} tok/session.`
+          : `mega-tron reference ~${megaTron} tok/invocation.`
         }
       </div>
     </section>
