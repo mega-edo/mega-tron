@@ -57,6 +57,7 @@ from mega_tron.cli.maintenance import (
 )
 from mega_tron.cli.parser import main
 from mega_tron.cli.search import cmd_search
+from mega_tron.cli.upgrade import cmd_upgrade
 from mega_tron.cli.skills import cmd_skills
 from mega_tron.cli.stats import cmd_stats
 from mega_tron.cli.verdicts import cmd_regressions, cmd_search_verdicts
@@ -96,6 +97,7 @@ __all__ = [
     "cmd_skills",
     "cmd_stats",
     "cmd_stop_hook",
+    "cmd_upgrade",
     "cmd_why",
     # public helpers (referenced by tests + scripts)
     "Config",

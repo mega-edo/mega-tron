@@ -72,6 +72,7 @@ from mega_tron.cli.maintenance import (
 )
 from mega_tron.cli.search import cmd_search
 from mega_tron.cli.skills import cmd_skills
+from mega_tron.cli.upgrade import cmd_upgrade
 from mega_tron.cli.stats import cmd_stats
 from mega_tron.cli.verdicts import cmd_regressions, cmd_search_verdicts
 from mega_tron.cli.why import cmd_why
@@ -417,6 +418,38 @@ def main(argv: list[str] | None = None) -> int:
         help="Alias for `setup`. Wire mega-tron into your host CLIs.",
     )
     _add_install_arguments(p_install)
+
+    # ----- upgrade ----- #
+    # One-stop wheel refresh + running-process restart + setup re-run.
+    # See mega_tron.cli.upgrade for the full rationale.
+    p_upgrade = sub.add_parser(
+        "upgrade",
+        help=(
+            "Refresh the mega-tron wheel AND restart every running "
+            "mega-tron process (daemon + dashboard) so the new build "
+            "actually serves on the same host:port the old one did."
+        ),
+    )
+    p_upgrade.add_argument(
+        "--from",
+        dest="source",
+        default=None,
+        help=(
+            "Local path to install from (a clone of mega-tron). "
+            "If omitted, upgrade auto-discovers a clone in common "
+            "locations and falls back to PyPI / a fresh /tmp clone."
+        ),
+    )
+    p_upgrade.add_argument(
+        "--from-pypi",
+        action="store_true",
+        help=(
+            "Skip local-clone auto-discovery and install from PyPI. "
+            "Useful on machines where the working clone is on a branch "
+            "you don't want to publish."
+        ),
+    )
+    p_upgrade.set_defaults(func=cmd_upgrade)
 
     # ----- dashboard ----- #
     p_dashboard = sub.add_parser(
@@ -989,7 +1022,7 @@ def _warn_if_unwired(args: argparse.Namespace) -> None:
     """
     cmd = getattr(args, "func", None)
     cmd_name = getattr(cmd, "__name__", "") if cmd else ""
-    if cmd_name in {"cmd_install"}:
+    if cmd_name in {"cmd_install", "cmd_upgrade"}:
         return
     # Hook commands run inside host CLI subprocesses; never print there.
     if cmd_name in {

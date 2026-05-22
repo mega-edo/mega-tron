@@ -259,6 +259,62 @@ this guide assumes (e.g. `--claude-native-mode`, `qa-live`,
 `compact-skills`) may simply not exist on their system. Always
 refresh the binary first.
 
+#### The one-command path: `mega-tron upgrade`
+
+If the user's installed binary is recent enough to ship `mega-tron
+upgrade` (anything from 2026-05 onward), that single command does
+the whole refresh:
+
+```bash
+mega-tron upgrade
+```
+
+It:
+1. Detects every running mega-tron daemon / dashboard process AND
+   captures their bind args (`--host` / `--port`).
+2. Refreshes the wheel via `uv tool install --force --reinstall`,
+   auto-discovering a local clone if one exists (otherwise falling
+   back to PyPI / a fresh `/tmp/mega-tron` clone).
+3. Gracefully stops the old processes (SIGTERM + grace + SIGKILL).
+4. Re-spawns the dashboard with the SAME bind args using the new
+   binary — so a reverse proxy / public URL in front of the
+   dashboard keeps pointing at a live listener.
+5. Re-runs `mega-tron setup` non-interactively, inferring the
+   embedder profile (from `~/.config/mega-tron/config.toml`) and
+   the Claude native mode (from the shell rc's
+   `MEGA_CLAUDE_NATIVE_MODE` export).
+
+Check whether the binary supports it before suggesting it:
+
+```bash
+mega-tron upgrade --help >/dev/null 2>&1 && echo HAS_UPGRADE
+```
+
+If the line prints `HAS_UPGRADE`, **use `mega-tron upgrade` and skip
+the rest of step 3b**. The command is the canonical update path; the
+manual fallback below exists only for old binaries that predate it.
+
+#### Why the upgrade-in-place step matters (any path)
+
+`uv tool install --force --reinstall` only replaces the wheel on
+disk. Any mega-tron Python process that's *already running* (the
+warm daemon, a long-lived dashboard the user launched behind a
+reverse proxy) keeps the OLD wheel loaded in memory until it exits
+on its own.
+
+Classic failure mode this guide is closing the hole on: the user
+launched `mega-tron dashboard --host 172.18.0.1 --port 7531 &` in a
+previous session and wired Traefik / nginx to that bind. An agent
+that only does `uv tool install --force --reinstall` then
+`mega-tron setup` leaves that old dashboard process serving the
+public URL — the wheel on disk is new, the daemon spawned by
+`setup` is new, but the dashboard the user actually *sees* is the
+old build. `mega-tron upgrade` is the cure; if you can't use it,
+the manual fallback below must include the same kill + respawn step
+**by hand**.
+
+#### Manual fallback (only when `mega-tron upgrade` isn't available)
+
 Pick the path that matches where they got it from:
 
 - **PyPI install:** `uv tool upgrade mega-tron`
@@ -290,6 +346,29 @@ Pick the path that matches where they got it from:
   has a clone but doesn't remember the path and doesn't want to
   hunt for it, or (c) the existing clone is on a branch the user
   doesn't want disturbed.
+
+After the wheel refresh, **find every running mega-tron process and
+restart it with the new binary** — otherwise an old dashboard /
+daemon will keep serving stale code from RAM until it exits on its
+own (see the "Why the upgrade-in-place step matters" callout above):
+
+```bash
+# 1. List running mega-tron processes + their bind args
+pgrep -af 'mega.tron|mega_tron' || echo "none running"
+
+# 2. For each dashboard / daemon line, note --host / --port (if any),
+#    then kill it:
+kill <old-pid>
+
+# 3. Respawn the dashboard with the SAME args using the fresh binary:
+mega-tron dashboard --host <same-host> --port <same-port> --no-open &
+
+# (The daemon is auto-respawned by the next host turn / by `setup`
+#  in step 4; you don't have to restart it by hand.)
+```
+
+This step is what `mega-tron upgrade` automates — when you have to do
+it manually, do not skip it.
 
 Sanity-check the refresh worked by listing a feature this guide uses
 that only exists in current builds:
@@ -508,6 +587,7 @@ Tell them:
 | Symptom | Likely cause | Fix |
 |---|---|---|
 | `mega-tron: command not found` after install | `~/.local/bin` not on PATH | Open a new shell. If still missing, source the shell rc explicitly. |
+| After update, `mega-tron --version` is new but the dashboard URL still shows old behaviour | Old dashboard process kept the old wheel in RAM; `uv tool install --force` only swapped the wheel on disk. | Run `mega-tron upgrade` (kills + respawns the dashboard with the same bind args using the new binary). On older binaries that predate `upgrade`, do it by hand — see step 3b. |
 | Setup prints "legacy mega-optimus conflict" | Old install of mega-optimus | Run `mega-optimus install --uninstall`, then `pip uninstall mega-optimus`, then retry. |
 | qa-live: `NEEDS_LOGIN` for a host | Host CLI not authenticated | User must log into that host (`claude /login`, `codex login`, `gemini auth login`) and re-run qa-live. Don't retry without login first. |
 | qa-live: `FAIL` with "timed out after Ns" | First call cold-loads embedder (130 MB – 570 MB) + host CLI. Default 5–6 min budget can still be tight on slow links / large catalogs. | `mega-tron daemon serve &` to pre-warm the router, **and/or** `MEGA_QA_TIMEOUT_S=600 mega-tron qa-live`. |
