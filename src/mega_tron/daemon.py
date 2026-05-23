@@ -327,15 +327,30 @@ def _handle_request(
     # uses /skill-name slash invocation and a softer "candidate" directive
     # (no `$Name` must-use trigger). Codex (default) gets the must-use
     # line + meta block since Codex's catalog is replaced wholesale.
+    #
+    # ``emit_mode="catalog_only"`` flips the prepender to its slim
+    # variant for follow-up turns (the hook side asks for this on every
+    # post-first-fire turn). Default ``"full"`` preserves backward
+    # compatibility with any non-hook caller of the daemon.
     target = request.get("target", "codex")
+    emit_mode = request.get("emit_mode", "full")
+    follow_up = emit_mode == "catalog_only"
     if target == "claude":
         from mega_tron.prepender import build_claude_hook_context
 
-        ctx = build_claude_hook_context(ranked, k=prepend_k)
+        ctx = build_claude_hook_context(
+            ranked, k=prepend_k, follow_up=follow_up
+        )
+    elif target == "gemini":
+        from mega_tron.prepender import build_gemini_hook_context
+
+        ctx = build_gemini_hook_context(
+            ranked, k=prepend_k, follow_up=follow_up
+        )
     else:
         from mega_tron.prepender import build_hook_context
 
-        ctx = build_hook_context(ranked, k=prepend_k)
+        ctx = build_hook_context(ranked, k=prepend_k, follow_up=follow_up)
 
     # The daemon backs the UserPromptSubmit hook, so we emit the full
     # hook-context shape. Persistent guidance lives in AGENTS.md / CLAUDE.md

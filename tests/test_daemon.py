@@ -123,6 +123,69 @@ def test_daemon_rank_returns_additional_context(daemon_in_thread, tmp_path):
     assert str(skills) in ctx  # skill_dir path is included in the meta block
 
 
+def test_daemon_rank_emit_mode_catalog_only_returns_slim(daemon_in_thread, tmp_path):
+    """The hook side requests ``emit_mode="catalog_only"`` on follow-up
+    turns. The daemon must honor that by calling ``build_*_hook_context``
+    with ``follow_up=True``, producing a slim block without the
+    "How to use" prose or inline self-eval contract."""
+    skills = _make_skills(tmp_path)
+    cache_path = tmp_path / "daemon_cache.npz"
+    base = {
+        "op": "rank",
+        "prompt": "validate webhook hmac signature on incoming request",
+        "skills_dir": str(skills),
+        "cache_path": str(cache_path),
+        "top_k": 3,
+        "prepend_k": 2,
+    }
+    full_resp = daemon_mod.client_query(
+        {**base, "emit_mode": "full"},
+        socket_path=daemon_in_thread,
+    )
+    slim_resp = daemon_mod.client_query(
+        {**base, "emit_mode": "catalog_only"},
+        socket_path=daemon_in_thread,
+    )
+
+    assert full_resp is not None and full_resp["ok"]
+    assert slim_resp is not None and slim_resp["ok"]
+    full_ctx = full_resp["additional_context"]
+    slim_ctx = slim_resp["additional_context"]
+
+    # Both still ship the catalog header + candidate names.
+    assert slim_ctx.startswith("## Skills (selected for this turn")
+    assert "Candidate skills for this task" in slim_ctx
+    assert "webhook-signer" in slim_ctx
+    # But slim drops the prose / contract.
+    assert "### How to use these skills" in full_ctx
+    assert "### How to use these skills" not in slim_ctx
+    assert "verdict=" in full_ctx
+    assert "verdict=" not in slim_ctx
+    assert len(slim_ctx) < len(full_ctx) * 0.5
+
+
+def test_daemon_emit_mode_defaults_to_full(daemon_in_thread, tmp_path):
+    """Missing ``emit_mode`` is backwards-compatible: it falls back to
+    the legacy full-block behavior so older clients aren't broken."""
+    skills = _make_skills(tmp_path)
+    cache_path = tmp_path / "daemon_cache.npz"
+    resp = daemon_mod.client_query(
+        {
+            "op": "rank",
+            "prompt": "validate webhook hmac signature on incoming request",
+            "skills_dir": str(skills),
+            "cache_path": str(cache_path),
+            "top_k": 3,
+            "prepend_k": 2,
+        },
+        socket_path=daemon_in_thread,
+    )
+    assert resp is not None and resp["ok"]
+    # The full block contains the prose + contract.
+    assert "### How to use these skills" in resp["additional_context"]
+    assert "verdict=" in resp["additional_context"]
+
+
 def test_daemon_unknown_op_returns_error(daemon_in_thread):
     resp = daemon_mod.client_query({"op": "nonsense"}, socket_path=daemon_in_thread)
     assert resp is not None

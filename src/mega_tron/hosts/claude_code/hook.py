@@ -213,8 +213,12 @@ def cmd_claude_hook(args: argparse.Namespace) -> int:
         return _emit_empty()
 
     session_id = data.get("session_id") or data.get("sessionId")
-    if not _is_first_fire(session_id):
-        return _emit_empty()
+    # Follow-up turns re-rank and emit a slim catalog-only block (no
+    # "How to use" prose, no inline self-eval contract — those live
+    # persistently in CLAUDE.md). Keeps per-turn context bloat bounded
+    # while making sure subsequent substantive turns see a fresh
+    # catalog instead of going off whatever surfaced on Turn 1.
+    follow_up = not _is_first_fire(session_id)
 
     if args.skills_dir:
         skills_dirs = [Path(args.skills_dir)]
@@ -271,10 +275,16 @@ def cmd_claude_hook(args: argparse.Namespace) -> int:
                 # (Stage 1 still calls the Codex prepender server-side);
                 # we re-render on the client side below if needed.
                 "target": "claude",
+                "emit_mode": "catalog_only" if follow_up else "full",
             }
         )
     if daemon_response and daemon_response.get("ok"):
-        ctx = daemon_response.get("additional_context") or ""
+        from mega_tron.prepender import append_session_block
+
+        ctx = append_session_block(
+            daemon_response.get("additional_context") or "",
+            session_id,
+        )
         # Log the route even on the daemon fast-path so the dashboard's
         # measured median accumulates samples on every turn, not only
         # cold-load turns. See hosts/_route_log.py for the shared
@@ -395,7 +405,9 @@ def cmd_claude_hook(args: argparse.Namespace) -> int:
     if _native_mode() in ("active", "strict"):
         _apply_native_mode_a(ranked[: args.prepend_k], skills_dirs)
 
-    ctx = build_claude_hook_context(ranked, k=args.prepend_k)
+    ctx = build_claude_hook_context(
+        ranked, k=args.prepend_k, session_id=session_id, follow_up=follow_up
+    )
     if not ctx.strip():
         return _emit_empty()
 

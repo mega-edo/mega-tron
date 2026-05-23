@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -21,6 +22,23 @@ from mega_tron.cli._common import (
     _resolve_cache_path,
     _resolve_mode,
 )
+
+
+def _resolve_session_id(args: argparse.Namespace) -> str | None:
+    """Resolve session_id from (1) --session-id, (2) env, (3) None.
+
+    Models invoked from a host (codex / claude / gemini) call
+    ``mega-tron search`` as a shell command. The per-turn skill
+    block injected by the host hook tells the model to pass the
+    host's session id via ``--session-id``; the env var fallback
+    exists for scripted callers that prefer to set it once and
+    forget. None is the right default for headless / SDK use.
+    """
+    explicit = getattr(args, "session_id", None)
+    if isinstance(explicit, str) and explicit.strip():
+        return explicit.strip()
+    env = os.environ.get("MEGA_SESSION_ID", "").strip()
+    return env or None
 from mega_tron.config import DEFAULT_PREFILTER
 from mega_tron.hosts.codex.compat import detect_version, warn_if_untested
 from mega_tron.prepender import build_prefix
@@ -102,11 +120,13 @@ def cmd_search(args: argparse.Namespace) -> int:
         dynamic=use_dynamic,
     )
 
-    # Best-effort route log (Phase 2: dashboard measurement). The CLI
-    # has no session_id so we log session_id=None — analytics readers
-    # see those as "headless" turns. Errors MUST NOT affect the CLI.
+    # Best-effort route log. session_id is resolved from --session-id
+    # arg → env MEGA_SESSION_ID → None. When a host model invokes the
+    # CLI on its behalf, the per-turn prepender block tells it to pass
+    # the host's session id; that's what lets the stop hook's verdict
+    # gate credit `<skill-used>` tags against the right session catalog.
     try:
-        _log_route_cli(args.task, ranked, router)
+        _log_route_cli(args.task, ranked, router, session_id=_resolve_session_id(args))
     except Exception:  # noqa: BLE001
         pass
 
@@ -332,7 +352,7 @@ def _try_daemon_path(args: argparse.Namespace) -> int | None:
         k_reason = extras.get("k_reason") or ("dynamic" if use_dynamic else "manual")
         qhash = hashlib.sha256(args.task.encode("utf-8")).hexdigest()[:16]
         Store(path=store_path()).record_route(
-            session_id=None,
+            session_id=_resolve_session_id(args),
             host="cli",
             query_hash=qhash,
             picked_names=[s.name for s in chosen],
@@ -346,14 +366,20 @@ def _try_daemon_path(args: argparse.Namespace) -> int | None:
     return 0
 
 
-def _log_route_cli(query: str, ranked, router) -> None:
+def _log_route_cli(
+    query: str,
+    ranked,
+    router,
+    *,
+    session_id: str | None = None,
+) -> None:
     """Write one row to the ``routes`` analytics table for a CLI rank.
 
-    The CLI runs without a session_id (no host wrapping the call), so
-    we log ``session_id=None`` — analytics readers see those as
-    "headless" turns. Lifts the same ``(K, k_reason, total_tok)`` the
-    host hooks log so the median/p90 calculations include CLI usage
-    on the same footing.
+    ``session_id`` is supplied by the caller (resolved from
+    ``--session-id`` or ``MEGA_SESSION_ID`` env); when None the row is
+    written headless (no host conversation to credit). The host's stop
+    hook later uses this column to admit the model's `<skill-used>`
+    tags against the session's routed catalog.
     """
     import hashlib
 
@@ -369,7 +395,7 @@ def _log_route_cli(query: str, ranked, router) -> None:
     total_tok = sum(r.skill.desc_tok for r in ranked)
     qhash = hashlib.sha256(query.encode("utf-8")).hexdigest()[:16]
     Store(path=store_path()).record_route(
-        session_id=None,
+        session_id=session_id,
         host="cli",
         query_hash=qhash,
         picked_names=[r.skill.name for r in ranked],

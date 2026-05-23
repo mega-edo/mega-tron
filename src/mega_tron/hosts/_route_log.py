@@ -80,10 +80,14 @@ def log_route_from_daemon(
     against the on-disk skill pool to compute ``total_tok`` from the
     description tokens, and tag the row as ``"dynamic"`` (the daemon's
     default rank path always uses dynamic-K).
+
+    Empty ``picked`` is still logged — a no-match turn is a real routing
+    event the dashboard's measured-median analytics needs to count.
+    Without this, sessions that never surface a skill look identical to
+    sessions where the hook never fired, and per-session multi-turn QA
+    cannot distinguish "hook ran, no match" from "hook didn't run".
     """
     picked = list(daemon_response.get("skills") or [])
-    if not picked:
-        return
 
     extras = daemon_response.get("extras") or {}
     total_tok = extras.get("total_tok")
@@ -91,17 +95,20 @@ def log_route_from_daemon(
     k_reason = extras.get("k_reason")
 
     if total_tok is None:
-        from mega_tron.router import load_skills
+        if picked:
+            from mega_tron.router import load_skills
 
-        by_name = {s.name: s for s in load_skills(skills_dirs)}
-        total_tok = sum(
-            getattr(by_name.get(n), "desc_tok", 0) or 0 for n in picked
-        )
+            by_name = {s.name: s for s in load_skills(skills_dirs)}
+            total_tok = sum(
+                getattr(by_name.get(n), "desc_tok", 0) or 0 for n in picked
+            )
+        else:
+            total_tok = 0
 
     if k is None:
         k = len(picked)
     if not k_reason:
-        k_reason = "dynamic"
+        k_reason = "dynamic" if picked else "no-match"
 
     Store(path=store_path()).record_route(
         session_id=session_id,

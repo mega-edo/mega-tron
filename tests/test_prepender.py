@@ -287,3 +287,165 @@ def test_self_eval_contract_uses_inline_verdict_attribute():
         # verdict-embedding store, where the embedder is tuned on
         # English; mixing languages silently degrades future routing.
         assert "must be written in english" in lower, builder.__name__
+
+
+# --- session_id propagation ---------------------------------------------------
+#
+# When the host hook supplies a session id, the prepender must stamp it
+# into the injected block so the model can pass it through to its
+# `mega-tron search` shell calls. This is the load-bearing piece of the
+# verdict-capture fix: cli-host routes rows written with the real session
+# id let the stop hook's verdict gate admit the model's `<skill-used>`
+# tags. Without these tests it's easy to silently drop the session-id
+# stamp during a future refactor and re-break verdict capture.
+
+
+def test_session_block_omitted_when_session_id_none():
+    """Backward compat: passing None (or no session_id) keeps the
+    output identical to the legacy block — no Session header."""
+    for builder in (
+        build_hook_context,
+        build_claude_hook_context,
+        build_gemini_hook_context,
+    ):
+        ctx = builder([_rs("alpha", description="d")], k=1)
+        assert "### Session" not in ctx, builder.__name__
+        assert "--session-id" not in ctx, builder.__name__
+        ctx_none = builder([_rs("alpha", description="d")], k=1, session_id=None)
+        assert ctx == ctx_none, builder.__name__
+
+
+def test_session_block_stamps_literal_id_when_provided():
+    """The literal session id appears verbatim; `--session-id <id>` is
+    spelled out so the model can copy it into a shell call."""
+    sid = "abc-123-deadbeef"
+    for builder in (
+        build_hook_context,
+        build_claude_hook_context,
+        build_gemini_hook_context,
+    ):
+        ctx = builder([_rs("alpha", description="d")], k=1, session_id=sid)
+        assert "### Session" in ctx, builder.__name__
+        assert sid in ctx, builder.__name__
+        assert f"--session-id {sid}" in ctx, builder.__name__
+        # The instruction that prevents the model from echoing the id
+        # in its reply must be present too — otherwise the UUID leaks
+        # into user-visible output.
+        assert "do not echo" in ctx.lower(), builder.__name__
+
+
+def test_session_block_present_on_no_match_too():
+    """A no-match turn can still cause the model to call `mega-tron
+    search` (the install block tells it to). The session block must
+    therefore appear even when the router returns zero skills."""
+    sid = "no-match-sid"
+    for builder in (
+        build_hook_context,
+        build_claude_hook_context,
+        build_gemini_hook_context,
+    ):
+        ctx = builder([], k=3, session_id=sid)
+        assert "### Session" in ctx, builder.__name__
+        assert sid in ctx, builder.__name__
+
+
+def test_append_session_block_idempotent_when_empty():
+    """append_session_block (used by daemon fast-paths) must no-op
+    when ctx is empty or session_id is None."""
+    from mega_tron.prepender import append_session_block
+
+    assert append_session_block("", "any-sid") == ""
+    assert append_session_block("some ctx", None) == "some ctx"
+    out = append_session_block("some ctx", "")  # empty string -> no-op
+    assert out == "some ctx"
+
+
+def test_append_session_block_adds_block_for_nonempty_ctx():
+    from mega_tron.prepender import append_session_block
+
+    sid = "daemon-fast-path-sid"
+    out = append_session_block("existing ctx\n", sid)
+    assert out.startswith("existing ctx\n")
+    assert "### Session" in out
+    assert sid in out
+    assert f"--session-id {sid}" in out
+
+
+# --- follow_up=True slim block ----------------------------------------------
+#
+# The slim variant is what enables Codex multi-turn verdict capture
+# (the model sees a fresh catalog every turn without paying the full
+# ~1800-tok first-fire cost). These tests pin the contract: catalog
+# header + entries + session block stay; "How to use" prose +
+# self-eval contract drop.
+
+
+def test_follow_up_drops_how_to_use_and_contract():
+    """All three builders strip the "How to use these skills" prose
+    and the inline self-eval contract on follow-up turns. Catalog
+    header + candidate list + Available skills entries stay."""
+    for builder in (
+        build_hook_context,
+        build_claude_hook_context,
+        build_gemini_hook_context,
+    ):
+        full = builder([_rs("alpha", description="d")], k=1)
+        slim = builder(
+            [_rs("alpha", description="d")], k=1, follow_up=True
+        )
+        # Both still emit the catalog block.
+        assert slim.startswith("## Skills (selected for this turn"), builder.__name__
+        assert "### Available skills" in slim, builder.__name__
+        assert "alpha" in slim, builder.__name__
+        # But the prose / contract is gone in slim.
+        assert "### How to use these skills" in full, builder.__name__
+        assert "### How to use these skills" not in slim, builder.__name__
+        assert "verdict=" in full, builder.__name__
+        assert "verdict=" not in slim, builder.__name__
+        # Slim should be meaningfully smaller.
+        assert len(slim) < len(full) * 0.5, (
+            f"{builder.__name__}: slim={len(slim)} full={len(full)}"
+        )
+
+
+def test_follow_up_preserves_session_block():
+    """The session-id stamp is load-bearing on follow-up too — the
+    model uses it to pass `--session-id <id>` to shell `mega-tron
+    search` calls. Slim variant must still carry it."""
+    sid = "abc-followup-123"
+    for builder in (
+        build_hook_context,
+        build_claude_hook_context,
+        build_gemini_hook_context,
+    ):
+        slim = builder(
+            [_rs("alpha", description="d")], k=1, session_id=sid, follow_up=True
+        )
+        assert "### Session" in slim, builder.__name__
+        assert sid in slim, builder.__name__
+        assert f"--session-id {sid}" in slim, builder.__name__
+
+
+def test_follow_up_no_match_returns_session_block_only():
+    """On a no-match follow-up turn (router returned empty), don't
+    spam the "emit zero tags" notice every turn — just stamp the
+    session block so any shell `mega-tron search` call this turn
+    gets attributed correctly. When session_id is also None, true
+    noop (empty string)."""
+    sid = "no-match-followup"
+    for builder in (
+        build_hook_context,
+        build_claude_hook_context,
+        build_gemini_hook_context,
+    ):
+        # No session_id + no ranked = true noop.
+        out = builder([], k=3, follow_up=True)
+        assert out == "", builder.__name__
+
+        # With session_id, the session block alone is emitted.
+        out_sess = builder([], k=3, session_id=sid, follow_up=True)
+        assert "### Session" in out_sess, builder.__name__
+        assert sid in out_sess, builder.__name__
+        # The "emit zero tags" no-match prose should NOT appear on
+        # follow-up turns — only the session block.
+        assert "## Skills (selected for this turn" not in out_sess, builder.__name__

@@ -112,6 +112,17 @@ def _render_agents_block_body() -> str:
         "common outcome at the routing system's measured coverage; do not "
         "force-fit an unrelated skill.\n"
         "\n"
+        "When mega-tron's hook has stamped a session id into ANY prior "
+        "turn of THIS conversation (look for a `### Session` block "
+        "containing `--session-id <id>`), keep using that same id on "
+        "every subsequent "
+        f"`{mega_tron_bin} search` shell call you make for the rest of "
+        "this conversation. The id does not change within a session, "
+        "and the hook only stamps it once (first turn). Without "
+        "`--session-id`, the verdict gate cannot credit your "
+        "`<skill-used>` tags to this conversation and your routing "
+        "signal is silently dropped.\n"
+        "\n"
         + render_install_tagging_guide(
             hook_name="Stop", mega_tron_bin=mega_tron_bin
         )

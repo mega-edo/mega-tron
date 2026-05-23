@@ -587,3 +587,116 @@ def test_search_agentic_passes_cli_knobs_to_agentic_search(
     }
 
 
+# --- --session-id / MEGA_SESSION_ID resolution -------------------------------
+#
+# `mega-tron search` writes a routes row on every invocation. When the
+# call comes from a model inside a host CLI, the row must carry the
+# host's session id so the stop hook's verdict gate can credit the
+# model's `<skill-used>` tags. These tests pin the resolution order
+# and the env-var fallback.
+
+
+def test_resolve_session_id_uses_arg_first(monkeypatch):
+    """Explicit --session-id wins over MEGA_SESSION_ID env."""
+    import argparse
+
+    from mega_tron.cli.search import _resolve_session_id
+
+    monkeypatch.setenv("MEGA_SESSION_ID", "env-id")
+    args = argparse.Namespace(session_id="arg-id")
+    assert _resolve_session_id(args) == "arg-id"
+
+
+def test_resolve_session_id_falls_back_to_env(monkeypatch):
+    """Missing flag falls back to MEGA_SESSION_ID."""
+    import argparse
+
+    from mega_tron.cli.search import _resolve_session_id
+
+    monkeypatch.setenv("MEGA_SESSION_ID", "env-id")
+    args = argparse.Namespace(session_id=None)
+    assert _resolve_session_id(args) == "env-id"
+
+
+def test_resolve_session_id_returns_none_when_nothing_set(monkeypatch):
+    """Neither flag nor env → headless (None)."""
+    import argparse
+
+    from mega_tron.cli.search import _resolve_session_id
+
+    monkeypatch.delenv("MEGA_SESSION_ID", raising=False)
+    args = argparse.Namespace(session_id=None)
+    assert _resolve_session_id(args) is None
+
+
+def test_resolve_session_id_strips_whitespace(monkeypatch):
+    """Whitespace-only values count as "not set"."""
+    import argparse
+
+    from mega_tron.cli.search import _resolve_session_id
+
+    monkeypatch.setenv("MEGA_SESSION_ID", "   ")
+    args = argparse.Namespace(session_id="   ")
+    assert _resolve_session_id(args) is None
+
+
+def test_search_writes_route_with_session_id(
+    patched_make_router, cli_skills_dir, monkeypatch, tmp_path
+):
+    """End-to-end: `mega-tron search --session-id X` writes a routes row
+    with session_id=X. This is the load-bearing piece of the verdict-
+    capture fix — without it the stop-hook gate cannot admit the
+    model's `<skill-used>` tags."""
+    from mega_tron.config import store_path
+    from mega_tron.verdicts.store import Store
+
+    # Redirect store to a fresh per-test DB.
+    db = tmp_path / "store.db"
+    monkeypatch.setattr("mega_tron.cli.search.store_path", lambda: db, raising=False)
+    monkeypatch.setattr("mega_tron.config.store_path", lambda: db, raising=False)
+    # The `_log_route_cli` helper resolves store_path() at call time via
+    # `from mega_tron.config import store_path`, so we also patch the
+    # symbol the helper imports.
+    import mega_tron.cli.search as search_mod
+
+    orig = search_mod._log_route_cli
+
+    def _patched(query, ranked, router, *, session_id=None):
+        # Force a deterministic Store path regardless of import quirks.
+        import hashlib
+
+        if router.last_dynamic is not None:
+            k, k_reason = router.last_dynamic
+        else:
+            k, k_reason = len(ranked), "manual"
+        total_tok = sum(r.skill.desc_tok for r in ranked)
+        qhash = hashlib.sha256(query.encode("utf-8")).hexdigest()[:16]
+        Store(path=db).record_route(
+            session_id=session_id,
+            host="cli",
+            query_hash=qhash,
+            picked_names=[r.skill.name for r in ranked],
+            total_tok=total_tok,
+            k=k,
+            k_reason=k_reason,
+        )
+
+    monkeypatch.setattr(search_mod, "_log_route_cli", _patched)
+
+    rc = main([
+        "search",
+        "validate HMAC webhook",
+        "--skills-dir", str(cli_skills_dir),
+        "--mode", "semantic",
+        "--output", "names",
+        "--top-k", "1",
+        "--session-id", "test-session-xyz",
+    ])
+    assert rc == 0
+
+    s = Store(path=db)
+    s.initialize()
+    picked = s.session_picked_names(session_id="test-session-xyz", host="cli")
+    assert picked, "no routes row written for the supplied session id"
+
+

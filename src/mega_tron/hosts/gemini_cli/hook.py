@@ -200,8 +200,12 @@ def cmd_gemini_hook(args: argparse.Namespace) -> int:
         return _emit_empty()
 
     session_id = data.get("session_id") or data.get("sessionId")
-    if not _is_first_fire(session_id):
-        return _emit_empty()
+    # Follow-up turns re-rank with a slim block (no inlined SKILL.md
+    # bodies, no self-eval contract — those live persistently in
+    # GEMINI.md). Lets multi-turn Gemini conversations keep getting
+    # a fresh per-turn catalog without paying the full ~14k-char
+    # first-fire cost on every turn.
+    follow_up = not _is_first_fire(session_id)
 
     if args.skills_dir:
         skills_dirs = [Path(args.skills_dir)]
@@ -253,6 +257,7 @@ def cmd_gemini_hook(args: argparse.Namespace) -> int:
                 # (Stage 1 still calls the Codex prepender server-side);
                 # we re-render on the client side below if needed.
                 "target": "gemini",
+                "emit_mode": "catalog_only" if follow_up else "full",
             }
         )
     if daemon_response and daemon_response.get("ok"):
@@ -274,9 +279,12 @@ def cmd_gemini_hook(args: argparse.Namespace) -> int:
 
         # If the daemon already rendered Gemini-shaped context, use it.
         # Otherwise re-render client-side from the returned ranked names.
+        from mega_tron.prepender import append_session_block
+
         ctx = daemon_response.get("additional_context") or ""
         if ctx.strip() and daemon_response.get("target") == "gemini":
-            chosen_ctx = ctx
+            # daemon doesn't know session_id; stamp it on this side.
+            chosen_ctx = append_session_block(ctx, session_id)
         else:
             # Re-render client-side. We only have names from the daemon,
             # not full RankedSkill objects — fall back to a minimal
@@ -294,7 +302,12 @@ def cmd_gemini_hook(args: argparse.Namespace) -> int:
                 for n in top_names
                 if n in by_name
             ]
-            chosen_ctx = build_gemini_hook_context(pseudo, k=args.prepend_k)
+            chosen_ctx = build_gemini_hook_context(
+                pseudo,
+                k=args.prepend_k,
+                session_id=session_id,
+                follow_up=follow_up,
+            )
         if not chosen_ctx.strip():
             return _emit_empty()
         # Mode A: daemon already returned top-K names — apply the disabled
@@ -392,7 +405,9 @@ def cmd_gemini_hook(args: argparse.Namespace) -> int:
     if _native_mode() == "active":
         _apply_native_mode_a(ranked[: args.prepend_k], skills_dirs)
 
-    ctx = build_gemini_hook_context(ranked, k=args.prepend_k)
+    ctx = build_gemini_hook_context(
+        ranked, k=args.prepend_k, session_id=session_id, follow_up=follow_up
+    )
     if not ctx.strip():
         return _emit_empty()
 

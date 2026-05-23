@@ -127,9 +127,14 @@ def test_first_fire_emits_additional_context():
     assert "Strongly prefer" in ctx or "skills" in ctx.lower()
 
 
-def test_subsequent_turn_is_noop():
-    """Second prompt in the same session should not re-route — Claude
-    Code carries the CLAUDE.md guidance forward, no per-turn injection."""
+def test_subsequent_turn_emits_slim_block():
+    """Follow-up turns re-rank against the new prompt and emit a slim
+    catalog block — name/path/desc only, no "How to use" prose, no
+    inline self-eval contract (those live persistently in CLAUDE.md).
+    This lets multi-turn Claude conversations keep getting fresh
+    per-turn catalogs without the ~1800-tok first-fire bloat."""
+    import json as _json
+
     fixtures = Path(__file__).parent / "fixtures" / "skills"
     session = f"test-{uuid.uuid4()}"
     args = _hook_args(
@@ -137,8 +142,21 @@ def test_subsequent_turn_is_noop():
         cache_path="/tmp/mega-tron-test-cache.npz",
     )
     # First call: first-fire
-    _run(_payload("validate webhook", session_id=session), args)
-    # Second call: same session_id → noop
-    rc, out, _ = _run(_payload("another prompt", session_id=session), args)
+    _, out1, _ = _run(_payload("validate webhook", session_id=session), args)
+    # Second call: same session_id → slim block (not noop)
+    rc, out2, _ = _run(_payload("another prompt", session_id=session), args)
     assert rc == 0
-    assert out == ""
+    assert out2 != ""
+
+    ctx1 = _json.loads(out1)["hookSpecificOutput"]["additionalContext"]
+    ctx2 = _json.loads(out2)["hookSpecificOutput"]["additionalContext"]
+
+    # Both fire the catalog header.
+    assert ctx2.startswith("## Skills (selected for this turn")
+    assert "### Available skills" in ctx2
+    # First fire carries the prose + contract; follow-up does not.
+    assert "### How to use these skills" in ctx1
+    assert "### How to use these skills" not in ctx2
+    assert "verdict=" in ctx1
+    assert "verdict=" not in ctx2
+    assert len(ctx2) < len(ctx1) * 0.5

@@ -136,9 +136,14 @@ def test_first_fire_emits_additional_context():
     assert "Strongly prefer" in ctx
 
 
-def test_subsequent_turn_is_noop():
-    """Second prompt in the same session should not re-route — Gemini
-    carries the GEMINI.md guidance forward; no per-turn injection."""
+def test_subsequent_turn_emits_slim_block():
+    """Follow-up turns re-rank with a slim block — catalog header +
+    name/path/desc only. The full ~14k-char first-fire block (with
+    inlined SKILL.md bodies + self-eval contract) is replaced by a
+    much smaller per-turn injection. GEMINI.md owns the persistent
+    self-eval contract."""
+    import json as _json
+
     fixtures = Path(__file__).parent / "fixtures" / "skills"
     session = f"test-{uuid.uuid4()}"
     args = _hook_args(
@@ -146,11 +151,28 @@ def test_subsequent_turn_is_noop():
         cache_path="/tmp/mega-tron-test-cache.npz",
     )
     # First call: first-fire
-    _run(_payload("validate webhook", session_id=session), args)
-    # Second call: same session_id → noop
-    rc, out, _ = _run(_payload("another prompt", session_id=session), args)
+    _, out1, _ = _run(_payload("validate webhook", session_id=session), args)
+    # Second call: same session_id → slim block (not noop)
+    rc, out2, _ = _run(_payload("another prompt", session_id=session), args)
     assert rc == 0
-    assert out == ""
+    assert out2 != ""
+
+    ctx1 = _json.loads(out1)["hookSpecificOutput"]["additionalContext"]
+    ctx2 = _json.loads(out2)["hookSpecificOutput"]["additionalContext"]
+
+    # Both fire the catalog header.
+    assert ctx2.startswith("## Skills (selected for this turn")
+    assert "### Available skills" in ctx2
+    # First fire carries the contract; follow-up does not. Inlined
+    # SKILL.md bodies are also dropped on follow-up.
+    assert "### How to use these skills" in ctx1
+    assert "### How to use these skills" not in ctx2
+    assert "verdict=" in ctx1
+    assert "verdict=" not in ctx2
+    assert "body: |" in ctx1
+    assert "body: |" not in ctx2
+    # Inlined bodies dominate Gemini's first-fire; slim should be ≪.
+    assert len(ctx2) < len(ctx1) * 0.5
 
 
 def test_first_fire_marker_uses_gemini_prefix(tmp_path, monkeypatch):

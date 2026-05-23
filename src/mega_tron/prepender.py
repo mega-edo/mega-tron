@@ -28,7 +28,66 @@ from mega_tron.router import RankedSkill
 from mega_tron.self_eval_contract import render_inline_self_eval_contract
 
 
-def _no_match_context() -> str:
+def _session_block(session_id: str | None) -> str:
+    """Emit the per-turn session-id stamp instruction, or empty string.
+
+    When the host hook knows its session id, we stamp it into the
+    prepended block and instruct the model to pass it via
+    ``--session-id`` on any ``mega-tron search`` shell call it makes
+    for this turn. The shell example uses the absolute mega-tron
+    binary path (same convention as the AGENTS.md / CLAUDE.md /
+    GEMINI.md install blocks) so the call works under minimal-PATH
+    subshells. Without this stamp the model's shell calls write
+    routes rows with ``session_id=NULL``, and the stop hook's verdict
+    gate later drops the model's `<skill-used>` tags as "not in this
+    session's routed catalog". The instruction is omitted when
+    ``session_id`` is None (CLI direct, MegaCore, etc.) so headless
+    use stays clean.
+    """
+    if not session_id:
+        return ""
+    from mega_tron.cli.path_setup import resolve_bin_path
+
+    mega_tron_bin = resolve_bin_path()
+    return (
+        "### Session\n"
+        "\n"
+        f"This turn's session id is `{session_id}`. When you call "
+        f"`{mega_tron_bin} search \"<query>\"` from a shell for THIS "
+        f"session, pass `--session-id {session_id}` so the routing "
+        "log credits the call against this conversation. Example:\n"
+        "\n"
+        f"    {mega_tron_bin} search \"jwt bearer middleware\" --session-id {session_id}\n"
+        "\n"
+        "Do NOT echo the session id in your reply text — it is a "
+        "routing identifier, not output. Skipping the flag still "
+        "lets the call succeed, but mega-tron's verdict gate cannot "
+        f"credit any `<skill-used>` tag you emit against this session's "
+        "catalog, and your routing signal for this turn is lost.\n"
+    )
+
+
+def append_session_block(ctx: str, session_id: str | None) -> str:
+    """Append the per-turn session-id stamp to an already-built ctx.
+
+    Used by host hooks on the daemon fast-path, where the
+    ``additional_context`` comes back from the daemon process
+    (which doesn't know the host's session id). When ``ctx`` is
+    empty or ``session_id`` is None this is a no-op — the caller
+    keeps its original empty-ctx semantics.
+    """
+    if not session_id or not ctx:
+        return ctx
+    sess = _session_block(session_id)
+    if not sess:
+        return ctx
+    sep = "" if ctx.endswith("\n") else "\n"
+    return ctx + sep + "\n" + sess
+
+
+def _no_match_context(
+    session_id: str | None = None, *, follow_up: bool = False
+) -> str:
     """Hook injection for turns where the router returned zero matches.
 
     Without this, the three ``build_*_hook_context`` functions return
@@ -43,8 +102,24 @@ def _no_match_context() -> str:
     An explicit one-block injection — *"emit zero tags"* — fixes that
     by replacing the silence with a positive instruction the model
     can't pattern-match against a stale prior block.
+
+    When the host supplies a session id we still tack the session-id
+    instruction on the end: even a no-match turn may produce a shell
+    `mega-tron search` call from the model (it's instructed by
+    AGENTS.md/CLAUDE.md/GEMINI.md to do so for ambiguous prompts),
+    and we want that call attributed to the right session.
+
+    On follow-up turns (``follow_up=True``) the "emit zero tags"
+    paragraph is omitted — the model has already seen the persistent
+    self-eval contract from earlier turns / from AGENTS.md, and
+    spamming it the no-match notice on every chatty turn is just
+    context bloat. The session block (if any) is returned alone so
+    a shell ``mega-tron search`` call still gets attributed.
     """
-    return (
+    sess = _session_block(session_id)
+    if follow_up:
+        return sess  # may be "" when session_id is None — true noop
+    base = (
         "## Skills (selected for this turn by mega-tron)\n"
         "\n"
         "(none — no surfaced skill applied; emit zero "
@@ -52,6 +127,7 @@ def _no_match_context() -> str:
         "signal that the top-K missed; do not substitute names from "
         "earlier turns of this conversation.)\n"
     )
+    return base + ("\n" + sess if sess else "")
 
 
 def build_prefix(
@@ -90,6 +166,9 @@ def build_prefix(
 def build_hook_context(
     ranked: list[RankedSkill],
     k: int = 3,
+    *,
+    session_id: str | None = None,
+    follow_up: bool = False,
 ) -> str:
     """Build the codex ``UserPromptSubmit`` hook's ``additionalContext``.
 
@@ -112,9 +191,18 @@ def build_hook_context(
     Use :func:`build_prefix` instead when staging into ``$CODEX_HOME``
     via the shell wrapper (codex inlines each staged skill's
     description natively, so the bare candidate line is enough).
+
+    ``follow_up=True`` emits a *slim* block (catalog header + entries
+    + session block only) for follow-up turns of a multi-turn
+    conversation. The "How to use" prose and the inline self-eval
+    contract are intentionally skipped — they live persistently in
+    AGENTS.md / CLAUDE.md / GEMINI.md, so re-injecting them every
+    turn is pure context bloat. Saves ~1700 tok/turn vs the full
+    block while keeping the catalog the model needs to choose which
+    skill applies and emit `<skill-used>` tags.
     """
     if not ranked:
-        return _no_match_context()
+        return _no_match_context(session_id=session_id, follow_up=follow_up)
     top = ranked[:k]
     names = ", ".join(rs.skill.name for rs in top)
     lines: list[str] = [
@@ -123,16 +211,17 @@ def build_hook_context(
         f"Candidate skills for this task: {names}. "
         f"Apply the ones that fit the user's intent; ignore the rest.",
         "",
-        (
+    ]
+    if not follow_up:
+        lines.append(
             "These skills were semantically ranked as the most relevant for "
             "your prompt. Each entry lists the skill name, the absolute path "
             "to its SKILL.md, and a one-line description — open the SKILL.md "
             "at that path for full instructions when you decide to apply a "
             "skill."
-        ),
-        "",
-        "### Available skills",
-    ]
+        )
+        lines.append("")
+    lines.append("### Available skills")
     for rs in top:
         desc = (rs.skill.description or "").strip().replace("\n", " ")
         lines.append(f"- {rs.skill.name}")
@@ -140,30 +229,35 @@ def build_hook_context(
         lines.append(f"    path: {skill_md}")
         if desc:
             lines.append(f"    desc: {desc}")
-    lines.append("")
-    lines.append("### How to use these skills")
-    lines.append(
-        "- Treat the list above as candidates, not commands. If a skill's "
-        "description clearly matches the user's task, apply it. If none "
-        "fit, proceed without them and say so briefly."
-    )
-    lines.append(
-        "- Open the SKILL.md at the listed `path` to load full instructions. "
-        "When SKILL.md references relative paths (e.g. `scripts/foo.py`), "
-        "resolve them relative to that SKILL.md's directory first."
-    )
-    lines.append(
-        "- If `scripts/` exist, prefer running or patching them instead of "
-        "retyping large code blocks. If `assets/` or templates exist, reuse "
-        "them instead of recreating from scratch."
-    )
-    lines.append(
-        "- If a skill can't be applied cleanly (missing files, unclear "
-        "instructions), state the issue, pick the next-best approach, and "
-        "continue."
-    )
-    lines.append("")
-    lines.append(render_inline_self_eval_contract())
+    if not follow_up:
+        lines.append("")
+        lines.append("### How to use these skills")
+        lines.append(
+            "- Treat the list above as candidates, not commands. If a skill's "
+            "description clearly matches the user's task, apply it. If none "
+            "fit, proceed without them and say so briefly."
+        )
+        lines.append(
+            "- Open the SKILL.md at the listed `path` to load full instructions. "
+            "When SKILL.md references relative paths (e.g. `scripts/foo.py`), "
+            "resolve them relative to that SKILL.md's directory first."
+        )
+        lines.append(
+            "- If `scripts/` exist, prefer running or patching them instead of "
+            "retyping large code blocks. If `assets/` or templates exist, reuse "
+            "them instead of recreating from scratch."
+        )
+        lines.append(
+            "- If a skill can't be applied cleanly (missing files, unclear "
+            "instructions), state the issue, pick the next-best approach, and "
+            "continue."
+        )
+        lines.append("")
+        lines.append(render_inline_self_eval_contract())
+    sess = _session_block(session_id)
+    if sess:
+        lines.append("")
+        lines.append(sess.rstrip("\n"))
     return "\n".join(lines) + "\n"
 
 
@@ -189,6 +283,9 @@ def _read_skill_body(skill_md_path) -> str:
 def build_gemini_hook_context(
     ranked: list[RankedSkill],
     k: int = 3,
+    *,
+    session_id: str | None = None,
+    follow_up: bool = False,
 ) -> str:
     """Build the Gemini CLI ``BeforeAgent`` hook's ``additionalContext``.
 
@@ -208,9 +305,15 @@ def build_gemini_hook_context(
       cannot open the SKILL.md path we hand it. We therefore embed the
       full SKILL.md body (capped per skill, total-capped) directly so
       the model has everything it needs without a follow-up tool call.
+
+    ``follow_up=True`` produces a slim variant for multi-turn
+    conversations: catalog header + names+desc only (NO inlined
+    bodies — the bodies are large and the model has already seen
+    them on first fire) + session block. Saves ~12k chars/turn vs
+    the full Gemini block.
     """
     if not ranked:
-        return _no_match_context()
+        return _no_match_context(session_id=session_id, follow_up=follow_up)
     top = ranked[:k]
     names = ", ".join(f"`{rs.skill.name}`" for rs in top)
     lines: list[str] = [
@@ -221,16 +324,17 @@ def build_gemini_hook_context(
             f"`activate_skill` tool: {names}."
         ),
         "",
-        (
+    ]
+    if not follow_up:
+        lines.append(
             "These skills were semantically ranked as the most relevant for "
             "your prompt. Each entry lists the skill name, a one-line "
             "description, and the full SKILL.md body (inlined because "
             "Gemini's workspace-trust sandbox can't read files outside "
             "the active project)."
-        ),
-        "",
-        "### Available skills",
-    ]
+        )
+        lines.append("")
+    lines.append("### Available skills")
     remaining = _GEMINI_INLINE_BUDGET_CHARS
     for rs in top:
         desc = (rs.skill.description or "").strip().replace("\n", " ")
@@ -239,6 +343,11 @@ def build_gemini_hook_context(
         lines.append(f"    path: {skill_md}")
         if desc:
             lines.append(f"    desc: {desc}")
+        if follow_up:
+            # Slim variant: skip the inlined SKILL.md body entirely.
+            # The model has already seen it on first fire; re-injecting
+            # it every turn dwarfs the rest of the block.
+            continue
         body = _read_skill_body(skill_md)
         if body:
             per_skill_cap = min(_GEMINI_PER_SKILL_BODY_CAP, max(0, remaining))
@@ -253,35 +362,43 @@ def build_gemini_hook_context(
                         f"      ... [truncated; full body at {skill_md}]"
                     )
                 remaining -= len(excerpt)
-    lines.append("")
-    lines.append("### How to use these skills")
-    lines.append(
-        "- If the task clearly matches one of the skills above, call "
-        "`activate_skill` with the corresponding `name`. Multiple matches "
-        "mean activate them all."
-    )
-    lines.append(
-        "- The full SKILL.md body is inlined under each `body:` block "
-        "above — use it directly. Do not call `read_file` on the `path:` "
-        "line; Gemini's workspace-trust sandbox will refuse it."
-    )
-    lines.append(
-        "- If `scripts/` or `assets/` ship with the skill, prefer using "
-        "them over retyping equivalent code from scratch."
-    )
-    lines.append(
-        "- If a skill can't be applied cleanly (missing files, unclear "
-        "instructions), state the issue, pick the next-best approach, and "
-        "continue."
-    )
-    lines.append("")
-    lines.append(render_inline_self_eval_contract())
+    if not follow_up:
+        lines.append("")
+        lines.append("### How to use these skills")
+        lines.append(
+            "- If the task clearly matches one of the skills above, call "
+            "`activate_skill` with the corresponding `name`. Multiple matches "
+            "mean activate them all."
+        )
+        lines.append(
+            "- The full SKILL.md body is inlined under each `body:` block "
+            "above — use it directly. Do not call `read_file` on the `path:` "
+            "line; Gemini's workspace-trust sandbox will refuse it."
+        )
+        lines.append(
+            "- If `scripts/` or `assets/` ship with the skill, prefer using "
+            "them over retyping equivalent code from scratch."
+        )
+        lines.append(
+            "- If a skill can't be applied cleanly (missing files, unclear "
+            "instructions), state the issue, pick the next-best approach, and "
+            "continue."
+        )
+        lines.append("")
+        lines.append(render_inline_self_eval_contract())
+    sess = _session_block(session_id)
+    if sess:
+        lines.append("")
+        lines.append(sess.rstrip("\n"))
     return "\n".join(lines) + "\n"
 
 
 def build_claude_hook_context(
     ranked: list[RankedSkill],
     k: int = 3,
+    *,
+    session_id: str | None = None,
+    follow_up: bool = False,
 ) -> str:
     """Build the Claude Code ``UserPromptSubmit`` hook's ``additionalContext``.
 
@@ -299,9 +416,14 @@ def build_claude_hook_context(
     - Each pick still lists ``name / path / desc`` so Claude can open
       the SKILL.md directly even if it lives outside the natively-loaded
       ``~/.claude/skills`` root (e.g. user-registered ``extra_dirs``).
+
+    ``follow_up=True`` emits the slim variant for multi-turn
+    conversations — catalog header + name/path/desc + session block
+    only. The self-eval contract is omitted (it lives persistently in
+    ~/.claude/CLAUDE.md anyway).
     """
     if not ranked:
-        return _no_match_context()
+        return _no_match_context(session_id=session_id, follow_up=follow_up)
     top = ranked[:k]
     slash_names = ", ".join(f"/{rs.skill.name}" for rs in top)
     lines: list[str] = [
@@ -309,14 +431,15 @@ def build_claude_hook_context(
         "",
         f"Strongly prefer using one of these skills: {slash_names}.",
         "",
-        (
+    ]
+    if not follow_up:
+        lines.append(
             "These skills were semantically ranked as the most relevant for "
             "your prompt. Each entry lists the skill name, the absolute path "
             "to its SKILL.md, and a one-line description."
-        ),
-        "",
-        "### Available skills",
-    ]
+        )
+        lines.append("")
+    lines.append("### Available skills")
     for rs in top:
         desc = (rs.skill.description or "").strip().replace("\n", " ")
         lines.append(f"- /{rs.skill.name}")
@@ -324,28 +447,33 @@ def build_claude_hook_context(
         lines.append(f"    path: {skill_md}")
         if desc:
             lines.append(f"    desc: {desc}")
-    lines.append("")
-    lines.append("### How to use these skills")
-    lines.append(
-        "- If the task clearly matches one of the skills above, invoke it "
-        "with `/skill-name` (or let it auto-load — both work). Multiple "
-        "matches mean use them all."
-    )
-    lines.append(
-        "- The skill's full SKILL.md content loads only when the skill is "
-        "actually invoked; the listing above only carries the description. "
-        "If you need to peek before invoking, open the file at the listed "
-        "`path`."
-    )
-    lines.append(
-        "- If `scripts/` or `assets/` ship with the skill, prefer using "
-        "them over retyping equivalent code from scratch."
-    )
-    lines.append(
-        "- If a skill can't be applied cleanly (missing files, unclear "
-        "instructions), state the issue, pick the next-best approach, and "
-        "continue."
-    )
-    lines.append("")
-    lines.append(render_inline_self_eval_contract())
+    if not follow_up:
+        lines.append("")
+        lines.append("### How to use these skills")
+        lines.append(
+            "- If the task clearly matches one of the skills above, invoke it "
+            "with `/skill-name` (or let it auto-load — both work). Multiple "
+            "matches mean use them all."
+        )
+        lines.append(
+            "- The skill's full SKILL.md content loads only when the skill is "
+            "actually invoked; the listing above only carries the description. "
+            "If you need to peek before invoking, open the file at the listed "
+            "`path`."
+        )
+        lines.append(
+            "- If `scripts/` or `assets/` ship with the skill, prefer using "
+            "them over retyping equivalent code from scratch."
+        )
+        lines.append(
+            "- If a skill can't be applied cleanly (missing files, unclear "
+            "instructions), state the issue, pick the next-best approach, and "
+            "continue."
+        )
+        lines.append("")
+        lines.append(render_inline_self_eval_contract())
+    sess = _session_block(session_id)
+    if sess:
+        lines.append("")
+        lines.append(sess.rstrip("\n"))
     return "\n".join(lines) + "\n"

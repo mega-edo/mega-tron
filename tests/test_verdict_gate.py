@@ -198,3 +198,56 @@ def test_missing_session_id_falls_back_to_legacy(routes_store):
     )
     assert outcome.via == "legacy"
     assert outcome.admitted == []
+
+
+def test_routes_gate_admits_cli_host_routes_for_same_session(routes_store):
+    """A model in an interactive host (e.g. claude_code) may run
+    `mega-tron search` as a shell command on a substantive turn. The
+    CLI writes that routes row under host="cli". The verdict gate
+    must admit `<skill-used>` tags whose names came from that cli row,
+    even though the host-narrowed lookup wouldn't find them — the row
+    provably belongs to the same session because it carries the same
+    session_id."""
+    # Host hook fired on turn 1 ("hi"); surfaced unrelated names.
+    routes_store.record_route(
+        session_id="s-mixed-host",
+        host="claude_code",
+        query_hash="t1",
+        picked_names=["instantly-hello-world"],
+        total_tok=10,
+        k=1,
+        k_reason="dynamic",
+    )
+    # Turn 2 (JWT): model ran `mega-tron search --session-id s-mixed-host
+    # "..."` directly. CLI logged the row under host="cli".
+    routes_store.record_route(
+        session_id="s-mixed-host",
+        host="cli",
+        query_hash="t2",
+        picked_names=["jwt-token-validator", "expressjs-development"],
+        total_tok=80,
+        k=2,
+        k_reason="gap-cut@2",
+    )
+    inv = _FakeInvocation(
+        label="claimed_use",
+        verdicts=["HELPFUL"],
+        reasons=["Followed expressjs-development middleware pattern"],
+    )
+    outcome = filter_invocations(
+        invocations={"expressjs-development": inv},
+        session_id="s-mixed-host",
+        host="claude_code",
+    )
+    assert outcome.via == "routes"
+    # Despite host="claude_code" being the gate's primary host, the
+    # cli-host row for the SAME session_id contributes to the catalog,
+    # so the verdict is admitted.
+    assert outcome.admitted == [
+        {
+            "skill": "expressjs-development",
+            "verdict": "HELPFUL",
+            "reason": "Followed expressjs-development middleware pattern",
+        }
+    ]
+    assert outcome.skipped_not_in_catalog == []

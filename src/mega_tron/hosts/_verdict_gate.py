@@ -76,9 +76,22 @@ def filter_invocations(
             from mega_tron.verdicts.store import Store
 
             store = Store(store_path())
+            # First: host-narrowed lookup (what the host's own hook
+            # surfaced this session).
             picked = store.session_picked_names(
                 session_id=session_id, host=host
             )
+            # Then: widen to host-agnostic union for the SAME session.
+            # This catches `mega-tron search` shell calls the model made
+            # mid-session (those land under host="cli"). The host-narrow
+            # filter was too tight: a JWT-related cli routes row written
+            # by the model's own shell call should be admitted against
+            # the host session's verdict gate, since it provably came
+            # from this same conversation (same session_id).
+            cli_picked = store.session_picked_names(
+                session_id=session_id, host="cli"
+            )
+            picked |= cli_picked
             if picked:
                 via = "routes"
         except Exception:

@@ -246,18 +246,23 @@ def cmd_hook(args: argparse.Namespace) -> int:
 
     session_id = data.get("session_id") or data.get("sessionId")
     first_fire = _is_first_fire(session_id)
-
-    # Only the first hook of a session auto-fires routing. Subsequent
-    # turns are a true noop — the search-CLI guidance lives in
-    # ~/.codex/AGENTS.md, which codex bakes into the system prompt itself.
-    if not first_fire:
-        return _emit_empty()
+    # Follow-up turns re-rank but emit a *slim* catalog-only block.
+    # Codex's `reasoning_effort=xhigh` model ignored the AGENTS.md
+    # "MUST call mega-tron search" instruction in earlier QA, so we
+    # inject the catalog directly every turn — the model now sees the
+    # JWT-relevant catalog on Turn 2 without needing to issue a shell
+    # call. The slim block (~350 tok) skips the inline self-eval
+    # contract and "How to use" prose (those live persistently in
+    # AGENTS.md), keeping per-turn context bloat bounded.
+    follow_up = not first_fire
 
     # Wisdom ignition runs FIRST so the (~80s) MEGA-Code curator call gets
     # maximum lead time. It's fire-and-forget; this turn still routes off
     # whatever is already on disk. Next-session prompts benefit when the
     # new SKILL.md files land in the auto-discovered wisdom dir.
-    _dispatch_wisdom_ignite(prompt)
+    # Only on first fire — the curator is per-session, not per-turn.
+    if first_fire:
+        _dispatch_wisdom_ignite(prompt)
 
     if args.skills_dir:
         skills_dirs = [Path(args.skills_dir)]
@@ -302,10 +307,16 @@ def cmd_hook(args: argparse.Namespace) -> int:
                 "cache_path": str(cache_path),
                 "top_k": args.top_k,
                 "prepend_k": args.prepend_k,
+                "emit_mode": "catalog_only" if follow_up else "full",
             }
         )
     if daemon_response and daemon_response.get("ok"):
-        ctx = daemon_response.get("additional_context") or ""
+        from mega_tron.prepender import append_session_block
+
+        ctx = append_session_block(
+            daemon_response.get("additional_context") or "",
+            session_id,
+        )
         # Log the route even on the daemon fast-path. Without this, only
         # cold-path turns reach record_route and the dashboard's
         # "measured median" never accumulates samples on the very hosts
@@ -394,7 +405,9 @@ def cmd_hook(args: argparse.Namespace) -> int:
     if not ranked:
         return _emit_empty()
 
-    ctx = build_hook_context(ranked, k=args.prepend_k)
+    ctx = build_hook_context(
+        ranked, k=args.prepend_k, session_id=session_id, follow_up=follow_up
+    )
     if not ctx.strip():
         return _emit_empty()
 

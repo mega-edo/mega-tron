@@ -236,6 +236,18 @@ def main(argv: list[str] | None = None) -> int:
         help="When --output=stage, stage symlinks but emit empty stdout.",
     )
     p_search.add_argument("--json", action="store_true", help="Emit JSON instead of plain text.")
+    p_search.add_argument(
+        "--session-id",
+        default=None,
+        help=(
+            "Host session id to credit this routing call against. Resolved "
+            "from (1) this flag, (2) env MEGA_SESSION_ID, (3) None. When "
+            "models invoke `mega-tron search` from an interactive host "
+            "(codex / claude / gemini) the per-turn skill block tells them "
+            "to pass the host's session id here so the verdict gate can "
+            "credit their `<skill-used>` tags."
+        ),
+    )
     _add_cache_path(p_search)
     p_search.set_defaults(func=cmd_search)
 

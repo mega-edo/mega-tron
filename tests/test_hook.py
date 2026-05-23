@@ -107,9 +107,14 @@ def test_hook_emits_additional_context(fake_embedder, fixtures_dir, tmp_path):
     assert "MUST use" not in ctx
     assert "Trigger rules" not in ctx
     assert "<skill-used" in ctx  # tag-emission reminder is inline
-    # search-CLI guidance lives in AGENTS.md, not per-turn.
+    # search-CLI guidance lives in AGENTS.md, not per-turn — EXCEPT
+    # for the session-id stamp block, which by design includes a
+    # `mega-tron search ... --session-id <id>` example so the model
+    # has a copy-pasteable shell call with the literal session id.
     assert "mega-tron find" not in ctx
-    assert "mega-tron search" not in ctx
+    if "### Session" not in ctx:
+        # No session_id supplied → the legacy invariant holds.
+        assert "mega-tron search" not in ctx
 
 
 def test_hook_empty_prompt_returns_no_context(fake_embedder, fixtures_dir, tmp_path):
@@ -174,10 +179,17 @@ def test_hook_respects_top_k_and_prepend_k(fake_embedder, fixtures_dir, tmp_path
     assert "$" not in candidate_line
 
 
-def test_hook_subsequent_turn_is_noop(fake_embedder, fixtures_dir, tmp_path):
-    """Only the first hook of a session emits a routing prefix. Every
-    subsequent turn returns empty stdout — search-CLI / evaluation
-    guidance lives in AGENTS.md, not in per-turn additionalContext."""
+def test_hook_subsequent_turn_emits_slim_block(fake_embedder, fixtures_dir, tmp_path):
+    """Follow-up turns now re-rank and emit a *slim* catalog block.
+
+    Codex's `reasoning_effort=xhigh` model historically ignored the
+    AGENTS.md "MUST call mega-tron search" instruction on follow-up
+    turns, so the only way to make the model see fresh JWT / SQL
+    catalogs on Turn 2 / Turn 4 is to inject them directly. The slim
+    block omits the "How to use" prose and the inline self-eval
+    contract (both live persistently in AGENTS.md), keeping per-turn
+    context bloat bounded.
+    """
     args = _hook_args(
         skills_dir=str(fixtures_dir / "skills"),
         cache_path=str(tmp_path / "c.npz"),
@@ -199,11 +211,27 @@ def test_hook_subsequent_turn_is_noop(fake_embedder, fixtures_dir, tmp_path):
 
     assert rc1 == 0 and rc2 == 0
     ctx1 = json.loads(out1)["hookSpecificOutput"]["additionalContext"]
-    # First fire: full skills block emitted, no embedded search-CLI hint
-    # (that guidance lives in AGENTS.md).
+    # First fire: full skills block emitted, including the self-eval
+    # contract and "How to use" prose.
     assert ctx1.startswith("## Skills (selected for this turn")
     assert "Candidate skills for this task" in ctx1
+    assert "### How to use these skills" in ctx1
+    assert "verdict=" in ctx1  # self-eval contract present
     assert "mega-tron find" not in ctx1
-    assert "mega-tron search" not in ctx1
-    # Subsequent: hook emits nothing — codex treats it as a no-op turn.
-    assert out2 == ""
+
+    # Subsequent: slim catalog block. Same header + candidate list +
+    # Available skills, but NO "How to use" prose and NO self-eval
+    # contract (they live persistently in AGENTS.md).
+    assert out2 != ""
+    ctx2 = json.loads(out2)["hookSpecificOutput"]["additionalContext"]
+    assert ctx2.startswith("## Skills (selected for this turn")
+    assert "Candidate skills for this task" in ctx2
+    assert "### Available skills" in ctx2
+    assert "### How to use these skills" not in ctx2
+    assert "verdict=" not in ctx2  # self-eval contract omitted on follow-up
+    # Slim block should be meaningfully smaller than the full first-
+    # fire block — guards against accidentally restoring (B)+(C) here.
+    assert len(ctx2) < len(ctx1) * 0.5, (
+        f"slim block ({len(ctx2)}b) not meaningfully smaller than "
+        f"full block ({len(ctx1)}b)"
+    )
