@@ -7,6 +7,7 @@ protocol.
 """
 from __future__ import annotations
 
+import os
 import shutil
 import socket
 import tempfile
@@ -205,6 +206,80 @@ def test_daemon_empty_prompt_returns_error(daemon_in_thread, tmp_path):
         socket_path=daemon_in_thread,
     )
     assert resp["ok"] is False
+
+
+# --- spawn-race guard --------------------------------------------------------
+#
+# The hook calls ``spawn_detached`` whenever ``is_running()`` returns
+# False. On the first turn of two parallel host sessions, the socket
+# probe inside ``is_running`` sees nothing for both — without the pid-
+# file gate we'd fork two daemons in parallel, both paying the embedder
+# cold-load. ``_has_live_daemon_pid`` blocks the second spawn.
+
+
+def test_has_live_daemon_pid_missing_file_returns_false(monkeypatch, tmp_path):
+    """No pid file at all → spawn must proceed (the daemon really is
+    not running yet)."""
+    pid_path = tmp_path / "missing.pid"
+    monkeypatch.setattr(daemon_mod, "default_pid_path", lambda: pid_path)
+    assert daemon_mod._has_live_daemon_pid() is False
+
+
+def test_has_live_daemon_pid_stale_pid_returns_false(monkeypatch, tmp_path):
+    """A pid file pointing at a no-longer-running process is stale —
+    spawn must proceed and the spawned daemon will overwrite the file."""
+    pid_path = tmp_path / "stale.pid"
+    # PID 2 should never be a live user process on a posix system; pick
+    # something safer just in case by searching upward from 2.
+    candidate = 2
+    while True:
+        try:
+            os.kill(candidate, 0)
+        except ProcessLookupError:
+            break
+        except PermissionError:
+            candidate += 1
+            if candidate > 99999:
+                pytest.skip("could not find a non-existent pid for test")
+        else:
+            candidate += 1
+    pid_path.write_text(str(candidate))
+    monkeypatch.setattr(daemon_mod, "default_pid_path", lambda: pid_path)
+    assert daemon_mod._has_live_daemon_pid() is False
+
+
+def test_has_live_daemon_pid_live_pid_returns_true(monkeypatch, tmp_path):
+    """A pid file pointing at this very test process counts as 'live'
+    — the spawn guard refuses to start another daemon."""
+    pid_path = tmp_path / "live.pid"
+    pid_path.write_text(str(os.getpid()))
+    monkeypatch.setattr(daemon_mod, "default_pid_path", lambda: pid_path)
+    assert daemon_mod._has_live_daemon_pid() is True
+
+
+def test_has_live_daemon_pid_garbage_returns_false(monkeypatch, tmp_path):
+    """Corrupt pid file (non-integer content) is treated like missing."""
+    pid_path = tmp_path / "garbage.pid"
+    pid_path.write_text("not-a-number")
+    monkeypatch.setattr(daemon_mod, "default_pid_path", lambda: pid_path)
+    assert daemon_mod._has_live_daemon_pid() is False
+
+
+def test_spawn_detached_skips_when_pid_file_live(monkeypatch, tmp_path):
+    """When _has_live_daemon_pid() returns True, spawn_detached must
+    short-circuit and never reach subprocess.Popen."""
+    monkeypatch.setattr(daemon_mod, "_has_live_daemon_pid", lambda: True)
+    called = {"count": 0}
+
+    class _BoomPopen:
+        def __init__(self, *args, **kwargs):  # pragma: no cover — should not fire
+            called["count"] += 1
+            raise AssertionError("subprocess.Popen must not be called")
+
+    monkeypatch.setattr("subprocess.Popen", _BoomPopen)
+    result = daemon_mod.spawn_detached()
+    assert result is None
+    assert called["count"] == 0
 
 
 def test_client_query_returns_none_when_socket_missing(tmp_path):

@@ -546,6 +546,47 @@ def _serve_one(
 # ---------------------------------------------------------------------------
 
 
+def _has_live_daemon_pid() -> bool:
+    """Return True if the daemon pid file points at a currently-alive process.
+
+    Catches the spawn-race where two host hooks fire in parallel: both
+    see ``is_running() == False`` (the first daemon hasn't bound its
+    socket yet) and both call ``spawn_detached()``. The second daemon's
+    own startup probe will recognize the first and exit cleanly, but in
+    the brief window before the first one bound the socket we'd have
+    two child processes booting the embedder in parallel. Cheap to
+    check the pid file as a second gate before forking.
+
+    Best-effort: a missing or unreadable pid file returns ``False`` so
+    we fall through to the spawn (matching the prior behaviour). An
+    int that doesn't map to a live process is treated as stale and
+    also returns ``False``.
+    """
+    pid_path = default_pid_path()
+    try:
+        raw = pid_path.read_text().strip()
+    except (OSError, ValueError):
+        return False
+    try:
+        pid = int(raw)
+    except ValueError:
+        return False
+    if pid <= 0:
+        return False
+    # ``os.kill(pid, 0)`` is the POSIX idiom: signal 0 doesn't deliver
+    # anything; success means the process exists and is signalable from
+    # this UID. PermissionError means the pid exists but isn't ours —
+    # still treat as "live" since unlinking the socket from under
+    # another user's daemon is worse than skipping the spawn.
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False  # stale pid file
+    except PermissionError:
+        return True
+    return True
+
+
 def spawn_detached() -> int | None:
     """Fork-exec ``mega-tron daemon serve`` as a detached process.
 
@@ -560,8 +601,18 @@ def spawn_detached() -> int | None:
     again, which on Gemini exceeds the host's 60s BeforeAgent hook timeout
     and silently drops the verdict for that session. Pinning the lifetime
     here keeps the router warm for the full uptime of the user's machine.
+
+    Multi-spawn guard: before forking, we re-check the pid file. Two
+    host hooks that fire in parallel both see ``is_running() == False``
+    on the first turn of a session — that probe goes through a socket
+    that the first daemon hasn't bound yet. Without the pid-file gate
+    we'd start two embedders in parallel; the second would eventually
+    notice and exit, but only after paying the cold-load itself.
+    Skipping the spawn here keeps the launch idempotent.
     """
     if daemon_disabled():
+        return None
+    if _has_live_daemon_pid():
         return None
     try:
         import subprocess

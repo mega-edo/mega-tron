@@ -955,6 +955,20 @@ def main(argv: list[str] | None = None) -> int:
             "Default: auto-detect every installed host."
         ),
     )
+    p_qa.add_argument(
+        "--multi-turn",
+        action="store_true",
+        help=(
+            "Run a 4-turn (hi → JWT → giraffe → SQL-injection) scenario "
+            "instead of the single-shot marker skill. Verifies multi-turn "
+            "verdict capture: each turn re-ranks, host=routes row count "
+            "should reach 4 per host, Turn 2 catalog includes JWT family, "
+            "Turn 4 includes SQL-injection family, and ≥ 1 verdict row "
+            "lands in the DB per host. Slow (~4 × LLM round-trip per "
+            "host) — developer / maintainer tool, not part of routine "
+            "setup."
+        ),
+    )
     p_qa.set_defaults(func=cmd_qa_live)
 
     # --- regressions ---------------------------------------------------------

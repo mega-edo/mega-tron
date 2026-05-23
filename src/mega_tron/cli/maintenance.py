@@ -286,7 +286,6 @@ def cmd_qa_live(args: argparse.Namespace) -> int:
     Exits 0 if ≥1 host PASSes; 1 otherwise. Designed to be safe to run
     as the last step of an unattended agent-driven install.
     """
-    from mega_tron.cli.qa_live import run_qa_live
     from mega_tron.hosts import detect_hosts
 
     if args.host:
@@ -313,5 +312,12 @@ def cmd_qa_live(args: argparse.Namespace) -> int:
                 file=sys.stderr,
             )
             return 1
+
+    if getattr(args, "multi_turn", False):
+        from mega_tron.cli.qa_live_multi import run_qa_live_multi_turn
+
+        return run_qa_live_multi_turn(hosts)
+
+    from mega_tron.cli.qa_live import run_qa_live
 
     return run_qa_live(hosts)
