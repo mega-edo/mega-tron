@@ -158,9 +158,11 @@ Solid lines = MEGA Tron. Dashed = semantic search only. Same router, same questi
 
 Requires Python ≥ 3.11 and [`uv`](https://docs.astral.sh/uv/).
 
-Open Codex / Claude Code / Gemini and paste:
+🤖 Tell Claude / Codex / Cursor / Copilot:
 
-> Read [`docs/agent installation.md`](docs/agent%20installation.md) from the mega-tron repo and install or update mega-tron on my machine following that procedure.
+```
+install or update mega-tron for me following https://github.com/mega-edo/mega-tron/blob/main/docs/agent%20installation.md
+```
 
 That covers fresh installs, updates, the three setup choices (embedder profile / Claude native-mode / post-install qa-live), and the end-to-end smoke test — the agent asks you at every decision point instead of choosing silently. It's the path most users want; installation involves three host-specific choices an agent following a written procedure will get right faster than you can read this section.
 
