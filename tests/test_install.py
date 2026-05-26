@@ -548,6 +548,86 @@ def test_install_codex_trust_skips_unmanaged_hooks(tmp_path):
         assert CODEX_TRUST_SENTINEL_START not in cfg.read_text()
 
 
+def test_install_codex_trust_dedupes_codex_native_entries(tmp_path):
+    """Codex itself writes ``[hooks.state."<hooks.json>:event:0:0"]`` entries
+    when the user accepts a managed hook via the ``/hooks`` trust UI. If we
+    then append our sentinel-fenced block carrying the same keys, the
+    resulting config.toml has duplicate table headers and codex rejects it
+    with a ``duplicate key`` TOML parse error — every ``codex exec``
+    returns rc=1 until the duplicate is removed. The installer must
+    detect any unfenced matching entry and strip it before writing our
+    block; the trust hash on both sides is identical so this is safe.
+    """
+    hooks = tmp_path / "hooks.json"
+    hooks.write_text(json.dumps({
+        "hooks": {
+            "UserPromptSubmit": [{
+                "_mega_tron_managed": "0.5.0",
+                "matcher": ".*",
+                "hooks": [{"type": "command", "command": "mega-tron hook"}],
+            }],
+            "Stop": [{
+                "_mega_tron_managed": "0.5.0",
+                "matcher": ".*",
+                "hooks": [{"type": "command", "command": "mega-tron stop-hook"}],
+            }],
+        }
+    }))
+    cfg = tmp_path / "config.toml"
+    # Simulate codex having already auto-stamped its own (unfenced) trust
+    # entries for the same keys — this is the failure scenario.
+    cfg.write_text(
+        'model = "gpt-5"\n\n'
+        f'[hooks.state."{hooks}:user_prompt_submit:0:0"]\n'
+        'trusted_hash = "sha256:legacy"\n\n'
+        f'[hooks.state."{hooks}:stop:0:0"]\n'
+        'trusted_hash = "sha256:legacy-stop"\n\n'
+        '[unrelated]\n'
+        'keep = "me"\n'
+    )
+    _install_codex_trust(str(cfg), hooks)
+    body = cfg.read_text()
+    # User content untouched.
+    assert 'model = "gpt-5"' in body
+    assert '[unrelated]\nkeep = "me"' in body
+    # Managed block present.
+    assert CODEX_TRUST_SENTINEL_START in body
+    # And exactly ONE entry per event key — no duplicates that would
+    # break TOML parsing.
+    assert body.count(f'[hooks.state."{hooks}:user_prompt_submit:0:0"]') == 1
+    assert body.count(f'[hooks.state."{hooks}:stop:0:0"]') == 1
+
+
+def test_install_codex_trust_does_not_touch_unrelated_hookstate(tmp_path):
+    """Another plugin's hook-trust entries (for a different hooks.json path)
+    must survive the dedup pass — we only strip entries that collide with
+    OUR hooks.json keys."""
+    hooks = tmp_path / "hooks.json"
+    hooks.write_text(json.dumps({
+        "hooks": {
+            "UserPromptSubmit": [{
+                "_mega_tron_managed": "0.5.0",
+                "matcher": ".*",
+                "hooks": [{"type": "command", "command": "mega-tron hook"}],
+            }]
+        }
+    }))
+    cfg = tmp_path / "config.toml"
+    # An unrelated plugin's hook-trust entry sitting in the same file.
+    other_hooks = tmp_path / "other-plugin" / "hooks.json"
+    cfg.write_text(
+        f'[hooks.state."{other_hooks}:user_prompt_submit:0:0"]\n'
+        'trusted_hash = "sha256:other-plugin"\n'
+    )
+    _install_codex_trust(str(cfg), hooks)
+    body = cfg.read_text()
+    # The other plugin's trust entry stays.
+    assert f'[hooks.state."{other_hooks}:user_prompt_submit:0:0"]' in body
+    assert 'sha256:other-plugin' in body
+    # Our managed block is also written.
+    assert CODEX_TRUST_SENTINEL_START in body
+
+
 def test_uninstall_codex_config_toml_strips_both_blocks(tmp_path):
     hooks = tmp_path / "hooks.json"
     hooks.write_text(json.dumps({

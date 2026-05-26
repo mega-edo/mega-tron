@@ -465,6 +465,72 @@ def render_codex_trust_block(hooks_json_path: Path, hooks_data: dict) -> str:
     )
 
 
+def _strip_codex_native_trust_keys(existing: str, hooks_path: Path) -> str:
+    """Remove any *unfenced* ``[hooks.state."<hooks_path>:event:row:col"]``
+    table entries that codex CLI itself may have written when the user
+    accepted a managed hook via the ``/hooks`` trust UI.
+
+    Without this step, our sentinel-fenced trust block can collide with
+    codex's own entry for the same key, producing a `duplicate key`
+    TOML parse error that takes the entire codex CLI offline (every
+    `codex exec` returns rc=1 with the parser error). The keys carry
+    the same hash on both sides, so dropping the codex-side
+    (unfenced) copy is safe: our managed block re-establishes trust on
+    the next session.
+
+    Only entries *outside* our sentinel block are stripped — we never
+    touch our own managed block here. We also only target entries
+    whose key prefix matches the absolute `hooks_path` we just wrote,
+    so other plugins' trust entries are left alone.
+    """
+    if CODEX_TRUST_SENTINEL_START in existing:
+        managed_start = existing.index(CODEX_TRUST_SENTINEL_START)
+        managed_end = (
+            existing.index(CODEX_TRUST_SENTINEL_END)
+            + len(CODEX_TRUST_SENTINEL_END)
+        )
+    else:
+        managed_start = -1
+        managed_end = -1
+    key_prefix = f'[hooks.state."{hooks_path}:'
+    out_chunks: list[str] = []
+    cursor = 0
+    n = len(existing)
+    while cursor < n:
+        # Preserve our own managed block verbatim — we never strip
+        # entries from inside it.
+        if managed_start != -1 and cursor == managed_start:
+            out_chunks.append(existing[managed_start:managed_end])
+            cursor = managed_end
+            continue
+        nl = existing.find("\n", cursor)
+        line_end = n if nl == -1 else nl + 1
+        line = existing[cursor:line_end]
+        if line.lstrip().startswith(key_prefix):
+            # Drop this `[hooks.state."…"]` table header and any
+            # immediately-following `trusted_hash = …` lines (codex
+            # writes the table as header + one value line).
+            cursor = line_end
+            while cursor < n:
+                nl2 = existing.find("\n", cursor)
+                next_end = n if nl2 == -1 else nl2 + 1
+                stripped = existing[cursor:next_end].strip()
+                if not stripped or stripped.startswith("["):
+                    break
+                if stripped.startswith("trusted_hash"):
+                    cursor = next_end
+                    continue
+                break
+            # Eat one trailing blank line so we don't accumulate
+            # empty separators each install run.
+            if cursor < n and existing[cursor:cursor + 1] == "\n":
+                cursor += 1
+            continue
+        out_chunks.append(line)
+        cursor = line_end
+    return "".join(out_chunks)
+
+
 def _install_codex_trust(
     codex_config_path_override: str | None,
     hooks_path: Path,
@@ -498,6 +564,14 @@ def _install_codex_trust(
     )
     cfg_path.parent.mkdir(parents=True, exist_ok=True)
     existing = cfg_path.read_text(encoding="utf-8") if cfg_path.exists() else ""
+    # Codex itself writes [hooks.state."<hooks.json>:user_prompt_submit:0:0"]
+    # entries the first time the user trusts a managed hook via `/hooks`.
+    # If we then write our own sentinel-fenced trust block carrying the
+    # same keys, the resulting config.toml has duplicate table headers
+    # and codex refuses to load it (`duplicate key` parse error blocks
+    # every codex command). Strip any *unfenced* matching keys before
+    # writing our managed block so the two paths never collide.
+    existing = _strip_codex_native_trust_keys(existing, hooks_path)
     updated = _replace_block(
         existing,
         trust_block,
