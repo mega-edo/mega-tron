@@ -243,6 +243,8 @@ def persist_verdicts(
             from mega_tron.verdicts.embeddings import (
                 AUTO_COMPACT_COSINE,
                 AUTO_COMPACT_THRESHOLD,
+                RATIO_AUTO_COMPACT_FLOOR,
+                RATIO_AUTO_COMPACT_MULTIPLIER,
                 VerdictEmbeddingsStore,
             )
 
@@ -262,11 +264,23 @@ def persist_verdicts(
                     embedding=vec,
                 )
 
-            # Auto-compact when the corpus crosses the high-water
-            # mark. Cheap (per-group matmul), runs at most once per
-            # stop-hook batch. The SQLite verdicts table is untouched
-            # so regression analysis remains time-series-true.
-            if len(ves) > AUTO_COMPACT_THRESHOLD:
+            # Auto-compact when EITHER trigger fires:
+            #   (a) raw row count crosses the disk-cost high-water mark
+            #       (10K — protects long-term memory residency)
+            #   (b) row count exceeds verdicts × 1.5 with at least 50
+            #       rows on disk (catches silence-loop accumulation where
+            #       one busy skill grows the npz faster than other skills
+            #       earn fresh evaluations)
+            # Cheap (per-group matmul), runs at most once per stop-hook
+            # batch. The SQLite verdicts table is untouched so regression
+            # analysis remains time-series-true.
+            ves_rows = len(ves)
+            should_compact = ves_rows > AUTO_COMPACT_THRESHOLD
+            if not should_compact and ves_rows >= RATIO_AUTO_COMPACT_FLOOR:
+                verdicts_count = store.count_verdicts()
+                if verdicts_count > 0 and ves_rows > verdicts_count * RATIO_AUTO_COMPACT_MULTIPLIER:
+                    should_compact = True
+            if should_compact:
                 report = ves.compact(
                     threshold=AUTO_COMPACT_COSINE,
                     get_reason=store.get_verdict_reason,

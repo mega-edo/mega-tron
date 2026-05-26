@@ -15,6 +15,7 @@ from mega_tron.dynamic_k import (
     _zscores,
     dynamic_k,
     profile_for,
+    silence_penalty,
     softmax_entropy,
 )
 
@@ -264,3 +265,102 @@ def test_custom_k_min_floor_respected():
     scores = [0.90, 0.05, 0.05, 0.04, 0.04, 0.03, 0.03, 0.02, 0.02, 0.01]
     k, _ = dynamic_k(scores, cfg=cfg)
     assert k == 4
+
+
+# --- Silence penalty -------------------------------------------------------
+
+
+def test_silence_penalty_zero_at_cold_start():
+    """A never-surfaced candidate gets no penalty (log1p(0) = 0)."""
+    assert silence_penalty(0, 0, 0) == 0.0
+
+
+def test_silence_penalty_grows_with_surface_count():
+    """Penalty must be monotone non-decreasing in surface count when
+    verdict density stays at 0 (the silence-loop trap)."""
+    p1 = silence_penalty(1, 0, 0)
+    p10 = silence_penalty(10, 0, 0)
+    p50 = silence_penalty(50, 0, 0)
+    p200 = silence_penalty(200, 0, 0)
+    assert p1 < p10 < p50 < p200
+
+
+def test_silence_penalty_is_smooth_not_cliff():
+    """No discrete cliff at any boundary — adjacent surface counts
+    differ by a strictly decreasing (log-concave) amount, not by a
+    step change at any specific N. This rules out the 19-vs-20
+    problem of a discrete threshold: the slope at the user's chosen
+    threshold is the same as the slope one off either side."""
+    deltas = [
+        silence_penalty(n + 1, 0, 0) - silence_penalty(n, 0, 0)
+        for n in range(5, 50)
+    ]
+    # Monotone positive AND monotone-decreasing (log shape).
+    assert all(d > 0 for d in deltas)
+    for i in range(1, len(deltas)):
+        assert deltas[i] <= deltas[i - 1], (
+            f"non-monotone delta at n={5 + i}: {deltas[i]} > {deltas[i - 1]}"
+        )
+
+
+def test_silence_penalty_disarms_with_any_verdict():
+    """A single verdict (helpful or harmful) noticeably reduces the
+    penalty; reaching full verdict_density (= surfaced) zeroes it."""
+    bare = silence_penalty(50, 0, 0)
+    one_helpful = silence_penalty(50, 1, 0)
+    one_harmful = silence_penalty(50, 0, 1)
+    five_helpful = silence_penalty(50, 5, 0)
+    fully_evaluated = silence_penalty(50, 50, 0)
+    assert one_helpful < bare
+    assert one_harmful < bare
+    assert five_helpful < one_helpful
+    assert fully_evaluated == 0.0
+
+
+def test_silence_penalty_alpha_zero_disables():
+    """Explicit alpha=0 returns 0 regardless of inputs."""
+    assert silence_penalty(100, 0, 0, alpha=0.0) == 0.0
+
+
+def test_dynamic_k_default_parity_when_candidate_stats_none():
+    """Backwards compat: calling without candidate_stats must yield
+    the same (k, reason) as before the silence-penalty plumbing."""
+    scores = [0.78, 0.62, 0.58, 0.41, 0.38, 0.36, 0.34, 0.30, 0.29, 0.28]
+    k_before, reason_before = dynamic_k(scores)
+    k_after, reason_after = dynamic_k(scores, candidate_stats=None)
+    assert (k_before, reason_before) == (k_after, reason_after)
+
+
+def test_dynamic_k_silence_penalty_can_shift_branch_only_when_meaningful():
+    """The silence penalty does not flip the K branch for a
+    distribution where the elbow is already clear. Designed as a
+    regression test: at production α=0.02, a candidate at the elbow
+    with surfaced=50 / verdicts=0 should not catastrophically narrow
+    K — it costs ≤ 0.08, not enough to cross thresholds tuned at
+    z-scale."""
+    # Clear gap-cut distribution; top1 = 0.78, gap to top2 = 0.16.
+    scores = [0.78, 0.62, 0.58, 0.41, 0.38, 0.36, 0.34, 0.30, 0.29, 0.28]
+    # All candidates "silent" (worst case for the penalty).
+    stats = [(50, 0, 0)] * len(scores)
+    k_baseline, _ = dynamic_k(scores)
+    k_penalized, _ = dynamic_k(scores, candidate_stats=stats)
+    # Penalty must not abstain when the baseline didn't.
+    assert k_baseline > 0
+    assert k_penalized > 0
+
+
+def test_dynamic_k_silence_penalty_disarms_for_evaluated_top():
+    """When the top candidate has plenty of verdicts, its score
+    survives the penalty unchanged. This is the load-bearing case:
+    we want healthy skills to keep winning."""
+    scores = [0.78, 0.62, 0.58, 0.41, 0.38]
+    # Top is well-evaluated; rest are silent.
+    stats = [(50, 25, 0), (50, 0, 0), (50, 0, 0), (50, 0, 0), (50, 0, 0)]
+    k, _ = dynamic_k(scores, candidate_stats=stats)
+    assert k >= 2  # k_min floor, never an abstain on a healthy distribution
+
+
+def test_dynamic_k_silence_penalty_preserves_empty_branch():
+    """Empty scores still return (0, 'empty') regardless of stats."""
+    k, reason = dynamic_k([], candidate_stats=[])
+    assert (k, reason) == (0, "empty")

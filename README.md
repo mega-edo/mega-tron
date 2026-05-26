@@ -347,6 +347,7 @@ A fixed top-5 is too rigid. Some prompts are unambiguous (one obvious skill); so
 score distribution     │ z_top1 low,  z_entropy high     →  uniform noise, K = 0 (null prompt)
 becomes ───────────►   │ z_entropy very high             →  ambiguous, K = wider window
                        │ scores[0] < embedder abs_floor  →  nonsense, K = 0
+                       │ surfaced ≫ verdicts             →  silence-penalty applied (smooth; lets a fresher peer enter K)
 ```
 
 The `abs_floor` is set per-embedder because "good enough" varies by model. The default policy returns `(K, reason)` — e.g. `(2, "gap-cut@2")`, `(0, "uniform-null")` — visible in CLI telemetry.
@@ -434,6 +435,8 @@ final = (semantic
 - **context match** compares the *current* query against natural-language `helpful_contexts` / `harmful_contexts` strings, so "validate JWT audience" and "rotate JWT signing keys" stay separated even though they share a skill
 - **harmful weight is 1.5× helpful** — false-positives are cheaper than false-negatives, so we punish HARMFUL evidence asymmetrically
 - **related verdict** consults the embedding store for the most semantically similar past verdicts and pulls their polarity in
+
+Separately at K-selection time, dynamic K subtracts a smooth `silence_penalty(surfaced, helpful, harmful)` from a *private* score copy to edge out candidates that get surfaced repeatedly without ever earning a verdict tag. The penalty self-disarms as soon as any verdict lands and never touches the *displayed* `final` — only the K boundary. See [`docs/routing-algorithm.md` §Silence penalty](docs/routing-algorithm.md) for the formula.
 
 </details>
 

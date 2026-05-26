@@ -32,8 +32,73 @@ fallback inside the staged window. ``k_min=2`` is the safety floor.
 from __future__ import annotations
 
 import math
+import os
 from dataclasses import dataclass
 from typing import Sequence
+
+
+# --- Silence penalty (continuous guard against silence-anchored loops) ---
+#
+# A skill that gets surfaced repeatedly without ever earning a verdict
+# is the symptom of cosine-only anchoring: the router never sees a
+# signal back from `<skill-used>` tags, so the same skill keeps
+# winning the top slot turn after turn. The silence penalty is a small
+# smooth down-shift applied to each candidate's score *only at K-
+# selection time* — it does not change the displayed score, only
+# whether the candidate makes it into K. As soon as any verdict
+# (HELPFUL, HARMFUL, or NEUTRAL) lands, the penalty fades smoothly
+# toward zero. Discrete cliff alternatives were rejected because they
+# create a 19-vs-20 boundary problem.
+#
+# Formula:  α × log1p(surfaced) × max(0, 1 − verdict_density)
+# where verdict_density = (helpful + harmful) / max(1, surfaced)
+#
+# Penalty scale at α=0.02 (default):
+#   surfaced=10,  no verdicts  → 0.02 × 2.40 × 1.0 ≈ 0.048
+#   surfaced=50,  no verdicts  → 0.02 × 3.93 × 1.0 ≈ 0.079
+#   surfaced=50,  1 verdict    → 0.02 × 3.93 × 0.98 ≈ 0.077
+#   surfaced=50,  5 verdicts   → 0.02 × 3.93 × 0.90 ≈ 0.071
+#   surfaced=50, 25 verdicts   → 0.02 × 3.93 × 0.50 ≈ 0.039
+#   surfaced=50, 50 verdicts   → 0 (fully disarmed)
+#
+# Same scale as `count_bonus_contribution` in ranker.py (W_COUNT=0.10
+# × bonus∈[-0.5,+0.5] ≈ ±0.05) so a long-silent skill loses roughly
+# what a consistently-HARMFUL skill would lose — strong enough to
+# break top-1 ties, weak enough not to bury a genuinely-best-cosine
+# match.
+_SILENCE_PENALTY_ALPHA_DEFAULT = 0.02
+
+
+def _silence_penalty_alpha() -> float:
+    """Read α from ``MEGA_SILENCE_PENALTY_ALPHA``. Defaults to 0.02.
+    Setting it to 0 disables the penalty entirely (parity with the
+    pre-penalty K policy)."""
+    raw = os.environ.get("MEGA_SILENCE_PENALTY_ALPHA")
+    if raw is None or raw == "":
+        return _SILENCE_PENALTY_ALPHA_DEFAULT
+    try:
+        return float(raw)
+    except ValueError:
+        return _SILENCE_PENALTY_ALPHA_DEFAULT
+
+
+def silence_penalty(
+    surfaced: int, helpful: int, harmful: int, *, alpha: float | None = None
+) -> float:
+    """Compute the silence penalty for one candidate. See module-level
+    notes for the formula and scale rationale.
+
+    Always returns a non-negative float. Cold-start candidates
+    (``surfaced=0``) return 0 because ``log1p(0) = 0``."""
+    if surfaced <= 0:
+        return 0.0
+    a = _silence_penalty_alpha() if alpha is None else alpha
+    if a == 0.0:
+        return 0.0
+    evaluated = max(0, int(helpful)) + max(0, int(harmful))
+    verdict_density = evaluated / max(1, int(surfaced))
+    silence_factor = max(0.0, 1.0 - verdict_density)
+    return a * math.log1p(int(surfaced)) * silence_factor
 
 
 @dataclass(frozen=True)
@@ -219,6 +284,8 @@ def _zscores(scores: Sequence[float]) -> list[float]:
 def dynamic_k(
     scores: Sequence[float],
     cfg: DynamicKConfig | None = None,
+    *,
+    candidate_stats: Sequence[tuple[int, int, int]] | None = None,
 ) -> tuple[int, str]:
     """Pick a top-K and a telemetry reason from a sorted score list.
 
@@ -226,11 +293,44 @@ def dynamic_k(
     Returns ``(k, reason)`` where ``reason`` is a stable branch
     identifier (e.g. ``"uniform-null"``, ``"gap-cut@2"``) used by
     telemetry and tests.
+
+    ``candidate_stats``, when provided, must be order-aligned with
+    ``scores``. Each tuple is ``(surfaced, helpful, harmful)`` for the
+    candidate at that rank. A per-candidate silence penalty
+    (see :func:`silence_penalty`) is subtracted from a *copy* of
+    ``scores`` before the K-selection branches run — sparse-evaluated
+    candidates may get edged out of K by a fresher peer. The returned
+    score values surfaced to callers (via the router's natural rank()
+    return) stay unchanged; only the K boundary is affected.
+
+    Passing ``candidate_stats=None`` (the default) preserves the
+    pre-penalty K policy exactly — used by tests and by the agentic
+    rerank path where the LLM does its own selection.
     """
     if cfg is None:
         cfg = DynamicKConfig()
     if not scores:
         return 0, "empty"
+
+    # Apply silence penalty to a private copy of scores. Sparse-
+    # evaluated candidates lose a small smooth amount; verdict-positive
+    # candidates lose ~0. The penalty is monotone-decreasing in
+    # rank-order *only if* candidates with lower scores also have less
+    # verdict signal — there's no guarantee, so after penalty the
+    # score list may no longer be perfectly sorted. We re-sort the
+    # working copy to keep the z-space and elbow analysis honest;
+    # the K returned is still a top-K count from the caller's
+    # already-ordered list.
+    if candidate_stats is not None:
+        adjusted: list[float] = []
+        for s, stats in zip(scores, candidate_stats):
+            surfaced, helpful, harmful = stats
+            adjusted.append(float(s) - silence_penalty(surfaced, helpful, harmful))
+        # Re-sort descending so the score-shape analysis (z, entropy,
+        # elbow) sees a monotone sequence. We do NOT propagate the new
+        # order back to the caller — the caller's `order` is the
+        # authoritative ranking; we're only deciding how many to keep.
+        scores = sorted(adjusted, reverse=True)
 
     # --- Step 1: compute z-space signals (embedder-invariant) ---
     zs = _zscores(scores)
@@ -282,5 +382,6 @@ __all__ = [
     "TIERS",
     "dynamic_k",
     "profile_for",
+    "silence_penalty",
     "softmax_entropy",
 ]

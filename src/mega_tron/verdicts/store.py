@@ -858,6 +858,35 @@ class Store:
                 )
             return int(cur.fetchone()[0])
 
+    def surface_counts_by_skill(self) -> dict[str, int]:
+        """Return ``{skill_name → cumulative_surface_count}`` aggregated
+        across every host and every session in the routes table.
+
+        "Surface count" = the number of times the skill appeared in any
+        past ``picked_names_json`` array. Used by the silence penalty in
+        :mod:`dynamic_k` to detect skills that get surfaced repeatedly
+        without ever earning a verdict.
+
+        Single batched read using SQLite's ``json_each`` to expand each
+        row's JSON array into rows then GROUP BY. O(routes_rows) — but
+        called once per Router instance, not per turn.
+
+        Returns ``{}`` on any failure (missing table, JSON parse error,
+        SQLite version without ``json_each``) so callers can treat the
+        result as "no signal".
+        """
+        self.initialize()
+        try:
+            with self._connect() as conn:
+                cur = conn.execute(
+                    "SELECT json_each.value AS skill_name, COUNT(*) "
+                    "FROM routes, json_each(routes.picked_names_json) "
+                    "GROUP BY json_each.value"
+                )
+                return {str(name): int(n) for name, n in cur.fetchall()}
+        except sqlite3.Error:
+            return {}
+
     def count_low_quality_reasons(self) -> int:
         """Number of verdicts whose reason would fail the P3 quality
         gate today. Used by the dashboard health card to surface

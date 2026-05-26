@@ -48,7 +48,29 @@ AUTO_COMPACT_THRESHOLD = 10_000
 """Verdict-count high-water mark above which the writer fires a
 background compact() pass. Sized so that even a 5-years-of-active-use
 corpus (~91K verdicts) goes through ~9 compact() calls — each one
-cheap because the group-wise matmuls stay small."""
+cheap because the group-wise matmuls stay small.
+
+This is the *disk-cost* trigger. A second *quality* trigger
+(``RATIO_AUTO_COMPACT_MULTIPLIER``) fires much earlier when the
+embedding store grows faster than the verdicts table — the symptom
+of one busy skill accumulating semantically-similar verdicts."""
+
+
+RATIO_AUTO_COMPACT_MULTIPLIER = 1.5
+"""Trigger compact() when ``len(ves) > verdicts_count × this``. Reads
+as: "the embedding store is allowed to be at most 1.5× the size of
+the verdicts table before we collapse near-duplicates." Catches the
+silence-loop symptom where one heavily-used skill grows the npz
+faster than other skills earn fresh evaluations."""
+
+
+RATIO_AUTO_COMPACT_FLOOR = 50
+"""Below this many embeddings, the ratio trigger is suppressed. Fresh
+installs accumulate verdicts one-by-one and the ratio is unstable for
+small N — without the floor, the very first 2 near-duplicate
+verdicts would already cross 1.5×. 50 keeps the trigger asleep
+during normal warm-up and wakes it once there's enough data to
+distinguish silence-loop accumulation from organic variance."""
 
 
 AUTO_COMPACT_COSINE = 0.95

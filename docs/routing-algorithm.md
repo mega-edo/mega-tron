@@ -562,6 +562,55 @@ flattens that gap. So we use:
 This is the only place in mega-tron where we deliberately mix the two
 representations, and it's documented inline in `dynamic_k.py`.
 
+### Silence penalty
+
+A skill that gets surfaced repeatedly without ever earning a verdict
+is the symptom of *cosine-only anchoring*: the router never sees a
+signal back from `<skill-used>` tags, so the same skill keeps
+winning the top slot turn after turn. The silence penalty is a
+**continuous** down-shift applied to each candidate's score at
+K-selection time, designed to edge silent candidates out of K and
+let a fresher peer enter.
+
+```
+silence_penalty = α × log1p(surfaced) × max(0, 1 − verdict_density)
+where verdict_density = (helpful + harmful) / max(1, surfaced)
+```
+
+| α (default = 0.02) | surfaced | helpful + harmful | penalty |
+|---|---|---|---|
+| 0.02 | 10 | 0 | 0.048 |
+| 0.02 | 50 | 0 | 0.079 |
+| 0.02 | 50 | 1 | 0.077 |
+| 0.02 | 50 | 5 | 0.071 |
+| 0.02 | 50 | 25 | 0.039 |
+| 0.02 | 50 | 50 | 0.000 |
+
+Two design notes:
+
+- **Smooth, not a cliff.** A discrete `surfaced ≥ N` threshold
+  would create a 19-vs-20 boundary problem. `log1p` keeps adjacent
+  surface counts within a small bounded distance of each other.
+- **Self-disarms with any verdict.** The `(1 − verdict_density)`
+  factor goes to 0 as soon as evidence accumulates; we don't need
+  a hand-coded recovery rule.
+
+The penalty composes with the existing four-term blend:
+
+```
+score_for_k = final − silence_penalty(surfaced, helpful, harmful)
+```
+
+**Crucially the returned score stays unchanged.** Only the K
+boundary moves: a sparse-evaluated candidate may get edged out of
+K, but if it does enter K its displayed rank and score vs other
+picks are untouched. `mega-tron why` shows the per-skill
+`silence_penalty` row purely for transparency.
+
+Override α via `MEGA_SILENCE_PENALTY_ALPHA` (set to `0` to disable
+the penalty entirely — useful for A/B comparison or to revert to
+the pre-penalty K policy).
+
 ---
 
 ## 5. Configuration & operations
@@ -589,7 +638,16 @@ cfg = DynamicKConfig(
     k_max=8,
 )
 
+# Baseline call — no silence penalty applied. Mirrors the policy used
+# by the agentic rerank path (where the LLM does its own selection).
 k, reason = dynamic_k(scores, cfg=cfg)
+
+# Silence-penalty call. `candidate_stats` is order-aligned with `scores`
+# and carries `(surfaced, helpful, harmful)` per candidate. The penalty
+# subtracts from a private score copy at K-selection time only; the
+# caller's score list is untouched.
+candidate_stats = [(53, 0, 0), (26, 8, 1), (49, 2, 0), ...]
+k, reason = dynamic_k(scores, cfg=cfg, candidate_stats=candidate_stats)
 ```
 
 Hosts wire it through `Router.rank(query, dynamic=True)`. When the
@@ -610,6 +668,28 @@ for telemetry.
 | `MEGA_EVAL_CONTEXT_W` | `0.15` | Weight on `helpful_ctx − 1.5 × harmful_ctx` term |
 | `MEGA_EVAL_HARM_W` | `1.5` | Asymmetry multiplier on harmful context match |
 | `MEGA_EVAL_RELATED_W` | `0.10` | Weight on related-verdict embedding signal |
+| `MEGA_SILENCE_PENALTY_ALPHA` | `0.02` | α for the K-selection silence penalty; set to `0` to disable |
+
+### Verdict-embedding store auto-compaction
+
+`verdict_embeddings.npz` accumulates one row per verdict, even when
+reasons are semantically near-duplicates (e.g. one heavily-used skill
+collecting many "validated webhook HMAC" / "verified webhook
+signature" verdicts). The writer auto-fires `compact_embeddings()`
+under **either** condition:
+
+- **Disk-cost trigger.** `len(ves) > 10_000` — protects long-term
+  memory residency. Sized for a five-years-of-active-use corpus.
+- **Quality trigger.** `len(ves) > max(50, verdicts_table_count × 1.5)`
+  — catches the silence-loop symptom where one busy skill grows the
+  npz faster than other skills earn fresh evaluations. The 50-row
+  floor keeps the trigger asleep during fresh-install warm-up where
+  small-N ratios are unstable.
+
+Both triggers call the same `compact()` with cosine threshold 0.95
+(true paraphrases collapse, similar-topic verdicts survive). The
+SQLite `verdicts` table is untouched — only the embedding store is
+deduped — so regression analysis remains time-series-true.
 
 ### When to disable dynamic K
 

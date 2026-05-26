@@ -22,10 +22,15 @@ def cmd_why(args: argparse.Namespace) -> int:
     """
     from mega_tron.verdicts.mega_meta import MegaMeta
     from mega_tron.ranker import adjusted_score_breakdown
+    from mega_tron.dynamic_k import silence_penalty
 
     router = _make_router(args)
     router.warmup()
     entries = router.cache.entries()
+    # Surfaced counts are read from the routes table once and cached
+    # on the router instance. Used by the silence_penalty row below
+    # (the same signal dynamic_k uses at K-selection time).
+    surfaced_counts = router._ensure_surfaced_counts()  # noqa: SLF001 — same module's helper
     if not entries:
         print(f"[why] no cached skills under {args.skills_dir}", file=sys.stderr)
         return 1
@@ -97,6 +102,14 @@ def cmd_why(args: argparse.Namespace) -> int:
         bd["name"] = entry.name
         bd["full_cos"] = float(scores_full[i])
         bd["name_cos"] = float(scores_name[i])
+        # Silence penalty — applied to the K-selection copy of scores in
+        # dynamic_k, NOT subtracted from `final`. Reported here for
+        # transparency only.
+        surfaced = int(surfaced_counts.get(entry.name, 0))
+        bd["surfaced"] = surfaced
+        bd["silence_penalty"] = float(
+            silence_penalty(surfaced, entry.helpful_count, entry.harmful_count)
+        )
         payloads.append(bd)
 
     if args.json:
@@ -129,4 +142,13 @@ def cmd_why(args: argparse.Namespace) -> int:
         )
         print(f"  ─────────────────────────")
         print(f"  final          {bd['final']:+.4f}")
+        # Silence penalty is informational: it does NOT subtract from
+        # final. It affects only whether dynamic_k keeps this candidate
+        # in the top-K. Surfaced count comes from the routes table.
+        print(
+            f"  silence_penalty −{bd['silence_penalty']:.4f}  "
+            f"(surfaced={bd['surfaced']}, h={bd['helpful_count']}, "
+            f"ha={bd['harmful_count']};  K-selection only, "
+            f"does not change displayed final)"
+        )
     return 0

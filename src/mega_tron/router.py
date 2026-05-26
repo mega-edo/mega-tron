@@ -239,6 +239,12 @@ class Router:
         # when the most recent rank() ran with ``dynamic=False`` (or
         # hasn't been called yet).
         self.last_dynamic: tuple[int, str] | None = None
+        # Per-skill cumulative surface count (= number of times the
+        # skill appeared in any past routes row across hosts). Populated
+        # lazily on first rank() call and used by dynamic_k's silence
+        # penalty. None = not yet loaded. Empty dict = loaded but the
+        # store has no rows yet (fresh install).
+        self._surfaced_counts: dict[str, int] | None = None
 
     def warmup(self) -> tuple[int, int, list]:
         """Load skills from every registered dir, sync the cache, persist.
@@ -309,6 +315,39 @@ class Router:
     def _ensure_warm(self) -> None:
         if not self._loaded:
             self.warmup()
+
+    def _ensure_surfaced_counts(self) -> dict[str, int]:
+        """Populate (lazily, once per Router instance) a per-skill map of
+        ``skill_name → cumulative_surface_count`` from the SQLite routes
+        table. Used by the dynamic_k silence penalty to detect skills
+        that get surfaced repeatedly without ever earning a verdict.
+
+        Single batched SQL read; zero DB calls on the rank() hot path
+        after this. The map is intentionally not refreshed mid-process
+        — a long-lived router (daemon) will see stale-but-monotonic
+        counts, which is fine: surface counts only grow, and the
+        penalty's verdict_density factor self-corrects as soon as
+        verdicts start landing.
+
+        Returns an empty dict on any failure (store missing, schema
+        mismatch, JSON parse error) so the silence penalty silently
+        degrades to "no penalty" rather than breaking rank().
+        """
+        if self._surfaced_counts is not None:
+            return self._surfaced_counts
+        counts: dict[str, int] = {}
+        try:
+            from mega_tron.config import store_path
+            from mega_tron.verdicts.store import Store
+
+            sql_path = store_path()
+            if sql_path.exists():
+                counts = Store(sql_path).surface_counts_by_skill()
+        except Exception:  # noqa: BLE001
+            # Any failure → treat as "no signal", silence penalty stays at 0.
+            counts = {}
+        self._surfaced_counts = counts
+        return counts
 
     def rank(
         self,
@@ -442,7 +481,26 @@ class Router:
             if cfg is None:
                 model_id = getattr(self.embedder, "model_id", None)
                 cfg = profile_for(model_id)
-            k, reason = dynamic_k(sorted_scores, cfg=cfg)
+            # Per-candidate (surfaced, helpful, harmful) — order-aligned
+            # with sorted_scores. Used by dynamic_k's silence penalty
+            # to edge out candidates that get surfaced repeatedly
+            # without ever earning a verdict tag. helpful/harmful are
+            # already in memory on CacheEntry (cache.py v4); surfaced
+            # comes from the lazy routes-table cache populated below.
+            surfaced_counts = self._ensure_surfaced_counts()
+            candidate_stats: list[tuple[int, int, int]] = []
+            for i in order:
+                entry = candidate_entries[i]
+                candidate_stats.append(
+                    (
+                        int(surfaced_counts.get(entry.name, 0)),
+                        int(getattr(entry, "helpful_count", 0)),
+                        int(getattr(entry, "harmful_count", 0)),
+                    )
+                )
+            k, reason = dynamic_k(
+                sorted_scores, cfg=cfg, candidate_stats=candidate_stats
+            )
             self.last_dynamic = (k, reason)
             cut = min(k, top_k)
         else:
