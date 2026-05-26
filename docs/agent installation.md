@@ -419,8 +419,9 @@ values from the environment when possible:
 - **Embedder profile** — read `~/.config/mega-tron/config.toml`'s
   `embedder_model` field (or run `mega-tron embedder show` if you
   can) and pick the profile whose default model matches:
-  `BAAI/bge-m3` → `multilingual`, `BAAI/bge-small-en-v1.5` →
-  `en-fast`, anything containing `SKILLRET` → `en-quality`.
+  anything containing `SKILLRET` → `en-quality` (the default for
+  fresh installs), `BAAI/bge-small-en-v1.5` → `en-fast`,
+  `BAAI/bge-m3` → `multilingual`.
 - **Claude native mode** — `grep MEGA_CLAUDE_NATIVE_MODE ~/.zshrc
   ~/.bashrc` to see what the user's rc currently exports
   (`passive` / `active` / `strict`). If nothing is set, that means

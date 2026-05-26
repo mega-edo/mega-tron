@@ -153,7 +153,7 @@ def _patched_input(
         ("1", "en-quality"),
         ("2", "en-fast"),
         ("3", "multilingual"),
-        ("", "multilingual"),  # blank → default
+        ("", "en-quality"),  # blank → default
         ("en-quality", "en-quality"),  # bare key works too
     ],
 )

@@ -417,8 +417,8 @@ def orphans() -> list[dict[str, Any]]:
 # in benchmarks/routing/results.md:
 #
 #   embedder family    pool=59   pool=183   pool=500
-#   skillret           106       124        157
-#   bge-m3 (default)   112       145        208
+#   skillret (default) 106       124        157
+#   bge-m3             112       145        208
 #   bge-small          312       400        527
 #
 # A piecewise linear curve through (0, 0) → (59, X1) → (183, X2) →
@@ -443,14 +443,15 @@ _K_MAX_BY_FAMILY: dict[str, int] = {
     "bge-m3":    15,   # tier="medium"
     "bge-small": 20,   # tier="weak"
 }
-# Default family when we can't classify the user's embedder. bge-m3 is
-# the install-time default and the safest middle estimate.
-_DEFAULT_EMBEDDER_FAMILY = "bge-m3"
+# Default family when we can't classify the user's embedder. skillret is
+# the install-time default and the best-measured profile, so it's also
+# the cleanest reference baseline.
+_DEFAULT_EMBEDDER_FAMILY = "skillret"
 
 # Kept as a static fallback for callers that haven't been updated to
-# the (family, pool_size) interpolation API. Matches bge-m3 @ pool=500
+# the (family, pool_size) interpolation API. Matches skillret @ pool=500
 # — the upper end of the default embedder's measured range.
-MEGA_TRON_BENCHMARK_TOKENS = 208
+MEGA_TRON_BENCHMARK_TOKENS = 157
 MEGA_TRON_BASELINE_TOKENS = MEGA_TRON_BENCHMARK_TOKENS
 
 
@@ -461,7 +462,7 @@ def _classify_embedder(model_id: str) -> str:
     substrings — because there are several published checkpoints per
     family (e.g. ``BAAI/bge-m3``, ``BAAI/bge-m3-unsupervised``). Anything
     we can't classify falls back to ``_DEFAULT_EMBEDDER_FAMILY`` so the
-    user still gets a reference number, just from the bge-m3 curve.
+    user still gets a reference number, just from the skillret curve.
     """
     if not model_id:
         return _DEFAULT_EMBEDDER_FAMILY

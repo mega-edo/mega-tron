@@ -204,7 +204,7 @@ For flag-level control (`--profile`, `--claude-native-mode`, `--target`, `--unin
 
 All steps are idempotent — re-running setup refreshes sentinel-fenced blocks in place.
 
-- **Embedder profile** — on a fresh install (TTY only) prompts you to pick one of three pre-tuned profiles: English-quality (SkillRet-0.6B), English-fast (bge-small-en), or multilingual (bge-m3, the default). Override with `--profile {en-quality,en-fast,multilingual}` for non-interactive installs. Skipped on re-runs once you've picked once. See [§Picking an embedder](#picking-an-embedder) for the numbers behind each option.
+- **Embedder profile** — on a fresh install (TTY only) prompts you to pick one of three pre-tuned profiles: English-quality (SkillRet-0.6B, the default), English-fast (bge-small-en), or multilingual (bge-m3). Override with `--profile {en-quality,en-fast,multilingual}` for non-interactive installs. Skipped on re-runs once you've picked once. See [§Picking an embedder](#picking-an-embedder) for the numbers behind each option.
 - **PATH** — adds `~/.local/bin` to your shell config (`~/.zshenv` for zsh, `~/.bashrc` for bash, fish conf.d for fish) inside a sentinel-bracketed block so hook subprocesses can resolve `mega-tron` even from non-interactive shells.
 - **Hosts** — registers the right hook entries in `~/.codex/hooks.json`, `~/.claude/settings.json`, `~/.gemini/settings.json` and writes the persistent guidance block into each host's `AGENTS.md` / `CLAUDE.md` / `GEMINI.md`.
 - **Codex shell wrapper** — drops a `codex()` function into `~/.zshrc` / `~/.bashrc` so `codex exec` non-interactive calls also route through the top-K stager.
@@ -315,7 +315,7 @@ Two dedup passes, both using the same winner-priority rule (status `active` > `s
 <details>
 <summary>Stage 1 — semantic top-K (embedder choice + benchmark)</summary>
 
-A task-specific retrieval embedder (BGE-M3 by default; SkillRet-Embedding-0.6B, Qwen3-Embedding, Voyage, OpenAI all swappable) ranks every skill against the query. The embedder is asymmetric — query gets an instruction prefix, documents stay plain — so cross-lingual retrieval (Korean → English skill descriptions, Japanese → English, etc.) just works.
+A task-specific retrieval embedder (SkillRet-Embedding-0.6B by default; BGE-M3, Qwen3-Embedding, Voyage, OpenAI all swappable) ranks every skill against the query. The embedder is asymmetric — query gets an instruction prefix, documents stay plain — so cross-lingual retrieval (Korean → English skill descriptions, Japanese → English, etc.) just works once you swap to the multilingual profile.
 
 #### Picking an embedder
 
@@ -323,13 +323,13 @@ A task-specific retrieval embedder (BGE-M3 by default; SkillRet-Embedding-0.6B, 
 
 | Profile | Embedder | Coverage | Tokens / turn | Latency (p50) | Pick when |
 |---|---|---:|---:|---:|---|
-| `multilingual` (default) | `BAAI/bge-m3` | 0.840 | 208 | 44 ms | Prompts or skills in any non-English language (~100 supported) |
-| `en-quality` | `ThakiCloud/SKILLRET-Embedding-0.6B` | **0.892** | **157** | 68 ms | English-only pool, rank quality matters most |
+| `en-quality` (default) | `ThakiCloud/SKILLRET-Embedding-0.6B` | **0.892** | **157** | 68 ms | Default — every embedding seed in the hot path is English in practice, even when your prompts are not |
 | `en-fast` | `BAAI/bge-small-en-v1.5` | 0.884 | 527 | **12 ms** | English-only pool, fastest warmup / smallest footprint |
+| `multilingual` | `BAAI/bge-m3` | 0.840 | 208 | 44 ms | You author skills with non-English descriptions, or your `<skill-used reason="...">` tags will be non-English |
 
-- **`BAAI/bge-m3`** — 1024d, ~570 MB. Strong cross-lingual retrieval out of the box.
 - **`ThakiCloud/SKILLRET-Embedding-0.6B`** — a Qwen3-0.6B fine-tune purpose-built for skill retrieval. Published NDCG@10 on the SkillRet test set is 0.7803 (vs BGE-large 0.5582).
 - **`BAAI/bge-small-en-v1.5`** — 384d, ~130 MB. Encodes in milliseconds even on CPU. Recall is lower per-query so MEGA Tron's dynamic-K widens the window automatically to compensate (visible in the higher token cost).
+- **`BAAI/bge-m3`** — 1024d, ~570 MB. Strong cross-lingual retrieval out of the box (100+ languages). Opt-in only; mega-tron's hot path (skill names, agent-issued search queries, verdict reasons) is English in practice regardless of your prompt language, so multilingual is a defensive choice rather than the universal right one.
 
 Switch any time with `mega-tron embedder set <huggingface-id>` — the cache is fingerprinted per-embedder so swaps never reuse stale vectors.
 
@@ -530,7 +530,7 @@ for r in core.regressions(window_days=30):
 
 ```toml
 [embedder]
-model = "BAAI/bge-m3"             # default; SkillRet-Embedding-0.6B, Qwen3, etc. all work
+model = "ThakiCloud/SKILLRET-Embedding-0.6B"   # default; BAAI/bge-m3, BAAI/bge-small-en-v1.5, Qwen3, etc. all work
 
 [skills]
 extra_dirs = [
@@ -544,7 +544,7 @@ Pipeline knobs have env-var defaults; CLI flags always win.
 | Variable | Default | Effect |
 |---|---|---|
 | `MEGA_MODE` | `semantic` | `semantic` (cosine + eval-blend) or `agentic` (adds LLM re-rank). |
-| `MEGA_EMBEDDER_MODEL` | `BAAI/bge-m3` | HuggingFace sentence-transformers id. Overrides `config.toml`. |
+| `MEGA_EMBEDDER_MODEL` | `ThakiCloud/SKILLRET-Embedding-0.6B` | HuggingFace sentence-transformers id. Overrides `config.toml`. |
 | `MEGA_SKILL_DIRS` | (empty) | Colon-separated ephemeral skill roots. |
 | `MEGA_BACKEND` | `codex` | LLM backend for `--mode agentic` (`codex` or `litellm`). |
 | `MEGA_MODEL` | `gpt-5.4-mini` (codex) / `openai/gpt-5.4-mini` (litellm) | LLM model id for agentic mode. |
@@ -587,8 +587,8 @@ MEGA_BACKEND=litellm MEGA_MODEL=claude-haiku-4-5 ANTHROPIC_API_KEY=… mega-tron
 
 Built on the shoulders of:
 
-- **[BGE-M3](https://github.com/FlagOpen/FlagEmbedding)** — default embedder. Chen, J. et al. (2024). *BGE M3-Embedding: Multi-Lingual, Multi-Functionality, Multi-Granularity Text Embeddings.* arXiv:[2402.03216](https://arxiv.org/abs/2402.03216).
-- **[SkillRet](https://huggingface.co/ThakiCloud/SKILLRET-Embedding-0.6B)** — alternate embedder, Qwen3-0.6B fine-tune purpose-built for skill retrieval (Apache-2.0). Cho, H., Kang, R., & Kim, Y. (2026). *SkillRet: A Large-Scale Benchmark for Skill Retrieval in LLM Agents.* arXiv:[2605.05726](https://arxiv.org/abs/2605.05726). Published NDCG@10 = 0.7803 on SkillRet test (vs BGE-large 0.5582, Qwen3-Embedding-8B 0.5998).
+- **[SkillRet](https://huggingface.co/ThakiCloud/SKILLRET-Embedding-0.6B)** — default embedder, a Qwen3-0.6B fine-tune purpose-built for skill retrieval (Apache-2.0). Cho, H., Kang, R., & Kim, Y. (2026). *SkillRet: A Large-Scale Benchmark for Skill Retrieval in LLM Agents.* arXiv:[2605.05726](https://arxiv.org/abs/2605.05726). Published NDCG@10 = 0.7803 on SkillRet test (vs BGE-large 0.5582, Qwen3-Embedding-8B 0.5998).
+- **[BGE-M3](https://github.com/FlagOpen/FlagEmbedding)** — multilingual embedder option. Chen, J. et al. (2024). *BGE M3-Embedding: Multi-Lingual, Multi-Functionality, Multi-Granularity Text Embeddings.* arXiv:[2402.03216](https://arxiv.org/abs/2402.03216).
 
 ## 📄 License
 

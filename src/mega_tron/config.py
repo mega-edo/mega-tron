@@ -34,32 +34,38 @@ except ImportError:  # pragma: no cover — older Python fallback
 # Defaults — change these to flip the system-wide default.
 # ---------------------------------------------------------------------------
 
-DEFAULT_EMBEDDER_MODEL = "BAAI/bge-m3"
+DEFAULT_EMBEDDER_MODEL = "ThakiCloud/SKILLRET-Embedding-0.6B"
 """Sentence-transformers model id for the default embedder.
 
-BGE-M3 (BAAI, XLM-RoBERTa-large backbone, 568M params) hits the
-sweet spot for a default — multilingual (100+ languages, Korean /
-Hindi / Chinese / Japanese all first-class), fast on CPU (~440
-embed/min in our 100-skill benchmark), MIT-licensed, and 27M+
-downloads of in-the-wild validation. Dense embedding only (we don't
-use BGE-M3's sparse / ColBERT modes).
+SKILLRET-Embedding-0.6B (ThakiCloud, Qwen3-0.6B fine-tune purpose-built
+for skill retrieval) is the install-wide default because every
+embedding seed in the hot path is English in practice — skill names
+and descriptions, agent-issued search queries, and `<skill-used
+reason="...">` verdict reasons all default to English regardless of
+the user's prompt language. SKILLRET dominates the 200-query routing
+benchmark at pool=500 on both axes that matter: coverage **0.892**
+(highest of the three profiles) and tokens/turn **157** (lowest).
+Published NDCG@10 on the SkillRet test set is 0.7803 vs BGE-large
+0.5582 — the gap reflects in-domain fine-tuning, not a leaderboard
+artifact.
 
-MTEB multilingual ~63. Slightly below Qwen3-0.6B (64.33) but ~22x
-faster on CPU because XLM-R is encoder-only and well-optimized in
-sentence-transformers.
+Multilingual users (Korean / Japanese / Chinese / Arabic skill
+descriptions OR cross-lingual queries against English skills) should
+explicitly opt into `--profile multilingual` (BGE-M3, 100+ languages).
+The default is opinionated, not exclusive.
 
 Alternatives users can swap in:
-  - Multilingual + accuracy:  Qwen/Qwen3-Embedding-0.6B (slower)
-  - English-only + accuracy:  ThakiCloud/SKILLRET-Embedding-0.6B
-  - Fastest tiny multilingual: intfloat/multilingual-e5-small (118M)
+  - Multilingual coverage:    BAAI/bge-m3 (100+ languages, 568M params)
+  - Fastest English:          BAAI/bge-small-en-v1.5 (33M params, ~12ms p50)
+  - Multilingual + accuracy:  Qwen/Qwen3-Embedding-0.6B (slower than SKILLRET)
 
 `mega-tron setup` offers three pre-tuned profiles via an interactive
 prompt (or the ``--profile {en-quality,en-fast,multilingual}`` flag
 for non-interactive installs):
 
-  - en-quality   → ThakiCloud/SKILLRET-Embedding-0.6B  (best F1, slower)
+  - en-quality   → ThakiCloud/SKILLRET-Embedding-0.6B  (best F1, this default)
   - en-fast      → BAAI/bge-small-en-v1.5              (near-best F1, fastest)
-  - multilingual → BAAI/bge-m3                         (this default)
+  - multilingual → BAAI/bge-m3                         (100+ languages, opt-in)
 
 Swap any time with: `mega-tron embedder set <huggingface-model-id>`
 """

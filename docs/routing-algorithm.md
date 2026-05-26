@@ -453,7 +453,7 @@ Measured recall@K on the SkillRet test split:
 | BGE-M3 (strong, est.) | ~75% | ~92% | ~95% | — |
 | BGE-small (weak) | 45% | 66% | 75% | 79% |
 
-So if you swap mega-tron's default (BGE-M3) for BGE-small to save
+So if you swap mega-tron's default (SkillRet) for BGE-small to save
 build time, dynamic_k automatically widens K from 2-10 to 5-20 to
 keep the gold inside the staged window. No user action needed —
 `profile_for(embedder.model_id)` handles it.

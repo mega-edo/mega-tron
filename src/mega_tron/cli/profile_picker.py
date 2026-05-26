@@ -13,9 +13,14 @@ en-quality   → ThakiCloud/SKILLRET-Embedding-0.6B          0.892 / slow
 en-fast      → BAAI/bge-small-en-v1.5                      0.884 / fast
 multilingual → BAAI/bge-m3                                 0.840 / medium
 
-`multilingual` is the install-wide DEFAULT_EMBEDDER_MODEL so users who
+`en-quality` is the install-wide DEFAULT_EMBEDDER_MODEL so users who
 skip the picker (non-TTY install, --print-only, MEGA_QUIET, or
-explicit `--profile auto`) land on the safest cross-language default.
+explicit `--profile auto`) land on the best-measured English profile.
+Multilingual users should opt in explicitly via the picker or
+``--profile multilingual``; mega-tron's hot-path embedding seeds
+(skill names, agent-issued search queries, verdict reasons) are
+English in practice regardless of the user's prompt language, so
+multilingual is a defensive choice rather than the right default.
 """
 from __future__ import annotations
 
@@ -39,12 +44,13 @@ PROFILES: tuple[Profile, ...] = (
     Profile(
         key="en-quality",
         model_id="ThakiCloud/SKILLRET-Embedding-0.6B",
-        label="English — quality (slower)",
+        label="English — quality (default)",
         blurb=(
             "Best F1 on the routing benchmark (0.892). English-only. "
             "0.6B params — ~3-5× slower per query than the fast option. "
-            "Pick this if all your prompts and skills are in English and "
-            "you want maximum routing accuracy."
+            "This is the install-wide default; pick another option only "
+            "if you write prompts or have skill descriptions in a "
+            "non-English language."
         ),
     ),
     Profile(
@@ -60,7 +66,7 @@ PROFILES: tuple[Profile, ...] = (
     Profile(
         key="multilingual",
         model_id="BAAI/bge-m3",
-        label="Multilingual (default)",
+        label="Multilingual",
         blurb=(
             "F1 0.840 on the routing benchmark. 100+ languages "
             "(Korean / Japanese / Chinese / Arabic all first-class). "
@@ -103,8 +109,8 @@ def prompt_for_profile() -> Profile | None:
     Returns ``None`` only when the read fails (EOF, KeyboardInterrupt)
     or the user enters something we don't recognise — the caller treats
     ``None`` as "leave config alone". There is deliberately no "skip"
-    option: a fresh install already has the multilingual default
-    saved, so "skip" would be indistinguishable from picking [3] and
+    option: a fresh install already has the en-quality default
+    saved, so "skip" would be indistinguishable from picking [1] and
     would just add noise to the menu. Users who want to change later
     can run ``mega-tron embedder set <id>``.
     """
@@ -123,14 +129,14 @@ def prompt_for_profile() -> Profile | None:
         print("", file=sys.stderr)
 
     try:
-        raw = input("Pick [1/2/3, default=3]: ").strip().lower()
+        raw = input("Pick [1/2/3, default=1]: ").strip().lower()
     except (EOFError, KeyboardInterrupt):
         print("", file=sys.stderr)
         return None
 
     if raw == "":
-        # Default — multilingual, matches the system-wide DEFAULT_EMBEDDER_MODEL.
-        return profile_by_key("multilingual")
+        # Default — en-quality, matches the system-wide DEFAULT_EMBEDDER_MODEL.
+        return profile_by_key("en-quality")
     if raw in {"1", "2", "3"}:
         return PROFILES[int(raw) - 1]
     # Allow the bare key too — handy for scripted re-runs.
@@ -155,7 +161,7 @@ def resolve_profile(
     - ``cli_profile == "auto"`` and TTY available → prompt the user
     - ``cli_profile`` is a known key → return that profile directly
     - ``cli_profile == "auto"`` and no TTY → return ``None`` (defer to
-      whatever is already saved in config, which is the multilingual
+      whatever is already saved in config, which is the en-quality
       default for fresh installs)
     - ``config_is_default`` is ``False`` (user already picked something
       via ``mega-tron embedder set``) → return ``None`` so we never

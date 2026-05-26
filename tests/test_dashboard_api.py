@@ -1035,8 +1035,8 @@ def test_context_savings_no_hosts_installed(env):
     assert out["multiplier"] == 0
     assert out["claude_mode"] == "passive"
     assert out["shared_skill_count"] == 0
-    # Reference is the bge-m3 default family at pool=0 — not extrapolated.
-    assert out["mega_tron_embedder_family"] == "bge-m3"
+    # Reference is the skillret default family at pool=0 — not extrapolated.
+    assert out["mega_tron_embedder_family"] == "skillret"
     assert out["mega_tron_reference_is_extrapolated"] is False
 
 
@@ -1434,23 +1434,23 @@ def test_interpolate_reference_tokens_curve():
         assert ref_n <= 416, f"pool={n} exceeded ceiling: got {ref_n}"
         prev = ref_n
 
-    # Unknown family falls back to bge-m3 silently.
+    # Unknown family falls back to skillret silently.
     ref_unknown, _ = _interpolate_reference_tokens("voyage-3", 100)
-    ref_bge, _ = _interpolate_reference_tokens("bge-m3", 100)
-    assert ref_unknown == ref_bge
+    ref_skillret, _ = _interpolate_reference_tokens("skillret", 100)
+    assert ref_unknown == ref_skillret
 
 
 def test_classify_embedder_family():
     """The classifier maps HuggingFace IDs to one of three families;
-    unknown IDs fall back to bge-m3 (the install-time default)."""
+    unknown IDs fall back to skillret (the install-time default)."""
     from mega_tron.dashboard.api import _classify_embedder
 
     assert _classify_embedder("BAAI/bge-m3") == "bge-m3"
     assert _classify_embedder("BAAI/bge-small-en-v1.5") == "bge-small"
     assert _classify_embedder("ThakiCloud/SKILLRET-Embedding-0.6B") == "skillret"
-    # Unknown → default bge-m3.
-    assert _classify_embedder("voyage-3") == "bge-m3"
-    assert _classify_embedder("") == "bge-m3"
+    # Unknown → default skillret.
+    assert _classify_embedder("voyage-3") == "skillret"
+    assert _classify_embedder("") == "skillret"
 
 
 def test_context_savings_warming_up_below_threshold(env):
