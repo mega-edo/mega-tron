@@ -411,6 +411,19 @@ def main(argv: list[str] | None = None) -> int:
             default=None,
             help="Override the codex config.toml path (default: ~/.codex/config.toml).",
         )
+        p.add_argument(
+            "--qa-live",
+            action="store_true",
+            help=(
+                "After setup completes, drive one non-interactive call "
+                "through every wired host (codex exec / claude --print / "
+                "gemini -p) using a planted `_mega-tron-check` skill, "
+                "verify the inline verdict tag reaches SQLite, and launch "
+                "the dashboard in the background. Uses your provider "
+                "quota (~one short turn per host); hosts whose CLI is "
+                "not on PATH are skipped silently."
+            ),
+        )
         p.set_defaults(func=cmd_install)
 
     # Primary, user-friendly name. "setup" reads as a one-time

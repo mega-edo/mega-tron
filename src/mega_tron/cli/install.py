@@ -374,6 +374,24 @@ def cmd_install(args: argparse.Namespace) -> int:
         # still kicks in on first miss — this is purely an optimisation.
         _warm_daemon_on_setup()
 
+        # Optional end-to-end self-check. Plants a ``_mega-tron-check``
+        # skill into each wired host, drives one non-interactive call
+        # per host, verifies the inline verdict tag reaches SQLite, and
+        # launches the dashboard in the background. Strictly opt-in
+        # behind ``--qa-live`` because it spends provider quota and
+        # assumes the user has already auth'd each host CLI.
+        if getattr(args, "qa_live", False) and wired_hosts:
+            try:
+                from mega_tron.cli.qa_live import run_qa_live
+
+                run_qa_live(wired_hosts)
+            except Exception as e:  # noqa: BLE001
+                if not os.environ.get("MEGA_QUIET"):
+                    print(
+                        f"[setup] --qa-live skipped ({e})",
+                        file=sys.stderr,
+                    )
+
     return rc
 
 

@@ -167,6 +167,22 @@ install or update mega-tron for me following https://github.com/mega-edo/mega-tr
 That covers fresh installs, updates, the three setup choices (embedder profile / Claude native-mode / post-install qa-live), and the end-to-end smoke test — the agent asks you at every decision point instead of choosing silently. It's the path most users want; installation involves three host-specific choices an agent following a written procedure will get right faster than you can read this section.
 
 <details>
+<summary>Want a "did it actually work?" moment? — <code>--qa-live</code></summary>
+
+```bash
+~/.local/bin/mega-tron setup --qa-live
+```
+
+mega-tron plants a `_mega-tron-check` skill into every host CLI you've installed, drives one non-interactive call through each (`codex exec` / `claude --print` / `gemini -p`), confirms the inline verdict tag reaches SQLite, and launches the dashboard in the background so your first verdicts are already on screen. Uses ~one short turn of provider quota per host.
+
+Two safety guards:
+
+- **Only your installed providers.** Hosts whose CLI binary is not on `$PATH` are skipped — no surprise install attempts.
+- **Only authenticated providers.** If a host returns an auth-shaped error (`401`, `not logged in`, `api_key invalid`, rate-limit, …), `--qa-live` marks it `NEEDS_LOGIN` and prints the exact command to fix it (`codex login` / `claude login` / `gemini` OAuth flow). The dashboard does not launch if zero hosts PASSed; re-run `mega-tron setup --qa-live` after logging in.
+
+</details>
+
+<details>
 <summary>Prefer to drive it yourself?</summary>
 
 ```bash
@@ -198,6 +214,21 @@ All steps are idempotent — re-running setup refreshes sentinel-fenced blocks i
 Targets: `mega-tron setup --target codex | claude | gemini | auto | all`. `--uninstall` reverses each cleanly — sentinel blocks, managed hook entries, the PATH block, and any `skillOverrides` we own are stripped; user-owned settings preserved.
 
 After install, just use the host CLIs normally (`codex` / `claude` / `gemini`) — same commands you already run, now routed through mega-tron.
+
+</details>
+
+<details>
+<summary>Updating an existing install</summary>
+
+```bash
+uv tool install --upgrade mega-tron     # PyPI install
+# or, from a git clone:
+git pull && sh install.sh
+```
+
+Both paths are also what a fresh install runs, so **re-running the install command updates an existing install in place** — `sh install.sh` is idempotent and passes `--upgrade` to `uv tool install` automatically.
+
+Both replace the underlying venv, so the warm router daemon dies with it — your next host session pays one cold embedder load (~5–30s) and respawns the daemon in the background. Re-run `mega-tron setup` only if you want to re-warm the cache upfront or refresh hook wiring after a major version.
 
 </details>
 

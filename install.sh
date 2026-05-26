@@ -48,8 +48,12 @@ if ! command -v uv >/dev/null 2>&1; then
 fi
 
 # ---------------------------------------------------------------- step 2
-log "installing the mega-tron Python package via \`uv tool install\`..."
-uv tool install --quiet mega-tron || err "\`uv tool install mega-tron\` failed; see output above"
+# `--upgrade` makes this script idempotent across versions: a first-time
+# user gets a fresh install; an existing user re-running the same command
+# gets the latest PyPI release transparently. uv treats `install --upgrade`
+# as a no-op when already at latest, so the steady-state run is still fast.
+log "installing or upgrading the mega-tron Python package via \`uv tool install --upgrade\`..."
+uv tool install --quiet --upgrade mega-tron || err "\`uv tool install --upgrade mega-tron\` failed; see output above"
 
 # ---------------------------------------------------------------- step 3
 # Find the binary. `uv tool install` always places it under
