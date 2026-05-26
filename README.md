@@ -156,7 +156,7 @@ Solid lines = MEGA Tron. Dashed = semantic search only. Same router, same questi
 
 ## 🚀 Install
 
-Requires Python ≥ 3.11 and [`uv`](https://docs.astral.sh/uv/).
+Requires Python ≥ 3.11 and [`uv`](https://docs.astral.sh/uv/). **Linux / macOS only** — the daemon uses Unix-domain sockets and the host installers shell out to bash/zsh. On Windows use WSL2; native Windows support is on the roadmap but not scheduled.
 
 🤖 Tell Claude / Codex / Cursor / Copilot:
 
