@@ -23,7 +23,12 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import Tuple
+from typing import NamedTuple, Tuple
+
+# Imported at module top (not locally) so tests can monkeypatch
+# ``qa_live._discover_running`` / ``qa_live._port_is_bound`` the same way
+# they already patch ``qa_live.subprocess`` / ``qa_live.time``.
+from mega_tron.cli.dashboard_procs import _discover_running, _port_is_bound
 
 # Public skill name lives outside the user's namespace via the leading
 # underscore. The router still surfaces it (no name filter exists today)
@@ -448,13 +453,62 @@ def _run_host_call(host: str, skill_name: str) -> tuple[str, str, float]:
     return ("CALLED", "completed cleanly", elapsed)
 
 
-def _launch_dashboard_detached(port: int = 7531) -> int | None:
-    """Spawn ``mega-tron dashboard`` as a detached background process.
+class DashboardLaunch(NamedTuple):
+    """Outcome of :func:`_launch_dashboard_detached`.
+
+    ``status`` is one of:
+      - ``"spawned"``  → we started a new dashboard; ``pid`` is set.
+      - ``"existing"`` → one was already running; ``pid`` is None,
+        ``url`` points at the dashboard we found.
+      - ``"failed"``   → the spawn raised; ``pid`` is None, ``url`` None.
+    """
+
+    pid: int | None
+    status: str
+    url: str | None = None
+
+
+def _launch_dashboard_detached(port: int = 7531) -> DashboardLaunch:
+    """Spawn ``mega-tron dashboard`` as a detached background process,
+    unless one is already running.
 
     Mirrors :func:`mega_tron.daemon.spawn_detached` so the dashboard
     outlives ``setup``'s parent shell. The browser open is best-effort
     — if no GUI, the user still has the URL.
+
+    Guard (fix for #3): qa-live used to spawn unconditionally, which on a
+    box where the user already runs a dashboard on a *non-loopback* bind
+    (e.g. ``--host 172.18.0.1 --port 7531``) left a redundant
+    ``127.0.0.1:7531`` listener the user had to kill by hand. We now skip
+    the spawn when either check fires:
+      - a mega-tron ``dashboard`` process is already running on this port
+        (catches any bind address, incl. a non-loopback one — the issue's
+        primary scenario), or
+      - the port already answers on loopback (the backstop: a
+        non-mega-tron holder, a dashboard launched without an explicit
+        ``--port``, or one whose argv we couldn't parse, on ``127.0.0.1``
+        / ``0.0.0.0``).
     """
+    # (1) An existing mega-tron dashboard process — regardless of which
+    # interface it bound. We only trust an entry whose port we actually
+    # parsed and that matches our target: a ``port is None`` entry is
+    # ambiguous (the argv parser found no --port), and trusting it would
+    # let an unrelated process that merely *mentions* "dashboard" suppress
+    # a legitimate spawn. The port check below is the backstop for a real
+    # dashboard launched without an explicit --port.
+    for proc in _discover_running():
+        if proc.kind != "dashboard" or proc.port != port:
+            continue
+        host = proc.host or "127.0.0.1"
+        return DashboardLaunch(None, "existing", f"http://{host}:{proc.port}/")
+
+    # (2) Something is already bound to the port on loopback (could be a
+    # non-mega-tron process, or a mega-tron one whose argv we couldn't
+    # parse). Skip rather than pile a second listener on top.
+    bound_host = _port_is_bound(port)
+    if bound_host is not None:
+        return DashboardLaunch(None, "existing", f"http://{bound_host}:{port}/")
+
     try:
         proc = subprocess.Popen(
             [sys.executable, "-m", "mega_tron.cli", "dashboard", "--no-open",
@@ -466,7 +520,7 @@ def _launch_dashboard_detached(port: int = 7531) -> int | None:
             close_fds=True,
         )
     except (OSError, ImportError):
-        return None
+        return DashboardLaunch(None, "failed", None)
     # Give the HTTP server a beat to bind before we open the browser
     # (otherwise the first GET races the listen() and returns connection
     # refused, which is a confusing first impression).
@@ -477,7 +531,7 @@ def _launch_dashboard_detached(port: int = 7531) -> int | None:
         webbrowser.open(f"http://127.0.0.1:{port}/")
     except Exception:  # noqa: BLE001
         pass
-    return proc.pid
+    return DashboardLaunch(proc.pid, "spawned", f"http://127.0.0.1:{port}/")
 
 
 def run_qa_live(wired_hosts: list[str]) -> int:
@@ -631,8 +685,14 @@ def run_qa_live(wired_hosts: list[str]) -> int:
             )
         return 1
 
-    pid = _launch_dashboard_detached()
-    if pid is None:
+    launch = _launch_dashboard_detached()
+    if launch.status == "existing":
+        print(
+            f"[check] using existing dashboard at {launch.url} "
+            "— skipping launch.",
+            file=sys.stderr,
+        )
+    elif launch.status == "failed":
         print(
             "[check] dashboard launch skipped (subprocess failed). "
             "Run `mega-tron dashboard` manually.",
@@ -640,9 +700,9 @@ def run_qa_live(wired_hosts: list[str]) -> int:
         )
     else:
         print(
-            f"[check] dashboard launched in background (PID {pid}) at "
-            "http://127.0.0.1:7531/ — opening your browser. "
-            f"Stop with `kill {pid}` or just close the tab.",
+            f"[check] dashboard launched in background (PID {launch.pid}) at "
+            f"{launch.url} — opening your browser. "
+            f"Stop with `kill {launch.pid}` or just close the tab.",
             file=sys.stderr,
         )
     return 0

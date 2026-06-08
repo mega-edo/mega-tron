@@ -51,8 +51,20 @@ import signal
 import subprocess
 import sys
 import time
-from dataclasses import dataclass, field
 from pathlib import Path
+
+# Dashboard / daemon process discovery lives in a shared module so qa-live
+# can reuse it without pulling in the kill/respawn machinery below. These
+# names are re-exported (imported but not all used directly here) for
+# backward compat: tests + this module import them from
+# ``mega_tron.cli.upgrade``.
+from mega_tron.cli.dashboard_procs import (  # noqa: F401
+    _RunningProc,
+    _read_cmdline,
+    _classify,
+    _parse_dashboard_args,
+    _discover_running,
+)
 
 
 # How long we wait for a TERM'd process to exit before sending KILL.
@@ -64,159 +76,18 @@ _DASHBOARD_BOOT_S = 5.0
 # --------------------------------------------------------------------------- #
 # Process discovery
 # --------------------------------------------------------------------------- #
-
-
-@dataclass
-class _RunningProc:
-    """One mega-tron process we found on the host."""
-
-    pid: int
-    kind: str  # "dashboard" | "daemon" | "other"
-    argv: list[str] = field(default_factory=list)
-    # Extracted bind args for dashboard. Empty for daemons.
-    host: str | None = None
-    port: int | None = None
-    no_open: bool = False
-
-
-def _read_cmdline(pid: int) -> list[str]:
-    """Return argv for ``pid``. Linux uses /proc; macOS falls back to ps."""
-    proc_path = Path(f"/proc/{pid}/cmdline")
-    if proc_path.exists():
-        try:
-            raw = proc_path.read_bytes()
-        except OSError:
-            return []
-        # /proc/<pid>/cmdline is NUL-separated, trailing NUL.
-        parts = [p.decode("utf-8", "replace") for p in raw.split(b"\x00") if p]
-        return parts
-
-    # macOS / non-Linux: shell out to `ps -o command=` and split on
-    # whitespace. This is lossy for arguments containing spaces, which
-    # is acceptable — dashboard / daemon args here are simple flag +
-    # value pairs (--host 127.0.0.1, --port 7531, --no-open).
-    try:
-        out = subprocess.check_output(
-            ["ps", "-p", str(pid), "-o", "command="],
-            stderr=subprocess.DEVNULL,
-            text=True,
-            timeout=3,
-        ).strip()
-    except (subprocess.SubprocessError, FileNotFoundError):
-        return []
-    return out.split() if out else []
-
-
-def _classify(argv: list[str]) -> str:
-    """Return the subcommand identifier for an argv we recognize."""
-    if not argv:
-        return "other"
-    joined = " ".join(argv)
-    # We match on the LAST occurrence of the subcommand word so a
-    # wrapper script (sh -c "... mega-tron dashboard ...") still
-    # classifies correctly.
-    if " dashboard" in f" {joined}":
-        return "dashboard"
-    if " daemon " in f" {joined} " or joined.endswith(" daemon"):
-        return "daemon"
-    return "other"
-
-
-def _parse_dashboard_args(argv: list[str]) -> tuple[str | None, int | None, bool]:
-    """Pull ``--host``, ``--port``, ``--no-open`` out of an argv list.
-
-    Handles both ``--host=X`` and ``--host X`` shapes. Returns
-    ``(host, port, no_open)`` with None for un-passed flags so the
-    caller can default to mega-tron's own defaults when respawning.
-    """
-    host: str | None = None
-    port: int | None = None
-    no_open = False
-    i = 0
-    while i < len(argv):
-        a = argv[i]
-        if a.startswith("--host="):
-            host = a.split("=", 1)[1]
-        elif a == "--host" and i + 1 < len(argv):
-            host = argv[i + 1]
-            i += 1
-        elif a.startswith("--port="):
-            try:
-                port = int(a.split("=", 1)[1])
-            except ValueError:
-                pass
-        elif a == "--port" and i + 1 < len(argv):
-            try:
-                port = int(argv[i + 1])
-            except ValueError:
-                pass
-            i += 1
-        elif a == "--no-open":
-            no_open = True
-        i += 1
-    return host, port, no_open
-
-
-def _discover_running() -> list[_RunningProc]:
-    """Return every mega-tron daemon / dashboard process currently on
-    this machine that we can confidently identify. Uses ``pgrep -af``
-    when available (Linux + macOS); silently returns [] if it isn't —
-    in that case the upgrade just skips the kill-and-respawn step.
-    """
-    if shutil.which("pgrep") is None:
-        return []
-    try:
-        # -a (or -lf on BSD pgrep) prints the full command; we use -f
-        # to match the whole argv string (so `python -m mega_tron.cli
-        # daemon serve` matches even though argv[0] is "python").
-        out = subprocess.check_output(
-            ["pgrep", "-af", "mega.tron|mega_tron"],
-            stderr=subprocess.DEVNULL,
-            text=True,
-            timeout=5,
-        )
-    except subprocess.SubprocessError:
-        return []
-
-    procs: list[_RunningProc] = []
-    self_pid = os.getpid()
-    parent_pid = os.getppid()
-    for line in out.splitlines():
-        parts = line.strip().split(maxsplit=1)
-        if not parts:
-            continue
-        try:
-            pid = int(parts[0])
-        except ValueError:
-            continue
-        if pid in (self_pid, parent_pid):
-            # Skip the upgrade process itself + its shell parent — pgrep
-            # would otherwise catch us through `mega-tron upgrade` and
-            # we'd kill ourselves mid-run.
-            continue
-        argv = _read_cmdline(pid)
-        if not argv:
-            # Process might have just exited between pgrep and our
-            # /proc read. Drop it.
-            continue
-        kind = _classify(argv)
-        if kind == "other":
-            continue
-        host = port = None
-        no_open = False
-        if kind == "dashboard":
-            host, port, no_open = _parse_dashboard_args(argv)
-        procs.append(
-            _RunningProc(
-                pid=pid,
-                kind=kind,
-                argv=argv,
-                host=host,
-                port=port,
-                no_open=no_open,
-            )
-        )
-    return procs
+#
+# These helpers were moved to ``dashboard_procs`` so ``qa-live`` can reuse
+# them without importing the kill/respawn machinery below. Re-exported here
+# under their original names for backward compat (tests + this module's own
+# code import them from ``mega_tron.cli.upgrade``).
+from mega_tron.cli.dashboard_procs import (  # noqa: E402
+    _RunningProc,
+    _read_cmdline,
+    _classify,
+    _parse_dashboard_args,
+    _discover_running,
+)
 
 
 # --------------------------------------------------------------------------- #

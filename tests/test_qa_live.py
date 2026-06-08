@@ -228,6 +228,11 @@ def test_run_qa_live_pass_path_spawns_dashboard(fake_home, monkeypatch, capsys):
 
     monkeypatch.setattr(qa_live.subprocess, "Popen", fake_popen)
     monkeypatch.setattr(qa_live.time, "sleep", lambda s: None)
+    # No dashboard already running, port free → spawn should proceed.
+    # (Without these stubs the test would be flaky on a dev box that
+    # happens to have a real dashboard up.)
+    monkeypatch.setattr(qa_live, "_discover_running", lambda: [])
+    monkeypatch.setattr(qa_live, "_port_is_bound", lambda port: None)
     # Block webbrowser.open too.
     import webbrowser
 
@@ -243,6 +248,98 @@ def test_run_qa_live_pass_path_spawns_dashboard(fake_home, monkeypatch, capsys):
     argv = dashboard_calls[0][0]
     assert "dashboard" in argv
     assert "--no-open" in argv
+
+
+def _stub_pass_path(fake_home, monkeypatch):
+    """Wire up the minimal PASS-path stubs (host call + verdict bump)
+    shared by the no-double-spawn tests. Leaves the dashboard probes
+    (`_discover_running` / `_port_is_bound`) for the caller to set."""
+    (fake_home / ".codex" / "skills").mkdir(parents=True)
+    monkeypatch.setattr(qa_live.shutil, "which", lambda name: f"/fake/bin/{name}")
+    counts = {"codex": 0}
+    monkeypatch.setattr(
+        qa_live, "_snapshot_verdict_count", lambda h: counts.get(h, 0)
+    )
+
+    def fake_run(*args, **kwargs):
+        counts["codex"] = 1
+        return subprocess.CompletedProcess(args[0], 0, stdout="", stderr="")
+
+    monkeypatch.setattr(qa_live.subprocess, "run", fake_run)
+    monkeypatch.setattr(qa_live.time, "sleep", lambda s: None)
+    import webbrowser
+
+    monkeypatch.setattr(webbrowser, "open", lambda url: None)
+
+    popen_calls = []
+    monkeypatch.setattr(
+        qa_live.subprocess,
+        "Popen",
+        lambda argv, **kw: popen_calls.append(argv)
+        or type("_P", (), {"pid": 99999})(),
+    )
+    return popen_calls
+
+
+def test_existing_dashboard_process_skips_spawn(fake_home, monkeypatch, capsys):
+    """A mega-tron dashboard already running on a NON-loopback bind
+    (the issue's exact repro) must suppress the spawn — caught by the
+    process check regardless of bind address (#3)."""
+    popen_calls = _stub_pass_path(fake_home, monkeypatch)
+
+    from mega_tron.cli.dashboard_procs import _RunningProc
+
+    monkeypatch.setattr(
+        qa_live,
+        "_discover_running",
+        lambda: [
+            _RunningProc(pid=111, kind="dashboard", host="172.18.0.1", port=7531)
+        ],
+    )
+    # Port probe must not even be needed, but stub it so a stray real
+    # listener can't influence the result.
+    monkeypatch.setattr(qa_live, "_port_is_bound", lambda port: None)
+
+    rc = qa_live.run_qa_live(["codex"])
+    assert rc == 0
+    err = capsys.readouterr().err
+    assert not popen_calls, "must NOT spawn when a dashboard already runs"
+    assert "using existing dashboard" in err.lower()
+    assert "172.18.0.1:7531" in err
+
+
+def test_port_bound_no_process_skips_spawn(fake_home, monkeypatch, capsys):
+    """No discoverable mega-tron dashboard process, but port 7531 is
+    already bound on loopback (a non-mega-tron holder, or one whose
+    argv we couldn't parse) → still skip the spawn."""
+    popen_calls = _stub_pass_path(fake_home, monkeypatch)
+
+    monkeypatch.setattr(qa_live, "_discover_running", lambda: [])
+    monkeypatch.setattr(qa_live, "_port_is_bound", lambda port: "127.0.0.1")
+
+    rc = qa_live.run_qa_live(["codex"])
+    assert rc == 0
+    err = capsys.readouterr().err
+    assert not popen_calls, "must NOT spawn when the port is already bound"
+    assert "using existing dashboard" in err.lower()
+    assert "127.0.0.1:7531" in err
+
+
+def test_nothing_running_spawns_dashboard(fake_home, monkeypatch, capsys):
+    """Regression guard: with no existing process and a free port, the
+    spawn must still happen (the original happy-path behavior)."""
+    popen_calls = _stub_pass_path(fake_home, monkeypatch)
+
+    monkeypatch.setattr(qa_live, "_discover_running", lambda: [])
+    monkeypatch.setattr(qa_live, "_port_is_bound", lambda port: None)
+
+    rc = qa_live.run_qa_live(["codex"])
+    assert rc == 0
+    err = capsys.readouterr().err
+    assert popen_calls, "expected a dashboard spawn when nothing is running"
+    argv = popen_calls[0]
+    assert "dashboard" in argv and "--no-open" in argv
+    assert "dashboard launched" in err.lower()
 
 
 def test_run_qa_live_partial_when_host_runs_but_no_verdict(
